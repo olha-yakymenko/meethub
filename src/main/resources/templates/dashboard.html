@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Mój Pulpit - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Welcome Message -->
+    <div class="row mb-4">
+        <div class="col">
+        <div class="col">
+            <h1 class="display-5">
+                <i class="bi bi-house-door me-2"></i>
+                Witaj, <span sec:authentication="name"></span>!
+            </h1>
+            <p class="text-muted">Oto twój pulpit zarządzania spotkaniami</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 th:text="${stats?.totalMeetings ?: 0}">0</h4>
+                            <p class="mb-0">Wszystkie spotkania</p>
+                        </div>
+                        <i class="bi bi-calendar-check display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 th:text="${stats?.upcomingMeetings ?: 0}">0</h4>
+                            <p class="mb-0">Nadchodzące</p>
+                        </div>
+                        <i class="bi bi-clock display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 th:text="${stats?.participantsCount ?: 0}">0</h4>
+                            <p class="mb-0">Uczestnicy</p>
+                        </div>
+                        <i class="bi bi-people display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 th:text="${stats?.organizedMeetings ?: 0}">0</h4>
+                            <p class="mb-0">Zorganizowane</p>
+                        </div>
+                        <i class="bi bi-star display-6 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-5">
+        <div class="col">
+            <h3 class="mb-3">Szybkie akcje</h3>
+            <div class="d-flex gap-3 flex-wrap">
+                <a th:href="@{/meetings/create}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>Utwórz spotkanie
+                </a>
+                <a th:href="@{/meetings}" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-search me-2"></i>Przeglądaj spotkania
+                </a>
+                <a th:href="@{/my-meetings}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-list-check me-2"></i>Moje spotkania
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Meetings -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Ostatnie spotkania
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${recentMeetings.empty}" class="text-center py-4">
+                        <i class="bi bi-calendar-x display-4 text-muted"></i>
+                        <p class="text-muted mt-3">Brak ostatnich spotkań</p>
+                        <a th:href="@{/meetings/create}" class="btn btn-primary">Utwórz pierwsze spotkanie</a>
+                    </div>
+
+                    <div th:unless="${recentMeetings.empty}" class="list-group list-group-flush">
+                        <div th:each="meeting : ${recentMeetings}" class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1" th:text="${meeting.title}"></h6>
+                                    <small class="text-muted" th:text="${meeting.description}"></small>
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar me-1"></i>
+                                            <span th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
+                                        </small>
+                                    </div>
+                                </div>
+                                <a th:href="@{/meetings/{id}(id=${meeting.id})}" class="btn btn-sm btn-outline-primary">
+                                    Szczegóły
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bell me-2"></i>Ostatnie aktywności
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Funkcjonalność w budowie
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning me-2"></i>Szybkie statystyki
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Dzisiaj:</span>
+                        <strong th:text="${stats?.meetingsToday ?: 0} + ' spotkań'">0 spotkań</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>W tym tygodniu:</span>
+                        <strong th:text="${stats?.meetingsThisWeek ?: 0} + ' spotkań'">0 spotkań</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>W tym miesiącu:</span>
+                        <strong th:text="${stats?.meetingsThisMonth ?: 0} + ' spotkań'">0 spotkań</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

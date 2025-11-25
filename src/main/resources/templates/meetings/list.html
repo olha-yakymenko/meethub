@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Lista spotkań - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">
+                <i class="bi bi-calendar3 me-2"></i>Wszystkie spotkania
+            </h1>
+            <p class="text-muted">Przeglądaj dostępne spotkania</p>
+        </div>
+        <a th:href="@{/meetings/create}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Utwórz spotkanie
+        </a>
+    </div>
+
+    <!-- Filtry -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form th:action="@{/meetings}" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Szukaj</label>
+                    <input type="text" name="search" class="form-control"
+                           th:value="${param.search}"
+                           placeholder="Tytuł lub opis...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Typ</label>
+                    <select name="type" class="form-select">
+                        <option value="">Wszystkie</option>
+                        <option value="ONLINE" th:selected="${param.type == 'ONLINE'}">Online</option>
+                        <option value="IN_PERSON" th:selected="${param.type == 'IN_PERSON'}">Osobiście</option>
+                        <option value="HYBRID" th:selected="${param.type == 'HYBRID'}">Hybrydowe</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">Wszystkie</option>
+                        <option value="PLANNED" th:selected="${param.status == 'PLANNED'}">Planowane</option>
+                        <option value="CONFIRMED" th:selected="${param.status == 'CONFIRMED'}">Potwierdzone</option>
+                        <option value="COMPLETED" th:selected="${param.status == 'COMPLETED'}">Zakończone</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-funnel me-1"></i>Filtruj
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista spotkań -->
+    <div th:if="${meetings.empty}" class="text-center py-5">
+        <i class="bi bi-calendar-x display-1 text-muted"></i>
+        <h4 class="text-muted mt-3">Brak spotkań</h4>
+        <p class="text-muted">Nie znaleziono spotkań spełniających kryteria</p>
+        <a th:href="@{/meetings/create}" class="btn btn-primary mt-3">
+            <i class="bi bi-plus-circle me-2"></i>Utwórz pierwsze spotkanie
+        </a>
+    </div>
+
+    <div class="row" th:unless="${meetings.empty}">
+        <div class="col-lg-6 mb-4" th:each="meeting : ${meetings}">
+            <div class="card h-100 meeting-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title" th:text="${meeting.title}"></h5>
+                        <!-- ✅ POPRAWIONE: Uproszczone warunki dla badge -->
+                        <span th:if="${meeting.type}" class="badge"
+                              th:class="${meeting.type.name() == 'ONLINE' ? 'bg-success' :
+                                        (meeting.type.name() == 'IN_PERSON' ? 'bg-primary' : 'bg-warning')}"
+                              th:text="${meeting.type.name()}">
+                        </span>
+                        <span th:unless="${meeting.type}" class="badge bg-secondary">BRAK TYPU</span>
+                    </div>
+
+                    <p class="card-text text-muted"
+                       th:text="${meeting.description ?: 'Brak opisu'}"></p>
+
+                    <div class="meeting-meta mb-3">
+                        <div class="d-flex justify-content-between text-muted small mb-2">
+                            <span>
+                                <i class="bi bi-calendar"></i>
+                                <span th:if="${meeting.startDate}"
+                                      th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
+                                <span th:unless="${meeting.startDate}">Data nieustalona</span>
+                            </span>
+                            <!-- ✅ POPRAWIONE: Uproszczone warunki dla statusu -->
+                            <span th:if="${meeting.status}"
+                                  th:class="${meeting.status.name() == 'CONFIRMED' ? 'text-success' :
+                                            (meeting.status.name() == 'CANCELLED' ? 'text-danger' : 'text-warning')}"
+                                  th:text="${meeting.status.name()}">
+                            </span>
+                            <span th:unless="${meeting.status}" class="text-muted">BRAK STATUSU</span>
+                        </div>
+                        <div class="text-muted small mb-2" th:if="${meeting.organizer}">
+                            <i class="bi bi-person"></i>
+                            <span th:text="${meeting.organizer.firstName + ' ' + meeting.organizer.lastName}"></span>
+                        </div>
+                        <div class="text-muted small" th:if="${meeting.maxParticipants}">
+                            <i class="bi bi-people"></i>
+                            <span th:text="${meeting.maxParticipants + ' uczestników max'}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Statystyki uczestników -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <div class="participant-info">
+                            <small class="text-muted">
+                                <i class="bi bi-people"></i>
+                                <span th:text="(${meeting.confirmedParticipantsCount != null} ? ${meeting.confirmedParticipantsCount} : 0) + '/' + (${meeting.maxParticipants} ?: '∞')"></span>
+                                potwierdzonych
+                            </small>
+                            <span th:if="${meeting.waitingListCount != null && meeting.waitingListCount > 0}"
+                                  class="badge bg-warning ms-2"
+                                  th:text="${meeting.waitingListCount} + ' w kolejce'">
+                            </span>
+                        </div>
+                        <div class="participant-actions">
+                            <a th:href="@{/meetings/{id}/participants(id=${meeting.id})}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-people"></i> Uczestnicy
+                            </a>
+                            <a th:if="${meeting.organizer != null && meeting.organizer.id == currentUserId}"
+                               th:href="@{/meetings/{id}/participants/invite(id=${meeting.id})}"
+                               class="btn btn-sm btn-success ms-1">
+                                <i class="bi bi-person-plus"></i> Zaproś
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <!-- ✅ POPRAWIONE: Uproszczone warunki dla visibility -->
+                        <span th:if="${meeting.visibility}" class="badge"
+                              th:class="${meeting.visibility.name() == 'PUBLIC' ? 'bg-info' : 'bg-secondary'}"
+                              th:text="${meeting.visibility.name()}">
+                        </span>
+                        <span th:unless="${meeting.visibility}" class="badge bg-secondary">BRAK</span>
+                        <div>
+                            <a th:href="@{/meetings/{id}(id=${meeting.id})}"
+                               class="btn btn-sm btn-primary me-1">Szczegóły</a>
+                            <a th:if="${meeting.organizer != null && meeting.organizer.id == currentUserId}"
+                               th:href="@{/meetings/{id}/edit(id=${meeting.id})}"
+                               class="btn btn-sm btn-outline-secondary">Edytuj</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paginacja -->
+    <nav th:if="${totalPages > 1}" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1}, search=${param.search}, type=${param.type}, status=${param.status})}">
+                    Poprzednia
+                </a>
+            </li>
+
+            <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"
+                class="page-item" th:classappend="${page == currentPage} ? 'active'">
+                <a class="page-link"
+                   th:href="@{/meetings(page=${page}, search=${param.search}, type=${param.type}, status=${param.status})}"
+                   th:text="${page + 1}"></a>
+            </li>
+
+            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1}, search=${param.search}, type=${param.type}, status=${param.status})}">
+                    Następna
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <style>
+        .meeting-card {
+            transition: transform 0.2s;
+        }
+        .meeting-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</div>
+</body>
+</html>

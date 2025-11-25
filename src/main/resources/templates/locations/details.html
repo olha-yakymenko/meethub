@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl" th:replace="~{layout}">
+<head>
+    <title th:text="${location.name} + ' - MeetHub'">Szczegóły lokalizacji</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0" th:text="${location.name}"></h1>
+                    <p class="text-muted mb-0">
+                        <span th:classappend="${location.type.name() == 'PHYSICAL'} ? 'badge bg-primary' : 'badge bg-success'"
+                              th:text="${location.type.name() == 'PHYSICAL'} ? 'LOKALIZACJA FIZYCZNA' : 'LOKALIZACJA WIRTUALNA'">
+                        </span>
+                    </p>
+                </div>
+                <div class="btn-group">
+                    <a th:href="@{/locations}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Powrót
+                    </a>
+                    <a th:href="@{/locations/{id}/edit(id=${location.id})}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-2"></i>Edytuj
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="row">
+                <!-- Main Info -->
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2"></i>Informacje podstawowe
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Nazwa:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.name}"></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Typ:</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <span th:classappend="${location.type.name() == 'PHYSICAL'} ? 'badge bg-primary' : 'badge bg-success'"
+                                          th:text="${location.type.name() == 'PHYSICAL'} ? 'Fizyczna' : 'Wirtualna'">
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Adres:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.fullAddress} ?: 'Brak danych'"></div>
+                            </div>
+                            <div th:if="${location.timezone}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Strefa czasowa:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.timezone}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Physical Location Details -->
+                    <div th:if="${location.type.name() == 'PHYSICAL'}" class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-geo-alt me-2"></i>Szczegóły lokalizacji fizycznej
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${location.address}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Ulica:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.address}"></div>
+                            </div>
+                            <div th:if="${location.city}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Miasto:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.city}"></div>
+                            </div>
+                            <div th:if="${location.country}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Kraj:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.country}"></div>
+                            </div>
+                            <div th:if="${location.hasCoordinates()}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Współrzędne:</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <span th:text="${location.latitude}"></span>,
+                                    <span th:text="${location.longitude}"></span>
+                                </div>
+                            </div>
+                            <div th:if="${location.drivingInstructions}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Instrukcje dojazdu:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.drivingInstructions}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Virtual Location Details -->
+                    <div th:if="${location.type.name() == 'VIRTUAL'}" class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-link-45deg me-2"></i>Szczegóły spotkania wirtualnego
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${location.virtualMeetingUrl}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>URL spotkania:</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <a th:href="${location.virtualMeetingUrl}" target="_blank"
+                                       th:text="${location.virtualMeetingUrl}"></a>
+                                </div>
+                            </div>
+                            <div th:if="${location.accessCode}" class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Kod dostępu:</strong>
+                                </div>
+                                <div class="col-sm-8" th:text="${location.accessCode}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions Sidebar -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-lightning me-2"></i>Akcje
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a th:if="${location.type.name() == 'PHYSICAL' and mapUrl}"
+                                   th:href="${mapUrl}" target="_blank" class="btn btn-outline-primary">
+                                    <i class="bi bi-map me-2"></i>Pokaż na mapie
+                                </a>
+                                <a th:if="${location.type.name() == 'VIRTUAL' and location.virtualMeetingUrl}"
+                                   th:href="${location.virtualMeetingUrl}" target="_blank" class="btn btn-outline-success">
+                                    <i class="bi bi-camera-video me-2"></i>Dołącz do spotkania
+                                </a>
+                                <a th:href="@{/locations/{id}/edit(id=${location.id})}" class="btn btn-primary">
+                                    <i class="bi bi-pencil me-2"></i>Edytuj
+                                </a>
+                                <button type="button" class="btn btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                    <i class="bi bi-trash me-2"></i>Usuń
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Info -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-clock me-2"></i>Informacje
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <div>ID: <span th:text="${location.id}"></span></div>
+                                <div th:if="${location.type.name() == 'PHYSICAL'}">
+                                    Typ: Lokalizacja fizyczna
+                                </div>
+                                <div th:if="${location.type.name() == 'VIRTUAL'}">
+                                    Typ: Spotkanie wirtualne
+                                </div>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Potwierdzenie usunięcia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Czy na pewno chcesz usunąć lokalizację <strong th:text="${location.name}"></strong>?</p>
+                    <p class="text-muted">Tej operacji nie można cofnąć.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <form th:action="@{/locations/{id}/delete(id=${location.id})}" method="post">
+                        <button type="submit" class="btn btn-danger">Usuń</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

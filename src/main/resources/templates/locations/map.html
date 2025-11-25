@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Edytuj spotkanie - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        <span th:text="${location.name}"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${location.type == 'PHYSICAL'}">
+                        <div class="mb-3">
+                            <strong>Adres:</strong>
+                            <p class="mb-1" th:text="${location.fullAddress}"></p>
+                        </div>
+
+                        <div th:if="${location.hasCoordinates()}" class="mb-3">
+                            <strong>Współrzędne:</strong>
+                            <p class="mb-1" th:text="${location.latitude} + ', ' + ${location.longitude}"></p>
+                        </div>
+                    </div>
+
+                    <div th:if="${location.drivingInstructions}" class="mb-3">
+                        <strong>Instrukcje dojazdu:</strong>
+                        <p class="mb-1" th:text="${location.drivingInstructions}"></p>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a th:href="${directionsUrl}" target="_blank" class="btn btn-primary">
+                            <i class="bi bi-signpost-split me-2"></i>Nawiguj do lokalizacji
+                        </a>
+                        <a th:href="@{/locations/{id}(id=${location.id})}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Powrót do szczegółów
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-map me-2"></i>Mapa
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 500px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        const latitude = /*[[${location.latitude}]]*/ 52.2297;
+        const longitude = /*[[${location.longitude}]]*/ 21.0122;
+        const locationName = /*[[${location.name}]]*/ 'Lokalizacja';
+        const address = /*[[${location.fullAddress}]]*/ 'Adres';
+
+        // Initialize map
+        const map = L.map('map').setView([latitude, longitude], 15);
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add marker
+        const marker = L.marker([latitude, longitude]).addTo(map)
+            .bindPopup(`
+                <strong>${locationName}</strong><br>
+                ${address}
+            `)
+            .openPopup();
+    });
+    /*]]>*/
+</script>
+</body>
+</html>

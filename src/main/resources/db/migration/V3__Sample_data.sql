@@ -1,0 +1,48 @@
+-- Insert sample users
+INSERT INTO users (email, password, first_name, last_name, role) VALUES
+('admin@meethub.com', '$2a$10$xyz123', 'Admin', 'User', 'ADMIN'),
+('organizer1@meethub.com', '$2a$10$xyz123', 'John', 'Organizer', 'ORGANIZER'),
+('user1@meethub.com', '$2a$10$xyz123', 'Alice', 'Participant', 'PARTICIPANT'),
+('user2@meethub.com', '$2a$10$xyz123', 'Bob', 'Attendee', 'PARTICIPANT');
+
+-- Insert sample locations
+INSERT INTO locations (name, address, city, country, latitude, longitude, type) VALUES
+('Conference Room A', '123 Main St', 'Warsaw', 'Poland', 52.2297, 21.0122, 'PHYSICAL'),
+('Virtual Meeting Room', NULL, NULL, NULL, NULL, NULL, 'VIRTUAL'),
+('Tech Hub Office', '456 Tech Ave', 'Krakow', 'Poland', 50.0647, 19.9450, 'PHYSICAL');
+
+-- Insert sample meetings
+INSERT INTO meetings (title, description, agenda, type, status, visibility, start_date, end_date, max_participants, organizer_id, location_id) VALUES
+('Spring Boot Workshop', 'Learn Spring Boot with hands-on examples', '1. Introduction 2. Hands-on coding 3. Q&A', 'PHYSICAL', 'CONFIRMED', 'PUBLIC', '2024-02-15 10:00:00', '2024-02-15 12:00:00', 20, 2, 1),
+('Project Planning', 'Quarterly project planning meeting', 'Review goals, assign tasks, set deadlines', 'VIRTUAL', 'PLANNED', 'INVITATION_ONLY', '2024-02-20 14:00:00', '2024-02-20 15:30:00', 10, 2, 2),
+('Team Building', 'Monthly team building activity', 'Fun activities and games for team bonding', 'PHYSICAL', 'CONFIRMED', 'PUBLIC', '2024-02-25 16:00:00', '2024-02-25 18:00:00', 30, 2, 3);
+
+-- Insert sample meeting participants
+INSERT INTO meeting_participants (meeting_id, user_id, status, permission_level) VALUES
+(1, 3, 'CONFIRMED', 'PARTICIPANT'),
+(1, 4, 'INVITED', 'PARTICIPANT'),
+(2, 3, 'CONFIRMED', 'CONTRIBUTOR'),
+(3, 4, 'CONFIRMED', 'PARTICIPANT');
+
+-- Insert sample meeting tasks
+INSERT INTO meeting_tasks (meeting_id, title, description, status, priority, assigned_to, due_date, progress_percentage) VALUES
+(1, 'Prepare presentation', 'Create slides for Spring Boot workshop', 'IN_PROGRESS', 'HIGH', 2, '2024-02-14 18:00:00', 75),
+(1, 'Book conference room', 'Reserve Conference Room A for the workshop', 'COMPLETED', 'MEDIUM', 2, '2024-02-10 12:00:00', 100),
+(2, 'Create project timeline', 'Develop detailed project timeline with milestones', 'PENDING', 'HIGH', 3, '2024-02-18 17:00:00', 0);
+
+-- Create materialized view for meeting statistics
+CREATE MATERIALIZED VIEW meeting_statistics AS
+SELECT
+    m.id as meeting_id,
+    m.title,
+    m.organizer_id,
+    COUNT(mp.id) as total_invited,
+    COUNT(CASE WHEN mp.status = 'CONFIRMED' THEN 1 END) as confirmed_count,
+    COUNT(CASE WHEN mp.status = 'DECLINED' THEN 1 END) as declined_count,
+    AVG(CASE WHEN mp.response_date IS NOT NULL THEN
+        EXTRACT(EPOCH FROM (mp.response_date - m.created_at)) / 3600 END) as avg_response_time_hours
+FROM meetings m
+LEFT JOIN meeting_participants mp ON m.id = mp.meeting_id
+GROUP BY m.id, m.title, m.organizer_id;
+
+CREATE UNIQUE INDEX idx_meeting_stats_meeting ON meeting_statistics (meeting_id);

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: meethub-postgres
+    environment:
+      POSTGRES_DB: meethub
+      POSTGRES_USER: meethub_user
+      POSTGRES_PASSWORD: secure_password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - meethub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meethub_user -d meethub"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: meethub-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@meethub.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8081:80"
+    networks:
+      - meethub-network
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  meethub-network:
+    driver: bridge

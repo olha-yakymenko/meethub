@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaproś uczestników - MeetHub</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        .search-container {
+            position: relative;
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        .selected-users {
+            min-height: 100px;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .selected-user-badge {
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            margin: 5px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .remove-user {
+            margin-left: 8px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: white;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+        .search-result-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <!-- Formularz zapraszania -->
+    <div class="row">
+        <div class="col-lg-8">
+            <form th:action="@{/meetings/{meetingId}/participants/invite(meetingId=${meetingId})}"
+                  method="post" th:object="${inviteRequest}">
+
+                <!-- Sekcja wyszukiwania użytkowników -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Wyszukaj użytkowników
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="search-container">
+                            <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                <input type="text"
+                                       class="form-control"
+                                       id="userSearch"
+                                       placeholder="Wpisz imię, nazwisko lub email użytkownika..."
+                                       autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="search-results" id="searchResults">
+                                <div class="loading-spinner" id="loadingSpinner">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                    Wyszukiwanie...
+                                </div>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            Wyszukaj użytkowników po imieniu, nazwisku lub adresie email
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Sekcja wybranych użytkowników -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            Wybrani użytkownicy
+                            <span class="badge bg-primary ms-2" id="selectedCount">0</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="selected-users" id="selectedUsers">
+                            <p class="text-muted text-center mb-0" id="emptySelectionMessage">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Nie wybrano żadnych użytkowników. Wyszukaj i dodaj użytkowników z listy powyżej.
+                            </p>
+                        </div>
+
+                        <!-- Ukryte pole dla wybranych użytkowników -->
+                        <input type="hidden" name="userIds" id="selectedUserIds">
+                    </div>
+                </div>
+
+                <!-- Przyciski akcji -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <a th:href="@{/meetings/{meetingId}/participants(meetingId=${meetingId})}"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Powrót
+                    </a>
+
+                    <div>
+                        <button type="button" class="btn btn-outline-danger me-2" id="clearAll">
+                            <i class="fas fa-trash me-2"></i>
+                            Wyczyść
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Wyślij zaproszenia
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Przechowywanie wybranych użytkowników
+    let selectedUsers = new Map();
+
+    // Elementy DOM
+    const userSearch = document.getElementById('userSearch');
+    const searchResults = document.getElementById('searchResults');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const selectedUsersContainer = document.getElementById('selectedUsers');
+    const selectedUserIds = document.getElementById('selectedUserIds');
+    const selectedCount = document.getElementById('selectedCount');
+    const emptySelectionMessage = document.getElementById('emptySelectionMessage');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const clearAllBtn = document.getElementById('clearAll');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Timer dla debounce
+    let searchTimeout;
+
+    // Wyszukiwanie użytkowników
+    userSearch.addEventListener('input', function() {
+        const query = this.value.trim();
+
+        // Czyszczenie poprzedniego timeoutu
+        clearTimeout(searchTimeout);
+
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        // Pokazanie loadera
+        loadingSpinner.style.display = 'block';
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = '';
+
+        // Debounce - czekamy 300ms po ostatnim wpisaniu
+        searchTimeout = setTimeout(() => {
+            searchUsers(query);
+        }, 300);
+    });
+
+    // Funkcja wyszukiwania przez AJAX
+    async function searchUsers(query) {
+        try {
+            const response = await fetch(`/api/users/search?query=${encodeURIComponent(query)}`);
+
+            if (!response.ok) {
+                throw new Error('Błąd wyszukiwania');
+            }
+
+            const users = await response.json();
+            displaySearchResults(users);
+
+        } catch (error) {
+            console.error('Error searching users:', error);
+            searchResults.innerHTML = '<div class="search-result-item text-danger">Błąd podczas wyszukiwania</div>';
+        } finally {
+            loadingSpinner.style.display = 'none';
+        }
+    }
+
+    // Wyświetlanie wyników wyszukiwania
+    function displaySearchResults(users) {
+        if (users.length === 0) {
+            searchResults.innerHTML = '<div class="search-result-item text-muted">Brak wyników</div>';
+        } else {
+            searchResults.innerHTML = users.map(user => {
+                const isSelected = selectedUsers.has(user.id);
+                const disabledClass = isSelected ? 'disabled' : '';
+
+                return `
+                    <div class="search-result-item ${disabledClass}"
+                         onclick="${isSelected ? '' : `selectUser(${user.id}, '${user.firstName}', '${user.lastName}', '${user.email}')`}">
+                        <div class="fw-bold">${user.firstName} ${user.lastName}</div>
+                        <small class="text-muted">${user.email}</small>
+                        ${isSelected ? '<small class="text-success float-end"><i class="fas fa-check"></i> Wybrany</small>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+        searchResults.style.display = 'block';
+    }
+
+    // Wybór użytkownika
+    function selectUser(id, firstName, lastName, email) {
+        if (!selectedUsers.has(id)) {
+            selectedUsers.set(id, { id, firstName, lastName, email });
+            updateSelectedUsersDisplay();
+            userSearch.value = '';
+            searchResults.style.display = 'none';
+
+            // Odśwież wyniki wyszukiwania aby pokazać aktualny stan
+            if (userSearch.value.trim().length >= 2) {
+                searchUsers(userSearch.value.trim());
+            }
+        }
+    }
+
+    // Usuwanie użytkownika
+    function removeUser(id) {
+        selectedUsers.delete(id);
+        updateSelectedUsersDisplay();
+
+        // Odśwież wyniki wyszukiwania jeśli jest aktywna wyszukiwarka
+        if (userSearch.value.trim().length >= 2) {
+            searchUsers(userSearch.value.trim());
+        }
+    }
+
+    // Aktualizacja wyświetlania wybranych użytkowników
+    function updateSelectedUsersDisplay() {
+        const selectedArray = Array.from(selectedUsers.values());
+
+        if (selectedArray.length === 0) {
+            selectedUsersContainer.innerHTML = '<p class="text-muted text-center mb-0" id="emptySelectionMessage"><i class="fas fa-info-circle me-2"></i>Nie wybrano żadnych użytkowników. Wyszukaj i dodaj użytkowników z listy powyżej.</p>';
+            selectedUserIds.value = '';
+            submitBtn.disabled = true;
+        } else {
+            selectedUsersContainer.innerHTML = selectedArray.map(user => `
+                <div class="selected-user-badge">
+                    ${user.firstName} ${user.lastName}
+                    <button type="button" class="remove-user" onclick="removeUser(${user.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            selectedUserIds.value = selectedArray.map(user => user.id).join(',');
+            submitBtn.disabled = false;
+        }
+
+        selectedCount.textContent = selectedArray.length;
+    }
+
+    // Czyszczenie wyszukiwania
+    clearSearchBtn.addEventListener('click', function() {
+        userSearch.value = '';
+        searchResults.style.display = 'none';
+    });
+
+    // Czyszczenie wszystkich wybranych użytkowników
+    clearAllBtn.addEventListener('click', function() {
+        selectedUsers.clear();
+        updateSelectedUsersDisplay();
+        searchResults.style.display = 'none';
+    });
+
+    // Ukrywanie wyników wyszukiwania po kliknięciu poza
+    document.addEventListener('click', function(e) {
+        if (!userSearch.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Walidacja formularza przed wysłaniem
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (selectedUsers.size === 0) {
+            e.preventDefault();
+            alert('Proszę wybrać przynajmniej jednego użytkownika do zaproszenia.');
+            return;
+        }
+    });
+
+    // Inicjalizacja
+    updateSelectedUsersDisplay();
+</script>
+</body>
+</html>

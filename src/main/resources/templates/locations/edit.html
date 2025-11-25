@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl" th:replace="~{layout}">
+<head>
+    <title>Edytuj lokalizację - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-pencil me-2"></i>Edytuj lokalizację
+                    </h1>
+                    <p class="text-muted mb-0">Modyfikuj dane lokalizacji</p>
+                </div>
+                <a th:href="@{/locations/{id}(id=${locationId})}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Powrót do szczegółów
+                </a>
+            </div>
+
+            <!-- Messages -->
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Form -->
+            <div class="card">
+                <div class="card-body">
+                    <form th:action="@{/locations/{id}/edit(id=${locationId})}" th:object="${locationRequest}" method="post">
+
+                        <!-- Location Type -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="type" class="form-label">Typ lokalizacji *</label>
+                                <select class="form-select" id="type" th:field="*{type}" required
+                                        onchange="toggleLocationFields()">
+                                    <option value="">Wybierz typ...</option>
+                                    <option value="PHYSICAL">Fizyczna</option>
+                                    <option value="VIRTUAL">Wirtualna</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">Nazwa lokalizacji *</label>
+                                <input type="text" class="form-control" id="name" th:field="*{name}" required>
+                            </div>
+                        </div>
+
+                        <!-- Physical Location Fields -->
+                        <div id="physicalFields" class="location-section">
+                            <div class="border rounded p-3 mb-3 bg-light">
+                                <h6 class="mb-3">
+                                    <i class="bi bi-geo-alt me-2"></i>Adres fizyczny
+                                </h6>
+
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label for="address" class="form-label">Adres</label>
+                                        <input type="text" class="form-control" id="address" th:field="*{address}">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="city" class="form-label">Miasto</label>
+                                        <input type="text" class="form-control" id="city" th:field="*{city}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="country" class="form-label">Kraj</label>
+                                        <input type="text" class="form-control" id="country" th:field="*{country}">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="latitude" class="form-label">Szerokość geograficzna</label>
+                                        <input type="number" step="0.000001" class="form-control" id="latitude"
+                                               th:field="*{latitude}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="longitude" class="form-label">Długość geograficzna</label>
+                                        <input type="number" step="0.000001" class="form-control" id="longitude"
+                                               th:field="*{longitude}">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="drivingInstructions" class="form-label">Instrukcje dojazdu</label>
+                                    <textarea class="form-control" id="drivingInstructions"
+                                              th:field="*{drivingInstructions}" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Virtual Location Fields -->
+                        <div id="virtualFields" class="location-section">
+                            <div class="border rounded p-3 mb-3 bg-light">
+                                <h6 class="mb-3">
+                                    <i class="bi bi-link-45deg me-2"></i>Spotkanie wirtualne
+                                </h6>
+
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label for="virtualMeetingUrl" class="form-label">URL spotkania</label>
+                                        <input type="url" class="form-control" id="virtualMeetingUrl"
+                                               th:field="*{virtualMeetingUrl}">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label for="accessCode" class="form-label">Kod dostępu</label>
+                                        <input type="text" class="form-control" id="accessCode" th:field="*{accessCode}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Common Fields -->
+                        <div class="mb-3">
+                            <label for="timezone" class="form-label">Strefa czasowa</label>
+                            <select class="form-select" id="timezone" th:field="*{timezone}">
+                                <option value="Europe/Warsaw">Europe/Warsaw (Polska)</option>
+                                <option value="Europe/London">Europe/London (Wielka Brytania)</option>
+                                <option value="Europe/Berlin">Europe/Berlin (Niemcy)</option>
+                                <option value="America/New_York">America/New_York (USA)</option>
+                                <option value="Asia/Tokyo">Asia/Tokyo (Japonia)</option>
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a th:href="@{/locations/{id}(id=${locationId})}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Zapisz zmiany
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleLocationFields() {
+        const type = document.getElementById('type').value;
+        const physicalFields = document.getElementById('physicalFields');
+        const virtualFields = document.getElementById('virtualFields');
+
+        physicalFields.style.display = 'none';
+        virtualFields.style.display = 'none';
+
+        if (type === 'PHYSICAL') {
+            physicalFields.style.display = 'block';
+        } else if (type === 'VIRTUAL') {
+            virtualFields.style.display = 'block';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(toggleLocationFields, 100);
+        document.getElementById('type').addEventListener('change', toggleLocationFields);
+    });
+</script>
+</body>
+</html>

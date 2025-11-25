@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Lokalizacje - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filtruj
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/locations}" method="get">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Wyszukaj</label>
+                            <input type="text" class="form-control" id="search" name="query"
+                                   th:value="${query}" placeholder="Nazwa lub adres...">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Typ lokalizacji</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">Wszystkie typy</option>
+                                <option value="PHYSICAL" th:selected="${type == 'PHYSICAL'}">Fizyczna</option>
+                                <option value="VIRTUAL" th:selected="${type == 'VIRTUAL'}">Wirtualna</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="city" class="form-label">Miasto</label>
+                            <input type="text" class="form-control" id="city" name="city"
+                                   th:value="${city}" placeholder="Nazwa miasta...">
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-2"></i>Filtruj
+                            </button>
+                            <a th:href="@{/locations}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Wyczyść
+                            </a>
+                        </div>
+                    </form>
+
+                    <hr>
+
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/locations/create}" class="btn btn-success">
+                            <i class="bi bi-plus-circle me-2"></i>Nowa lokalizacja
+                        </a>
+                        <a th:href="@{/locations/nearby?lat=52.2297&lng=21.0122&radius=5}"
+                           class="btn btn-outline-info">
+                            <i class="bi bi-geo-alt me-2"></i>Lokalizacje w pobliżu
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-geo-alt me-2"></i>Lokalizacje
+                    </h1>
+                    <p class="text-muted mb-0" th:if="${totalItems > 0}">
+                        Znaleziono <span th:text="${totalItems}">0</span> lokalizacji
+                    </p>
+                </div>
+
+                <div class="btn-group">
+                    <a th:href="@{/locations/create}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Dodaj lokalizację
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Locations Grid -->
+            <div th:if="${locations.empty}" class="text-center py-5">
+                <i class="bi bi-geo-alt display-1 text-muted"></i>
+                <h3 class="text-muted mt-3">Brak lokalizacji</h3>
+                <p class="text-muted">Nie znaleziono lokalizacji spełniających kryteria wyszukiwania.</p>
+                <a th:href="@{/locations/create}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>Dodaj pierwszą lokalizację
+                </a>
+            </div>
+
+            <div th:unless="${locations.empty}" class="row">
+                <div th:each="location : ${locations}" class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 location-card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="card-title mb-0" th:text="${location.name}"></h6>
+                                <!-- ✅ POPRAWIONE: Wyświetla dokładnie to co jest w bazie -->
+                                <span th:classappend="${location.type.name() == 'PHYSICAL'} ? 'badge bg-primary' : 'badge bg-success'"
+                                      th:text="${location.type.name()} == 'PHYSICAL' ? 'FIZYCZNA' : 'WIRTUALNA'">
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <!-- ✅ POPRAWIONE: Wyświetla wszystkie dane bez warunków -->
+                            <div class="mb-2">
+                                <i class="bi bi-geo-alt me-2 text-muted"></i>
+                                <small class="text-muted" th:text="${location.fullAddress} ?: 'Brak adresu'"></small>
+                            </div>
+
+                            <div th:if="${location.virtualMeetingUrl}" class="mb-2">
+                                <i class="bi bi-link-45deg me-2 text-muted"></i>
+                                <small class="text-muted" th:text="${location.virtualMeetingUrl}"></small>
+                            </div>
+
+                            <div th:if="${location.hasCoordinates()}" class="mb-2">
+                                <i class="bi bi-pin-map me-2 text-muted"></i>
+                                <small class="text-muted">
+                                    <span th:text="${location.latitude}"></span>,
+                                    <span th:text="${location.longitude}"></span>
+                                </small>
+                            </div>
+
+                            <div th:if="${location.accessCode}" class="mb-2">
+                                <i class="bi bi-key me-2 text-muted"></i>
+                                <small class="text-muted">Kod dostępu: <span th:text="${location.accessCode}"></span></small>
+                            </div>
+
+                            <div th:if="${location.timezone}" class="mb-2">
+                                <i class="bi bi-clock me-2 text-muted"></i>
+                                <small class="text-muted" th:text="${location.timezone}"></small>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex justify-content-between">
+                                <a th:href="@{/locations/{id}(id=${location.id})}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye me-1"></i>Szczegóły
+                                </a>
+                                <div class="btn-group">
+                                    <a th:href="@{/locations/{id}/edit(id=${location.id})}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            th:attr="data-bs-target='#deleteModal' + ${location.id}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delete Modal -->
+                    <div class="modal fade" th:id="'deleteModal' + ${location.id}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Potwierdzenie usunięcia</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Czy na pewno chcesz usunąć lokalizację <strong th:text="${location.name}"></strong>?</p>
+                                    <p class="text-muted">Tej operacji nie można cofnąć.</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                                    <form th:action="@{/locations/{id}/delete(id=${location.id})}" method="post">
+                                        <button type="submit" class="btn btn-danger">Usuń</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination">
+                        <li class="page-item" th:classappend="${!hasPrevious} ? 'disabled'">
+                            <a class="page-link" th:href="@{/locations(query=${query}, type=${type}, city=${city}, page=${currentPage - 1})}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <li th:each="page : ${#numbers.sequence(1, totalPages)}"
+                            class="page-item" th:classappend="${page == currentPage + 1} ? 'active'">
+                            <a class="page-link"
+                               th:href="@{/locations(query=${query}, type=${type}, city=${city}, page=${page - 1})}"
+                               th:text="${page}"></a>
+                        </li>
+
+                        <li class="page-item" th:classappend="${!hasNext} ? 'disabled'">
+                            <a class="page-link" th:href="@{/locations(query=${query}, type=${type}, city=${city}, page=${currentPage + 1})}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .location-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .location-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+</body>
+</html>

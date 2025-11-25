@@ -1,0 +1,146 @@
+<!-- [file name]: templates/auth/register.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejestracja - MeetHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-plus display-4 text-primary"></i>
+                        <h2 class="mt-3">Utwórz konto</h2>
+                        <p class="text-muted">Dołącz do społeczności MeetHub</p>
+                    </div>
+
+                    <!-- Komunikat błędu -->
+                    <div th:if="${error}" class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span th:text="${error}"></span>
+                    </div>
+
+                    <!-- Komunikat sukcesu -->
+                    <div th:if="${message}" class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${message}"></span>
+                    </div>
+
+                    <!-- Formularz rejestracji -->
+                    <form th:action="@{/register}" th:object="${registrationRequest}" method="post">
+                        <!-- Imię -->
+                        <div class="mb-3">
+                            <label for="firstName" class="form-label">Imię</label>
+                            <input type="text" class="form-control" id="firstName"
+                                   th:field="*{firstName}"
+                                   placeholder="Twoje imię" required>
+                            <div th:if="${#fields.hasErrors('firstName')}" class="text-danger small">
+                                <span th:errors="*{firstName}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Nazwisko -->
+                        <div class="mb-3">
+                            <label for="lastName" class="form-label">Nazwisko</label>
+                            <input type="text" class="form-control" id="lastName"
+                                   th:field="*{lastName}"
+                                   placeholder="Twoje nazwisko" required>
+                            <div th:if="${#fields.hasErrors('lastName')}" class="text-danger small">
+                                <span th:errors="*{lastName}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email"
+                                   th:field="*{email}"
+                                   placeholder="twój@email.com" required>
+                            <div th:if="${#fields.hasErrors('email')}" class="text-danger small">
+                                <span th:errors="*{email}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Numer telefonu -->
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label">Numer telefonu (opcjonalnie)</label>
+                            <input type="tel" class="form-control" id="phoneNumber"
+                                   th:field="*{phoneNumber}"
+                                   placeholder="+48 123 456 789">
+                            <div th:if="${#fields.hasErrors('phoneNumber')}" class="text-danger small">
+                                <span th:errors="*{phoneNumber}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Hasło -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Hasło</label>
+                            <input type="password" class="form-control" id="password"
+                                   th:field="*{password}"
+                                   placeholder="Minimum 8 znaków" required>
+                            <div class="form-text">Hasło musi zawierać co najmniej 8 znaków</div>
+                            <div th:if="${#fields.hasErrors('password')}" class="text-danger small">
+                                <span th:errors="*{password}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Potwierdź hasło -->
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Potwierdź hasło</label>
+                            <input type="password" class="form-control" id="confirmPassword"
+                                   th:field="*{confirmPassword}"
+                                   placeholder="Powtórz hasło" required>
+                            <div th:if="${#fields.hasErrors('confirmPassword')}" class="text-danger small">
+                                <span th:errors="*{confirmPassword}"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-person-plus me-2"></i>Zarejestruj się
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted">Masz już konto?
+                            <a th:href="@{/login}" class="text-decoration-none">Zaloguj się</a>
+                        </p>
+                        <a th:href="@{/}" class="text-decoration-none">
+                            <i class="bi bi-arrow-left me-1"></i>Powrót do strony głównej
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Walidacja hasła w czasie rzeczywistym
+    document.addEventListener('DOMContentLoaded', function() {
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+
+        function validatePassword() {
+            if (password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('Hasła nie są identyczne');
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+        }
+
+        password.addEventListener('change', validatePassword);
+        confirmPassword.addEventListener('keyup', validatePassword);
+    });
+</script>
+</body>
+</html>

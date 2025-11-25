@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Edytuj spotkanie - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Komunikaty -->
+    <div th:if="${message}" class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>
+        <span th:text="${message}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <!-- Główne informacje -->
+        <div class="col-lg-8">
+            <!-- Uczestnicy -->
+            <div class="mb-4">
+                <h6><i class="bi bi-people me-2"></i>Uczestnicy</h6>
+                <p class="text-muted" th:if="${meeting.maxParticipants}">
+                    Maksymalnie: <span th:text="${meeting.maxParticipants}"></span> osób
+                </p>
+                <div th:if="${participants != null and !participants.empty}">
+                    <div th:each="participant : ${participants}" class="d-flex align-items-center mb-2">
+                        <i class="bi bi-person-circle me-2 text-muted"></i>
+                        <span th:text="${participant.user.firstName + ' ' + participant.user.lastName}"></span>
+                        <span class="badge ms-2"
+                              th:classappend="${participant.status.name() == 'CONFIRMED'} ? 'bg-success' : 'bg-secondary'">
+                <span th:text="${participant.status?.displayName}"></span>
+            </span>
+                    </div>
+                </div>
+                <div th:if="${participants == null or participants.empty}" class="text-muted">
+                    Brak uczestników
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar z akcjami -->
+        <div class="col-lg-4">
+            <!-- Akcje -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0"><i class="bi bi-lightning me-2"></i>Akcje</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <!-- Dołącz do spotkania -->
+                        <a th:if="${meeting.visibility.name() == 'PUBLIC' and isParticipant == false and userId != null}"
+                           th:href="@{/meetings/{id}/join(id=${meeting.id})}"
+                           class="btn btn-success">
+                            <i class="bi bi-plus-circle me-2"></i>Dołącz do spotkania
+                        </a>
+
+                        <!-- Edytuj (tylko organizator) -->
+                        <a th:if="${meeting.organizer.id == userId}"
+                           th:href="@{/meetings/{id}/edit(id=${meeting.id})}"
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-pencil me-2"></i>Edytuj spotkanie
+                        </a>
+
+                        <!-- Duplikuj -->
+                        <a th:if="${meeting.organizer.id == userId}"
+                           th:href="@{/meetings/{id}/duplicate(id=${meeting.id})}"
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-copy me-2"></i>Duplikuj spotkanie
+                        </a>
+
+                        <!-- Usuń (tylko organizator) -->
+                        <form th:if="${meeting.organizer.id == userId}"
+                              th:action="@{/meetings/{id}/delete(id=${meeting.id})}"
+                              method="post"
+                              class="d-grid"
+                              onsubmit="return confirm('Czy na pewno chcesz usunąć to spotkanie?')">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-2"></i>Usuń spotkanie
+                            </button>
+                        </form>
+
+                        <!-- Powrót -->
+                        <a th:href="@{/meetings}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Powrót do listy
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informacje dodatkowe -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>Informacje</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Widoczność:</strong>
+                        <span class="badge float-end"
+                              th:classappend="${meeting.visibility.name() == 'PUBLIC'} ? 'bg-info' : 'bg-secondary'">
+                            <span th:text="${meeting.visibility?.displayName}"></span>
+                        </span>
+                    </div>
+                    <div class="mb-2" th:if="${meeting.createdAt}">
+                        <strong>Utworzono:</strong>
+                        <span class="float-end text-muted"
+                              th:text="${#temporals.format(meeting.createdAt, 'dd.MM.yyyy')}"></span>
+                    </div>
+                    <div th:if="${meeting.updatedAt}">
+                        <strong>Zaktualizowano:</strong>
+                        <span class="float-end text-muted"
+                              th:text="${#temporals.format(meeting.updatedAt, 'dd.MM.yyyy')}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-dark text-light mt-5 py-4">
+    <div class="container text-center">
+        <p>&copy; 2024 MeetHub. Wszelkie prawa zastrzeżone.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

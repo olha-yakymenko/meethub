@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Edytuj spotkanie - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Utwórz nowe spotkanie
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Komunikat błędu -->
+                    <div th:if="${error}" class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span th:text="${error}"></span>
+                    </div>
+
+                    <!-- Formularz -->
+                    <form th:action="@{/meetings/create}" th:object="${createMeetingRequest}" method="post">
+
+                        <!-- Tytuł -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Tytuł spotkania *</label>
+                            <input type="text" class="form-control" id="title"
+                                   th:field="*{title}"
+                                   placeholder="Nazwa spotkania" required>
+                            <div th:if="${#fields.hasErrors('title')}" class="text-danger small">
+                                <span th:errors="*{title}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Opis -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Opis</label>
+                            <textarea class="form-control" id="description"
+                                      th:field="*{description}"
+                                      rows="3"
+                                      placeholder="Opis spotkania..."></textarea>
+                            <div th:if="${#fields.hasErrors('description')}" class="text-danger small">
+                                <span th:errors="*{description}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Agenda -->
+                        <div class="mb-3">
+                            <label for="agenda" class="form-label">Agenda</label>
+                            <textarea class="form-control" id="agenda"
+                                      th:field="*{agenda}"
+                                      rows="3"
+                                      placeholder="Plan spotkania..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <!-- Typ spotkania -->
+                            <div class="col-md-6 mb-3">
+                                <label for="type" class="form-label">Typ spotkania *</label>
+                                <select class="form-select" id="type" th:field="*{type}" required>
+                                    <option value="">Wybierz typ...</option>
+                                    <option value="ONLINE">Online</option>
+                                    <option value="IN_PERSON">Osobiście</option>
+                                    <option value="HYBRID">Hybrydowe</option>
+                                </select>
+                            </div>
+
+                            <!-- Widoczność -->
+                            <div class="col-md-6 mb-3">
+                                <label for="visibility" class="form-label">Widoczność *</label>
+                                <select class="form-select" id="visibility" th:field="*{visibility}" required>
+                                    <option value="">Wybierz widoczność...</option>
+                                    <option value="PUBLIC">Publiczne</option>
+                                    <option value="PRIVATE">Prywatne</option>
+                                    <option value="INVITE_ONLY">Tylko zaproszeni</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Data rozpoczęcia -->
+                            <div class="col-md-6 mb-3">
+                                <label for="startDate" class="form-label">Data rozpoczęcia *</label>
+                                <input type="datetime-local" class="form-control" id="startDate"
+                                       th:field="*{startDate}" required>
+                                <div th:if="${#fields.hasErrors('startDate')}" class="text-danger small">
+                                    <span th:errors="*{startDate}"></span>
+                                </div>
+                            </div>
+
+                            <!-- Data zakończenia -->
+                            <div class="col-md-6 mb-3">
+                                <label for="endDate" class="form-label">Data zakończenia *</label>
+                                <input type="datetime-local" class="form-control" id="endDate"
+                                       th:field="*{endDate}" required>
+                                <div th:if="${#fields.hasErrors('endDate')}" class="text-danger small">
+                                    <span th:errors="*{endDate}"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Maksymalna liczba uczestników -->
+                        <div class="mb-3">
+                            <label for="maxParticipants" class="form-label">Maksymalna liczba uczestników</label>
+                            <input type="number" class="form-control" id="maxParticipants"
+                                   th:field="*{maxParticipants}"
+                                   min="1" max="1000"
+                                   placeholder="Np. 50">
+                        </div>
+
+                        <!-- Tagi -->
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tagi (oddzielone przecinkami)</label>
+                            <input type="text" class="form-control" id="tags"
+                                   th:field="*{tags}"
+                                   placeholder="business, networking, programowanie">
+                            <div class="form-text">Wpisz tagi oddzielone przecinkami</div>
+                        </div>
+
+                        <!-- Przyciski -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Utwórz spotkanie
+                            </button>
+                            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Anuluj
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Walidacja dat
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+
+        function validateDates() {
+            if (startDate.value && endDate.value) {
+                const start = new Date(startDate.value);
+                const end = new Date(endDate.value);
+
+                if (end <= start) {
+                    endDate.setCustomValidity('Data zakończenia musi być późniejsza niż data rozpoczęcia');
+                } else {
+                    endDate.setCustomValidity('');
+                }
+            }
+        }
+
+        startDate.addEventListener('change', validateDates);
+        endDate.addEventListener('change', validateDates);
+    });
+</script>
+</body>
+</html>

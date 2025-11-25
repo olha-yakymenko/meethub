@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Edytuj spotkanie - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Edytuj spotkanie
+                    </h4>
+                </div>
+                <div class="card-body">
+
+                    <!-- Komunikaty -->
+                    <div th:if="${message}" class="alert alert-success alert-dismissible fade show">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${message}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Formularz edycji -->
+                    <form th:action="@{/meetings/{id}/edit(id=${meetingId})}"
+                          th:object="${updateMeetingRequest}"
+                          method="post"
+                          novalidate>
+
+                        <!-- Tytuł -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Tytuł spotkania *</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="title"
+                                   th:field="*{title}"
+                                   required
+                                   minlength="3"
+                                   maxlength="100">
+                            <div class="form-text">Tytuł powinien mieć od 3 do 100 znaków</div>
+                            <div th:if="${#fields.hasErrors('title')}" class="text-danger">
+                                <small th:errors="*{title}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Opis -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Opis</label>
+                            <textarea class="form-control"
+                                      id="description"
+                                      th:field="*{description}"
+                                      rows="3"
+                                      maxlength="500"
+                                      placeholder="Opisz cel i tematykę spotkania..."></textarea>
+                            <div class="form-text">Maksymalnie 500 znaków</div>
+                            <div th:if="${#fields.hasErrors('description')}" class="text-danger">
+                                <small th:errors="*{description}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Agenda -->
+                        <div class="mb-3">
+                            <label for="agenda" class="form-label">Agenda</label>
+                            <textarea class="form-control"
+                                      id="agenda"
+                                      th:field="*{agenda}"
+                                      rows="4"
+                                      maxlength="1000"
+                                      placeholder="Plan spotkania, punkty do omówienia..."></textarea>
+                            <div class="form-text">Maksymalnie 1000 znaków</div>
+                            <div th:if="${#fields.hasErrors('agenda')}" class="text-danger">
+                                <small th:errors="*{agenda}"></small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Typ spotkania -->
+                            <div class="col-md-6 mb-3">
+                                <label for="type" class="form-label">Typ spotkania *</label>
+                                <select class="form-select"
+                                        id="type"
+                                        th:field="*{type}"
+                                        required>
+                                    <option value="">Wybierz typ...</option>
+                                    <option th:each="type : ${T(com.meethub.domain.model.enums.MeetingType).values()}"
+                                            th:value="${type}"
+                                            th:text="${type.displayName}">
+                                    </option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('type')}" class="text-danger">
+                                    <small th:errors="*{type}"></small>
+                                </div>
+                            </div>
+
+                            <!-- Widoczność -->
+                            <div class="col-md-6 mb-3">
+                                <label for="visibility" class="form-label">Widoczność *</label>
+                                <select class="form-select"
+                                        id="visibility"
+                                        th:field="*{visibility}"
+                                        required>
+                                    <option value="">Wybierz widoczność...</option>
+                                    <option th:each="visibility : ${T(com.meethub.domain.model.enums.MeetingVisibility).values()}"
+                                            th:value="${visibility}"
+                                            th:text="${visibility.displayName}">
+                                    </option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('visibility')}" class="text-danger">
+                                    <small th:errors="*{visibility}"></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Data rozpoczęcia -->
+                            <div class="col-md-6 mb-3">
+                                <label for="startDate" class="form-label">Data rozpoczęcia *</label>
+                                <input type="datetime-local"
+                                       class="form-control"
+                                       id="startDate"
+                                       th:field="*{startDate}"
+                                       required>
+                                <div th:if="${#fields.hasErrors('startDate')}" class="text-danger">
+                                    <small th:errors="*{startDate}"></small>
+                                </div>
+                            </div>
+
+                            <!-- Data zakończenia -->
+                            <div class="col-md-6 mb-3">
+                                <label for="endDate" class="form-label">Data zakończenia *</label>
+                                <input type="datetime-local"
+                                       class="form-control"
+                                       id="endDate"
+                                       th:field="*{endDate}"
+                                       required>
+                                <div th:if="${#fields.hasErrors('endDate')}" class="text-danger">
+                                    <small th:errors="*{endDate}"></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Maksymalna liczba uczestników -->
+                        <div class="mb-3">
+                            <label for="maxParticipants" class="form-label">Maksymalna liczba uczestników</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="maxParticipants"
+                                   th:field="*{maxParticipants}"
+                                   min="1"
+                                   max="1000"
+                                   placeholder="Np. 10">
+                            <div class="form-text">Pozostaw puste dla nieograniczonej liczby uczestników</div>
+                            <div th:if="${#fields.hasErrors('maxParticipants')}" class="text-danger">
+                                <small th:errors="*{maxParticipants}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Tagi -->
+                        <div class="mb-4">
+                            <label for="tags" class="form-label">Tagi</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="tags"
+                                   th:field="*{tags}"
+                                   placeholder="Np. spotkanie, projekt, omówienie"
+                                   maxlength="200">
+                            <div class="form-text">Tagi oddziel przecinkami (maksymalnie 200 znaków)</div>
+                            <div th:if="${#fields.hasErrors('tags')}" class="text-danger">
+                                <small th:errors="*{tags}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Przyciski akcji -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>Zapisz zmiany
+                            </button>
+                            <a th:href="@{/meetings/{id}(id=${meetingId})}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-2"></i>Anuluj
+                            </a>
+                            <a th:href="@{/meetings}" class="btn btn-outline-secondary ms-auto">
+                                <i class="bi bi-arrow-left me-2"></i>Powrót do listy
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Walidacja dat
+        document.addEventListener('DOMContentLoaded', function() {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            function validateDates() {
+                if (startDateInput.value && endDateInput.value) {
+                    const startDate = new Date(startDateInput.value);
+                    const endDate = new Date(endDateInput.value);
+
+                    if (endDate <= startDate) {
+                        endDateInput.setCustomValidity('Data zakończenia musi być późniejsza niż data rozpoczęcia');
+                    } else {
+                        endDateInput.setCustomValidity('');
+                    }
+                }
+            }
+
+            startDateInput.addEventListener('change', validateDates);
+            endDateInput.addEventListener('change', validateDates);
+        });
+    </script>
+</div>
+</body>
+</html>
