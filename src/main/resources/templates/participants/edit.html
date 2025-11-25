@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edytuj uczestnika - MeetHub</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Komunikat o błędzie -->
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Nagłówek -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Edytuj uczestnika
+                </h1>
+                <a th:href="@{/meetings/{meetingId}/participants(meetingId=${meetingId})}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Powrót do listy
+                </a>
+            </div>
+
+            <!-- Informacje o użytkowniku -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person me-2"></i>
+                        Informacje o użytkowniku
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Imię i nazwisko:</strong>
+                            <p th:text="${participant.user.firstName + ' ' + participant.user.lastName}">-</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Email:</strong>
+                            <p th:text="${participant.user.email}">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formularz edycji -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Ustawienia uczestnika
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/meetings/{meetingId}/participants/{participantId}/update(meetingId=${meetingId}, participantId=${participantId})}"
+                          method="post"
+                          th:object="${updateRequest}">
+
+                        <!-- Status uczestnika -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label">
+                                <strong>Status uczestnictwa</strong>
+                            </label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">-- Wybierz status --</option>
+                                <option th:each="status : ${participantStatuses}"
+                                        th:value="${status}"
+                                        th:text="${status.displayName}"
+                                        th:selected="${status == participant.status}">
+                                </option>
+                            </select>
+                            <div class="form-text">
+                                Określ aktualny status uczestnictwa użytkownika w spotkaniu.
+                            </div>
+                        </div>
+
+                        <!-- Poziom uprawnień -->
+                        <div class="mb-3">
+                            <label for="permissionLevel" class="form-label">
+                                <strong>Poziom uprawnień</strong>
+                            </label>
+                            <select class="form-select" id="permissionLevel" name="permissionLevel" required>
+                                <option value="">-- Wybierz poziom uprawnień --</option>
+                                <option th:each="permission : ${permissionLevels}"
+                                        th:value="${permission}"
+                                        th:text="${permission.displayName}"
+                                        th:selected="${permission == participant.permissionLevel}">
+                                </option>
+                            </select>
+                            <div class="form-text">
+                                Określ poziom uprawnień użytkownika w spotkaniu.
+                            </div>
+                        </div>
+
+                        <!-- Komentarz (opcjonalny) -->
+                        <div class="mb-4">
+                            <label for="comment" class="form-label">
+                                <strong>Komentarz (opcjonalny)</strong>
+                            </label>
+                            <textarea class="form-control"
+                                      id="comment"
+                                      name="comment"
+                                      rows="3"
+                                      placeholder="Dodaj komentarz dotyczący tego uczestnika..."
+                                      th:text="${participant.comment}"></textarea>
+                            <div class="form-text">
+                                Komentarz będzie widoczny tylko dla organizatorów.
+                            </div>
+                        </div>
+
+                        <!-- Przyciski akcji -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a th:href="@{/meetings/{meetingId}/participants(meetingId=${meetingId})}"
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Anuluj
+                            </a>
+
+                            <div>
+                                <button type="button" class="btn btn-outline-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                    <i class="bi bi-trash me-2"></i>
+                                    Usuń
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    Zapisz zmiany
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informacje o aktualnym uczestniku -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Aktualne informacje
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Obecny status:</strong>
+                            <br>
+                            <span th:text="${participant.status.displayName}">-</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Obecne uprawnienia:</strong>
+                            <br>
+                            <span th:text="${participant.permissionLevel.displayName}">-</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Data odpowiedzi:</strong>
+                            <br>
+                            <span th:if="${participant.responseDate}"
+                                  th:text="${#temporals.format(participant.responseDate, 'dd.MM.yyyy HH:mm')}">
+                            </span>
+                            <span th:unless="${participant.responseDate}" class="text-muted">-</span>
+                        </div>
+                    </div>
+                    <div class="row mt-3" th:if="${participant.comment}">
+                        <div class="col-12">
+                            <strong>Komentarz:</strong>
+                            <p th:text="${participant.comment}" class="mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal potwierdzenia usunięcia -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Potwierdzenie usunięcia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz usunąć uczestnika
+                    <strong th:text="${participant.user.firstName + ' ' + participant.user.lastName}"></strong>
+                    z tego spotkania?</p>
+                <p class="text-danger"><small>Tej operacji nie można cofnąć.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <form th:action="@{/meetings/{meetingId}/participants/{participantId}/remove(meetingId=${meetingId}, participantId=${participantId})}"
+                      method="post" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>
+                        Usuń uczestnika
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

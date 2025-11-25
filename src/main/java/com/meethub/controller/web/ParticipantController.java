@@ -1,5 +1,7 @@
 package com.meethub.controller.web;
 
+import com.meethub.domain.model.enums.ParticipationStatus;
+import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
@@ -16,6 +18,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -114,6 +117,39 @@ public class ParticipantController {
         return "redirect:/meetings/" + meetingId + "/participants";
     }
 
+//    @GetMapping("/{participantId}/edit")
+//    public String showEditForm(@PathVariable Long meetingId,
+//                               @PathVariable Long participantId,
+//                               @AuthenticationPrincipal CustomUserDetails userDetails,
+//                               Model model) {
+//        try {
+//            // Sprawdź uprawnienia
+//            if (!participantService.canEditParticipant(meetingId, participantId, userDetails.getId())) {
+//                model.addAttribute("error", "Nie masz uprawnień do edycji tego uczestnika");
+//                return "redirect:/meetings/" + meetingId + "/participants";
+//            }
+//
+//            ParticipantResponse participant = participantService.getParticipant(participantId);
+//            model.addAttribute("participant", participant);
+//            model.addAttribute("meetingId", meetingId);
+//            model.addAttribute("participantId", participantId);
+//            model.addAttribute("updateRequest", new UpdateParticipantRequest());
+//
+//            // Dodaj enumy do modelu
+//            model.addAttribute("participantStatuses",
+//                    java.util.Arrays.asList(com.meethub.domain.model.enums.ParticipationStatus.values()));
+//            model.addAttribute("permissionLevels",
+//                    java.util.Arrays.asList(com.meethub.domain.model.enums.PermissionLevel.values()));
+//
+//            return "participants/edit";
+//        } catch (Exception e) {
+//            log.error("Błąd podczas ładowania formularza edycji", e);
+//            return "redirect:/meetings/" + meetingId + "/participants?error=Nie można załadować formularza";
+//        }
+//    }
+
+
+
     @GetMapping("/{participantId}/edit")
     public String showEditForm(@PathVariable Long meetingId,
                                @PathVariable Long participantId,
@@ -127,10 +163,27 @@ public class ParticipantController {
             }
 
             ParticipantResponse participant = participantService.getParticipant(participantId);
+
+            // Debug - sprawdźmy co mamy w participant
+            log.info("Participant status: {}", participant.getStatus());
+            log.info("Participant permission level: {}", participant.getPermissionLevel());
+
+            // Pobierz enumy
+            ParticipationStatus[] statuses = ParticipationStatus.values();
+            PermissionLevel[] levels = PermissionLevel.values();
+
+            // Debug - sprawdźmy enumy
+            log.info("Available statuses: {}", Arrays.toString(statuses));
+            log.info("Available permission levels: {}", Arrays.toString(levels));
+
             model.addAttribute("participant", participant);
             model.addAttribute("meetingId", meetingId);
             model.addAttribute("participantId", participantId);
             model.addAttribute("updateRequest", new UpdateParticipantRequest());
+
+            // Dodaj enumy do modelu
+            model.addAttribute("participantStatuses", statuses);
+            model.addAttribute("permissionLevels", levels);
 
             return "participants/edit";
         } catch (Exception e) {
