@@ -3,6 +3,7 @@ package com.meethub.domain.model.enums;
 public enum MeetingType {
     ONLINE("Online"),
     IN_PERSON("Osobiście"),
+    PHYSICAL("Physical"),
     HYBRID("Hybrydowe");
 
     private final String displayName;

@@ -2,6 +2,7 @@ package com.meethub.domain.repository.jpa;
 
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.enums.MeetingStatus;
+import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -77,4 +78,48 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
 
     @Query("SELECT COUNT(m) FROM Meeting m WHERE m.organizer.id = :organizerId AND m.startDate > :now")
     long countUpcomingMeetingsByOrganizerId(@Param("organizerId") Long organizerId, @Param("now") LocalDateTime now);
+
+
+    // Metody dla powiadomień
+    @Query("SELECT COUNT(m) FROM Meeting m JOIN m.participants mp WHERE mp.user.id = :userId AND m.startDate > CURRENT_TIMESTAMP")
+    Long countUpcomingMeetingsByUserId(@Param("userId") Long userId);
+
+
+    @Query("SELECT COUNT(m) FROM Meeting m JOIN m.participants mp WHERE mp.user.id = :userId AND m.startDate > :now")
+    Long countUpcomingMeetingsByUserIdAndDate(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+
+
+    // Nadchodzące spotkania użytkownika
+    @Query("SELECT m FROM Meeting m " +
+            "JOIN m.participants mp " +
+            "JOIN mp.user u " +
+            "WHERE u.id = :userId AND m.startDate > :now " +
+            "ORDER BY m.startDate ASC")
+    List<Meeting> findUpcomingMeetingsByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+
+    @Query("SELECT m FROM Meeting m WHERE " +
+            "(:search IS NULL OR LOWER(m.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(m.description) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+            "(:type IS NULL OR m.type = :type) AND " +
+            "(:status IS NULL OR m.status = :status)")
+    Page<Meeting> findByFilters(@Param("search") String search,
+                                @Param("type") MeetingType type,
+                                @Param("status") MeetingStatus status,
+                                Pageable pageable);
+
+
+    default List<Meeting> findUpcomingPublicMeetings() {
+        return findUpcomingPublicMeetings(LocalDateTime.now());
+    }
+
+    // Spotkania wymagające przypomnień
+    @Query("SELECT m FROM Meeting m WHERE m.startDate BETWEEN :start AND :end AND m.status = 'CONFIRMED'")
+    List<Meeting> findMeetingsStartingBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(m) FROM Meeting m WHERE m.status = 'CONFIRMED'")
+    Long countConfirmedMeetings();
+
+    // Spotkania z określonym tagiem
+    @Query("SELECT m FROM Meeting m JOIN m.tags t WHERE t = :tag")
+    List<Meeting> findByTag(@Param("tag") String tag);
 }

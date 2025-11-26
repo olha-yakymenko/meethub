@@ -46,4 +46,42 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByEmailContainingOrFirstNameContainingOrLastNameContaining(
                 String email, String firstName, String lastName);
 
+
+    @Query("SELECT u FROM User u WHERE u.emailNotificationsEnabled = true")
+    List<User> findByEmailNotificationsEnabledTrue();
+
+    @Query("SELECT u FROM User u WHERE u.pushNotificationsEnabled = true")
+    List<User> findByPushNotificationsEnabledTrue();
+
+    @Query("SELECT u FROM User u WHERE u.smsNotificationsEnabled = true AND u.phoneNumber IS NOT NULL")
+    List<User> findBySmsNotificationsEnabledTrue();
+
+    // Metoda dla użytkowników związanych ze spotkaniem
+    @Query("SELECT DISTINCT u FROM User u " +
+            "LEFT JOIN u.meetingParticipants mp " +
+            "LEFT JOIN mp.meeting m " +
+            "WHERE m.id = :meetingId")
+    List<User> findUsersByMeetingId(@Param("meetingId") Long meetingId);
+
+    // Wyszukiwanie użytkowników z określonym kanałem powiadomień
+    @Query("SELECT u FROM User u JOIN u.enabledNotificationChannels enc WHERE enc = :channel")
+    List<User> findByEnabledNotificationChannelsContaining(@Param("channel") String channel);
+
+    // Statystyki
+    @Query("SELECT COUNT(u) FROM User u WHERE u.enabled = true")
+    Long countActiveUsers();
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.emailNotificationsEnabled = true")
+    Long countUsersWithEmailNotifications();
+
+    // Wyszukiwanie z paginacją i filtrami
+    @Query("SELECT u FROM User u WHERE " +
+            "(:search IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')))")
+    List<User> findBySearchTerm(@Param("search") String search);
+
+
+    List<User> findByDigestEnabledTrue();
+
 }

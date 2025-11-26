@@ -182,6 +182,7 @@ import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.request.UserRegistrationRequest;
 import com.meethub.domain.model.response.DashboardStatsResponse;
 import com.meethub.domain.model.response.MeetingResponse;
+import com.meethub.domain.model.response.NotificationResponse;
 import com.meethub.domain.model.response.UserResponse;
 import com.meethub.domain.repository.jpa.UserRepository;
 import com.meethub.domain.service.*;
@@ -216,6 +217,7 @@ public class WebController {
     private final MeetingParticipantService participantService;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     // METODY POMOCNICZE - MUSZĄ BYĆ NA POCZĄTKU!
     @ModelAttribute("currentUserId")
@@ -615,23 +617,23 @@ public class WebController {
         }
     }
 
-    @GetMapping("/profile")
-    public String profile(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-
-        model.addAttribute("userId", userDetails.getId());
-        try {
-            User user = userRepository.findById(userDetails.getId())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            model.addAttribute("user", user);
-        } catch (Exception e) {
-            model.addAttribute("error", "Nie można załadować danych użytkownika");
-        }
-
-        return "user/profile";
-    }
+//    @GetMapping("/profile")
+//    public String profile(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
+//        if (userDetails == null) {
+//            return "redirect:/login";
+//        }
+//
+//        model.addAttribute("userId", userDetails.getId());
+//        try {
+//            User user = userRepository.findById(userDetails.getId())
+//                    .orElseThrow(() -> new RuntimeException("User not found"));
+//            model.addAttribute("user", user);
+//        } catch (Exception e) {
+//            model.addAttribute("error", "Nie można załadować danych użytkownika");
+//        }
+//
+//        return "user/profile";
+//    }
 
     @GetMapping("/dashboard")
     public String dashboard(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
@@ -681,6 +683,40 @@ public class WebController {
         }
     }
 
+
+//    @GetMapping("/profile/notifications")
+//    public String profileNotifications(
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "20") int size,
+//            Model model) {
+//
+//        if (userDetails == null) {
+//            return "redirect:/login";
+//        }
+//
+//        Pageable pageable = PageRequest.of(page, size);
+//        Page<NotificationResponse> notifications = notificationService.getUserNotifications(
+//                userDetails.getId(), pageable);
+//
+//        model.addAttribute("notifications", notifications.getContent());
+//        model.addAttribute("currentPage", page);
+//        model.addAttribute("totalPages", notifications.getTotalPages());
+//        model.addAttribute("totalItems", notifications.getTotalElements());
+//        model.addAttribute("unreadCount", notificationService.getUnreadCount(userDetails.getId()));
+//
+//        return "user/notifications";
+//    }
+
+//    @PostMapping("/profile/notifications/mark-all-read")
+//    public String markAllNotificationsRead(@AuthenticationPrincipal CustomUserDetails userDetails) {
+//        if (userDetails == null) {
+//            return "redirect:/login";
+//        }
+//
+//        notificationService.markAllAsRead(userDetails.getId());
+//        return "redirect:/profile/notifications";
+//    }
 
 
 

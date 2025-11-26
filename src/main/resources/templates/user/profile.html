@@ -1,54 +1,150 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mój profil - MeetHub</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <title>Mój Pulpit - MeetHub</title>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<div th:fragment="content">
+
     <div class="container">
-        <a class="navbar-brand" th:href="@{/dashboard}">
-            <i class="bi bi-calendar-event me-2"></i>MeetHub
-        </a>
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link" th:href="@{/dashboard}">Pulpit</a>
-            <a class="nav-link" th:href="@{/meetings}">Spotkania</a>
-            <a class="nav-link" th:href="@{/my-meetings}">Moje spotkania</a>
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="bg-white bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center"
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-fill text-white" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+            <div class="col">
+                <h2 th:text="${user?.firstName + ' ' + user?.lastName}">Użytkownik</h2>
+                <p class="mb-0" th:text="${user?.email}">email@example.com</p>
+                <span class="badge bg-light text-dark" th:text="${user?.role}">ROLE</span>
+            </div>
+            <div class="col-auto">
+                <a th:href="@{/profile/settings}" class="btn btn-light">
+                    <i class="bi bi-gear me-2"></i>Ustawienia
+                </a>
+            </div>
         </div>
     </div>
-</nav>
+</div>
 
-<main class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<main class="container">
+    <!-- Komunikaty -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <!-- Statystyki -->
+        <div class="col-md-4 mb-4">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-bell text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2" th:text="${user?.totalNotifications}">0</h3>
+                    <p class="text-muted">Wszystkie powiadomienia</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-bell-fill text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2" th:text="${user?.unreadNotifications}">0</h3>
+                    <p class="text-muted">Nieprzeczytane</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-check text-success" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2" th:text="${user?.upcomingMeetings}">0</h3>
+                    <p class="text-muted">Nadchodzące spotkania</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Ostatnie powiadomienia -->
+        <div class="col-lg-8">
             <div class="card">
-                <div class="card-header">
-                    <h4 class="card-title mb-0">
-                        <i class="bi bi-person-circle me-2"></i>Mój profil
-                    </h4>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bell me-2"></i>Ostatnie powiadomienia
+                    </h5>
+                    <a th:href="@{/profile/notifications}" class="btn btn-sm btn-outline-primary">
+                        Zobacz wszystkie
+                    </a>
                 </div>
                 <div class="card-body">
-                    <div class="text-center mb-4">
-                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center"
-                             style="width: 80px; height: 80px;">
-                            <i class="bi bi-person-fill text-white" style="font-size: 2rem;"></i>
+                    <div th:if="${recentNotifications.empty}" class="text-center text-muted py-4">
+                        <i class="bi bi-bell-slash" style="font-size: 3rem;"></i>
+                        <p class="mt-2">Brak powiadomień</p>
+                    </div>
+                    <div th:each="notification : ${recentNotifications}"
+                         class="notification-item mb-3"
+                         th:classappend="${notification.readAt == null} ? 'unread' : ''">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 th:text="${notification.title}" class="mb-1"></h6>
+                                <p th:text="${notification.message}" class="text-muted small mb-1"></p>
+                                <small class="text-muted" th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></small>
+                            </div>
+                            <span th:if="${notification.readAt == null}" class="badge bg-danger">Nowe</span>
                         </div>
-                        <h4 class="mt-3" th:text="${user?.firstName + ' ' + user?.lastName}">Użytkownik</h4>
-                        <p class="text-muted" th:text="${user?.email}">email@example.com</p>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Strona profilu w budowie. Funkcjonalność będzie dostępna wkrótce.
-                    </div>
-
+        <!-- Szybkie akcje -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning me-2"></i>Szybkie akcje
+                    </h5>
+                </div>
+                <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a th:href="@{/dashboard}" class="btn btn-primary">
-                            <i class="bi bi-arrow-left me-2"></i>Powrót do pulpitu
+                        <a th:href="@{/profile/notifications}" class="btn btn-outline-primary">
+                            <i class="bi bi-bell me-2"></i>Moje powiadomienia
                         </a>
+                        <a th:href="@{/profile/settings}" class="btn btn-outline-primary">
+                            <i class="bi bi-gear me-2"></i>Ustawienia powiadomień
+                        </a>
+                        <form th:action="@{/profile/notifications/mark-all-read}" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-check-all me-2"></i>Oznacz wszystkie jako przeczytane
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferencje powiadomień -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-sliders me-2"></i>Aktywne kanały
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:each="channel : ${user?.enabledChannels}">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        <span th:text="${channel}"></span>
+                    </div>
+                    <div th:if="${user?.enabledChannels.empty}" class="text-muted">
+                        Brak aktywnych kanałów
                     </div>
                 </div>
             </div>

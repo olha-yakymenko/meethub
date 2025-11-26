@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Mój Pulpit - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+<div class="row">
+        <div class="col-md-3">
+            <div class="list-group">
+                <a th:href="@{/profile}" class="list-group-item list-group-item-action">
+                    <i class="bi bi-person me-2"></i>Profil
+                </a>
+                <a th:href="@{/profile/notifications}" class="list-group-item list-group-item-action">
+                    <i class="bi bi-bell me-2"></i>Powiadomienia
+                </a>
+                <a th:href="@{/profile/settings}" class="list-group-item list-group-item-action active">
+                    <i class="bi bi-gear me-2"></i>Ustawienia
+                </a>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-sliders me-2"></i>Ustawienia powiadomień
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Komunikaty -->
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <span th:text="${success}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form th:action="@{/profile/notifications/preferences}" method="post">
+                        <!-- Kanały powiadomień -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-broadcast me-2"></i>Kanały powiadomień
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="emailNotifications" name="emailNotificationsEnabled"
+                                               th:checked="${user?.emailNotificationsEnabled}">
+                                        <label class="form-check-label" for="emailNotifications">
+                                            <i class="bi bi-envelope me-2"></i>Powiadomienia email
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="pushNotifications" name="pushNotificationsEnabled"
+                                               th:checked="${user?.pushNotificationsEnabled}">
+                                        <label class="form-check-label" for="pushNotifications">
+                                            <i class="bi bi-phone me-2"></i>Powiadomienia push
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="smsNotifications" name="smsNotificationsEnabled"
+                                               th:checked="${user?.smsNotificationsEnabled}">
+                                        <label class="form-check-label" for="smsNotifications">
+                                            <i class="bi bi-chat-dots me-2"></i>Powiadomienia SMS
+                                        </label>
+                                        <small class="form-text text-muted d-block">
+                                            Wymaga podania numeru telefonu
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Typy powiadomień -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-filter me-2"></i>Rodzaje powiadomień
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="meetingInvitations" name="meetingInvitations"
+                                               checked>
+                                        <label class="form-check-label" for="meetingInvitations">
+                                            Zaproszenia na spotkania
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="meetingReminders" name="meetingReminders"
+                                               checked>
+                                        <label class="form-check-label" for="meetingReminders">
+                                            Przypomnienia o spotkaniach
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="meetingUpdates" name="meetingUpdates"
+                                               checked>
+                                        <label class="form-check-label" for="meetingUpdates">
+                                            Aktualizacje spotkań
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="taskAssignments" name="taskAssignments"
+                                               checked>
+                                        <label class="form-check-label" for="taskAssignments">
+                                            Przypisania zadań
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Digest i harmonogram -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-collection me-2"></i>Podsumowania
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="digestEnabled" name="digestEnabled"
+                                               th:checked="${user?.digestEnabled}">
+                                        <label class="form-check-label" for="digestEnabled">
+                                            Wysyłaj podsumowania
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="digestFrequency" class="form-label">Częstotliwość podsumowań</label>
+                                        <select class="form-select" id="digestFrequency" name="digestFrequency">
+                                            <option value="DAILY" th:selected="${user?.digestFrequency == 'DAILY'}">Codziennie</option>
+                                            <option value="WEEKLY" th:selected="${user?.digestFrequency == 'WEEKLY'}">Tygodniowo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a th:href="@{/profile}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Zapisz zmiany
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

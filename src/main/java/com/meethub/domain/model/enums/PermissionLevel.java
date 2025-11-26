@@ -4,6 +4,7 @@ public enum PermissionLevel {
     VIEWER("Viewer"),
     PARTICIPANT("Participant"),
     CONTRIBUTOR("Contributor"),
+    ORGANIZER("Organizer"),
     MODERATOR("Moderator");
 
     private final String displayName;
