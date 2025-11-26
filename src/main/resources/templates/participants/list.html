@@ -262,6 +262,70 @@
                     </table>
                 </div>
 
+                <!-- W pliku participants/list.html, w tabeli uczestników: -->
+
+                <tr th:each="participant : ${participants}">
+                    <td>
+                        <strong th:text="${participant.user.firstName + ' ' + participant.user.lastName}"></strong>
+                    </td>
+                    <td th:text="${participant.user.email}"></td>
+                    <td>
+        <span th:classappend="${participant.status.name() == 'CONFIRMED'} ? 'badge bg-success' :
+                              (${participant.status.name() == 'PENDING'} ? 'badge bg-warning' :
+                              (${participant.status.name() == 'INVITED'} ? 'badge bg-primary' :
+                              (${participant.status.name() == 'DECLINED'} ? 'badge bg-danger' :
+                              (${participant.status.name() == 'TENTATIVE'} ? 'badge bg-info' : 'badge bg-secondary'))))"
+              th:text="${participant.status.displayName}">
+        </span>
+                    </td>
+                    <td>
+        <span th:classappend="${participant.permissionLevel.name() == 'MODERATOR'} ? 'badge bg-danger' :
+                              (${participant.permissionLevel.name() == 'CONTRIBUTOR'} ? 'badge bg-info' : 'badge bg-secondary')"
+              th:text="${participant.permissionLevel.displayName}">
+        </span>
+                    </td>
+                    <td>
+        <span th:if="${participant.responseDate}"
+              th:text="${#temporals.format(participant.responseDate, 'dd.MM.yyyy HH:mm')}">
+        </span>
+                        <span th:unless="${participant.responseDate}" class="text-muted">-</span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <!-- Akcje dla oczekujących (tylko organizator) -->
+                            <div th:if="${isOrganizer and participant.status.name() == 'PENDING'}">
+                                <form th:action="@{/meetings/{meetingId}/participants/{participantId}/approve(meetingId=${meetingId}, participantId=${participant.id})}"
+                                      method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-success btn-sm" title="Zaakceptuj">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                                <form th:action="@{/meetings/{meetingId}/participants/{participantId}/reject(meetingId=${meetingId}, participantId=${participant.id})}"
+                                      method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Odrzuć">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Edycja -->
+                            <a th:href="@{/meetings/{meetingId}/participants/{participantId}/edit(meetingId=${meetingId}, participantId=${participant.id})}"
+                               class="btn btn-outline-primary" title="Edytuj">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+
+                            <!-- Usuwanie -->
+                            <button th:if="${isOrganizer}"
+                                    th:data-user-name="${participant.user.firstName}"
+                                    th:data-participant-id="${participant.id}"
+                                    onclick="confirmDelete(this.getAttribute('data-user-name'), this.getAttribute('data-participant-id'))"
+                                    class="btn btn-outline-danger" title="Usuń">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
                 <!-- Pusta lista -->
                 <div th:if="${participants.empty}" class="text-center py-4">
                     <i class="bi bi-people display-1 text-muted"></i>

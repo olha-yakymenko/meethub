@@ -1,10 +1,12 @@
 package com.meethub.controller.web;
 
+import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
+import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.domain.service.ParticipantService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
@@ -29,6 +31,7 @@ public class ParticipantController {
 
     private final ParticipantService participantService;
     private final MeetingService meetingService;
+    private final MeetingRepository meetingRepository;
 
     @GetMapping
     public String getParticipants(@PathVariable Long meetingId,
@@ -293,5 +296,127 @@ public class ParticipantController {
             model.addAttribute("error", "Błąd podczas ustawiania statusu: " + e.getMessage());
             return "participants/confirmation-error";
         }
+    }
+
+
+    // W ParticipantController.java dodaj:
+
+//    @PostMapping("/join")
+//    public String joinMeeting(@PathVariable Long meetingId,
+//                              @AuthenticationPrincipal CustomUserDetails userDetails,
+//                              RedirectAttributes redirectAttributes) {
+//        try {
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            switch (meeting.getVisibility()) {
+//                case PUBLIC:
+//                    participantService.joinPublicMeeting(meetingId, userDetails.getId());
+//                    redirectAttributes.addFlashAttribute("message", "Dołączono do spotkania publicznego");
+//                    break;
+//
+//                case PRIVATE:
+//                    participantService.requestToJoinPrivateMeeting(meetingId, userDetails.getId());
+//                    redirectAttributes.addFlashAttribute("message", "Wysłano prośbę o dołączenie do spotkania prywatnego");
+//                    break;
+//
+//                case INVITE_ONLY:
+//                    redirectAttributes.addFlashAttribute("error", "To spotkanie jest dostępne tylko dla zaproszonych");
+//                    break;
+//            }
+//
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("error", "Błąd podczas dołączania: " + e.getMessage());
+//        }
+//
+//        return "redirect:/meetings/" + meetingId;
+//    }
+
+
+    @PostMapping("/join")
+    public String joinMeeting(@PathVariable Long meetingId,
+                              @AuthenticationPrincipal CustomUserDetails userDetails,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+            log.info("Attempting to join meeting {} with visibility {} by user {}",
+                    meetingId, meeting.getVisibility(), userDetails.getId());
+
+            switch (meeting.getVisibility()) {
+                case PUBLIC:
+                    log.info("Calling joinPublicMeeting for meeting {}", meetingId);
+                    participantService.joinPublicMeeting(meetingId, userDetails.getId());
+                    redirectAttributes.addFlashAttribute("success", "Dołączono do spotkania publicznego");
+                    break;
+
+                case PRIVATE:
+                    log.info("Calling requestToJoinPrivateMeeting for meeting {}", meetingId);
+                    participantService.requestToJoinPrivateMeeting(meetingId, userDetails.getId());
+                    redirectAttributes.addFlashAttribute("success", "Wysłano prośbę o dołączenie do spotkania prywatnego");
+                    break;
+
+                case INVITE_ONLY:
+                    redirectAttributes.addFlashAttribute("error", "To spotkanie jest dostępne tylko dla zaproszonych");
+                    break;
+            }
+
+        } catch (SecurityException e) {
+            log.warn("Security exception while joining meeting {}: {}", meetingId, e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation exception while joining meeting {}: {}", meetingId, e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error while joining meeting {}: {}", meetingId, e.getMessage(), e); // DODAJ FULL STACKTRACE
+            redirectAttributes.addFlashAttribute("error", "Błąd podczas dołączania: " + e.getMessage()); // POKAŻ PRAWDZIWY BŁĄD
+        }
+
+        return "redirect:/meetings/" + meetingId;
+    }
+
+    @PostMapping("/{participantId}/approve")
+    public String approveJoinRequest(@PathVariable Long meetingId,
+                                     @PathVariable Long participantId,
+                                     @AuthenticationPrincipal CustomUserDetails userDetails,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            participantService.approveJoinRequest(meetingId, participantId, userDetails.getId());
+            redirectAttributes.addFlashAttribute("message", "Zaakceptowano prośbę o dołączenie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Błąd podczas akceptowania: " + e.getMessage());
+        }
+
+        return "redirect:/meetings/" + meetingId + "/participants";
+    }
+
+    @PostMapping("/{participantId}/reject")
+    public String rejectJoinRequest(@PathVariable Long meetingId,
+                                    @PathVariable Long participantId,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            participantService.rejectJoinRequest(meetingId, participantId, userDetails.getId());
+            redirectAttributes.addFlashAttribute("message", "Odrzucono prośbę o dołączenie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Błąd podczas odrzucania: " + e.getMessage());
+        }
+
+        return "redirect:/meetings/" + meetingId + "/participants";
+    }
+
+    @PostMapping("/leave")
+    public String leaveMeeting(@PathVariable Long meetingId,
+                               @AuthenticationPrincipal CustomUserDetails userDetails,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            participantService.leaveMeeting(userDetails.getId(), meetingId);
+            redirectAttributes.addFlashAttribute("message", "Opuszczono spotkanie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Błąd podczas opuszczania spotkania: " + e.getMessage());
+        }
+
+        return "redirect:/meetings/" + meetingId;
     }
 }

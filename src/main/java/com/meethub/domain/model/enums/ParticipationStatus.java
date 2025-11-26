@@ -6,7 +6,9 @@ public enum ParticipationStatus {
     DECLINED("Declined"),
     TENTATIVE("Tentative"),
     WAITING_LIST("Waiting List"),
-    CANCELLED("Cancelled");
+    CANCELLED("Cancelled"),
+    PENDING("Pending");
+
 
     private final String displayName;
 

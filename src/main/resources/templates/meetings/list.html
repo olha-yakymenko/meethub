@@ -153,6 +153,40 @@
                                class="btn btn-sm btn-outline-secondary">Edytuj</a>
                         </div>
                     </div>
+
+                    <div class="participant-actions mt-3 pt-3 border-top">
+                        <!-- Dołącz do publicznego -->
+                        <div th:if="${meeting.visibility.name() == 'PUBLIC' and currentUserId != null}">
+                            <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Dołącz
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Zgłoś do prywatnego -->
+                        <div th:if="${meeting.visibility.name() == 'PRIVATE' and currentUserId != null}">
+                            <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-envelope me-1"></i>Zgłoś
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Dla niezalogowanych -->
+                        <div th:if="${currentUserId == null}">
+                            <a th:href="@{/login}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Zaloguj się
+                            </a>
+                        </div>
+
+                        <!-- Szczegóły -->
+                        <a th:href="@{/meetings/{id}(id=${meeting.id})}"
+                           class="btn btn-outline-secondary btn-sm float-end">
+                            <i class="bi bi-eye me-1"></i>Szczegóły
+                        </a>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>

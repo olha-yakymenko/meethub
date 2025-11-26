@@ -1,6 +1,7 @@
 // NotificationService.java
 package com.meethub.domain.service;
 
+import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.Notification;
 import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.NotificationChannel;
@@ -46,4 +47,13 @@ public interface NotificationService {
     // Agregacja
     void aggregateMeetingUpdates(Long meetingId);
     void sendAggregatedNotification(Long userId, NotificationType type, List<Long> referenceIds);
+
+    void sendParticipantJoinedNotification(User organizer, User participant, Meeting meeting);
+    void sendJoinRequestNotification(User organizer, User requester, Meeting meeting);
+    void sendRequestApprovedNotification(User user, Meeting meeting);
+    void sendRequestRejectedNotification(User user, Meeting meeting);
+
+    // METODY POMOCNICZE
+    boolean isNotificationAllowed(User user, NotificationType type, NotificationChannel channel);
+    String getUserPreference(User user, String key, String defaultValue);
 }

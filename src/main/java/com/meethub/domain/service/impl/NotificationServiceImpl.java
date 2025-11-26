@@ -324,7 +324,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     // Metody pomocnicze
-    private boolean isNotificationAllowed(User user, NotificationType type, NotificationChannel channel) {
+    public boolean isNotificationAllowed(User user, NotificationType type, NotificationChannel channel) {
         if (!user.isNotificationChannelEnabled(channel)) {
             return false;
         }
@@ -347,7 +347,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private String getUserPreference(User user, String key, String defaultValue) {
+    public String getUserPreference(User user, String key, String defaultValue) {
         return userPreferenceRepository.findByUserIdAndPreferenceKey(user.getId(), key)
                 .map(UserPreference::getPreferenceValue)
                 .orElse(defaultValue);
@@ -443,4 +443,122 @@ public class NotificationServiceImpl implements NotificationService {
         // Stwórz zwięzłą wiadomość agregującą wiele zdarzeń
         return "Masz " + referenceIds.size() + " nowych aktualizacji. Sprawdź szczegóły w aplikacji.";
     }
+
+
+    @Override
+    public void sendParticipantJoinedNotification(User organizer, User participant, Meeting meeting) {
+        log.info("Sending participant joined notification for meeting {} to organizer {}", meeting.getId(), organizer.getId());
+
+        if (!isNotificationAllowed(organizer, NotificationType.MEETING_UPDATE, NotificationChannel.EMAIL)) {
+            return;
+        }
+
+        Map<String, String> variables = new HashMap<>();
+        variables.put("organizerName", organizer.getFirstName());
+        variables.put("participantName", participant.getFullName());
+        variables.put("meetingTitle", meeting.getTitle());
+        variables.put("meetingDate", meeting.getStartDate().toString());
+        variables.put("currentParticipants", String.valueOf(getCurrentParticipantsCount(meeting.getId())));
+
+        createNotificationFromTemplate(
+                organizer.getId(),
+                "participant_joined",
+                variables,
+                NotificationType.MEETING_UPDATE,
+                NotificationChannel.EMAIL
+        );
+    }
+
+    @Override
+    public void sendJoinRequestNotification(User organizer, User requester, Meeting meeting) {
+        log.info("Sending join request notification for meeting {} to organizer {}", meeting.getId(), organizer.getId());
+
+        if (!isNotificationAllowed(organizer, NotificationType.MEETING_INVITATION, NotificationChannel.EMAIL)) {
+            return;
+        }
+
+        Map<String, String> variables = new HashMap<>();
+        variables.put("organizerName", organizer.getFirstName());
+        variables.put("requesterName", requester.getFullName());
+        variables.put("meetingTitle", meeting.getTitle());
+        variables.put("meetingDate", meeting.getStartDate().toString());
+        variables.put("requesterEmail", requester.getEmail());
+
+        createNotificationFromTemplate(
+                organizer.getId(),
+                "join_request",
+                variables,
+                NotificationType.MEETING_INVITATION,
+                NotificationChannel.EMAIL
+        );
+    }
+
+    @Override
+    public void sendRequestApprovedNotification(User user, Meeting meeting) {
+        log.info("Sending request approved notification for meeting {} to user {}", meeting.getId(), user.getId());
+
+        if (!isNotificationAllowed(user, NotificationType.MEETING_INVITATION, NotificationChannel.EMAIL)) {
+            return;
+        }
+
+        Map<String, String> variables = new HashMap<>();
+        variables.put("userName", user.getFirstName());
+        variables.put("meetingTitle", meeting.getTitle());
+        variables.put("meetingDate", meeting.getStartDate().toString());
+        variables.put("organizerName", meeting.getOrganizer().getFullName());
+
+        // Poprawka dla lokalizacji
+        String locationString = "Online";
+        if (meeting.getLocation() != null) {
+            locationString = meeting.getLocation().getName() != null ?
+                    meeting.getLocation().getName() :
+                    meeting.getLocation().toString();
+        }
+        variables.put("meetingLocation", locationString);
+
+        createNotificationFromTemplate(
+                user.getId(),
+                "request_approved",
+                variables,
+                NotificationType.MEETING_INVITATION,
+                NotificationChannel.EMAIL
+        );
+    }
+    @Override
+    public void sendRequestRejectedNotification(User user, Meeting meeting) {
+        log.info("Sending request rejected notification for meeting {} to user {}", meeting.getId(), user.getId());
+
+        if (!isNotificationAllowed(user, NotificationType.MEETING_UPDATE, NotificationChannel.EMAIL)) {
+            return;
+        }
+
+        Map<String, String> variables = new HashMap<>();
+        variables.put("userName", user.getFirstName());
+        variables.put("meetingTitle", meeting.getTitle());
+        variables.put("meetingDate", meeting.getStartDate().toString());
+        variables.put("organizerName", meeting.getOrganizer().getFullName());
+
+        createNotificationFromTemplate(
+                user.getId(),
+                "request_rejected",
+                variables,
+                NotificationType.MEETING_UPDATE,
+                NotificationChannel.EMAIL
+        );
+    }
+
+    // Metody pomocnicze
+    private long getCurrentParticipantsCount(Long meetingId) {
+        // Zakładając, że masz odpowiednie repozytorium
+        // W rzeczywistości potrzebujesz metody do zliczania potwierdzonych uczestników
+        try {
+            // Tymczasowe rozwiązanie - zwróć przykładową wartość
+            return 1L;
+        } catch (Exception e) {
+            log.warn("Could not get participants count for meeting {}", meetingId, e);
+            return 0L;
+        }
+    }
+
+
 }
