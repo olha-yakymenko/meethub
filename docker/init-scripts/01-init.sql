@@ -1291,3 +1291,35 @@ SELECT setval('meethub_schema.notification_schedules_id_seq', COALESCE((SELECT M
 
 -- Set default schema for user
 ALTER USER meethub_user SET search_path TO meethub_schema, public;
+
+
+
+-- Dodaj brakujące kolumny do tabeli meeting_resources
+ALTER TABLE meethub_schema.meeting_resources
+ADD COLUMN IF NOT EXISTS download_count INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- Dodaj indeksy dla lepszej wydajności
+CREATE INDEX IF NOT EXISTS idx_resource_uploaded_by ON meethub_schema.meeting_resources(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_resource_current ON meethub_schema.meeting_resources(is_current);
+CREATE INDEX IF NOT EXISTS idx_resource_uploaded_at ON meethub_schema.meeting_resources(uploaded_at DESC);
+
+-- Dodaj WSZYSTKIE brakujące kolumny do email_templates
+ALTER TABLE meethub_schema.email_templates
+ADD COLUMN IF NOT EXISTS name VARCHAR(200),
+ADD COLUMN IF NOT EXISTS category VARCHAR(100),
+ADD COLUMN IF NOT EXISTS description TEXT,
+ADD COLUMN IF NOT EXISTS variables_help TEXT,
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1,
+ADD COLUMN IF NOT EXISTS channel VARCHAR(50),
+ADD COLUMN IF NOT EXISTS available_variables TEXT;
+
+-- Ustaw domyślne wartości
+UPDATE meethub_schema.email_templates SET
+    name = template_key,
+    category = 'NOTIFICATION',
+    is_active = TRUE,
+    version = 1,
+    channel = 'EMAIL'
+WHERE name IS NULL OR category IS NULL OR is_active IS NULL;

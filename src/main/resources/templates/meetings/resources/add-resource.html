@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title th:text="'Dodaj zasób - ' + ${meeting?.title} + ' - MeetHub'">Dodaj zasób - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/meetings}">Spotkania</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/meetings/{id}(id=${meeting.id})}" th:text="${meeting.title}"></a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/meetings/{id}/resources(id=${meeting.id})}">Zasoby</a>
+                    </li>
+                    <li class="breadcrumb-item active">Dodaj zasób</li>
+                </ol>
+            </nav>
+            <h1 class="display-6">
+                <i class="bi bi-plus-circle me-2"></i>Dodaj zasób
+            </h1>
+            <p class="text-muted" th:text="${meeting.title}"></p>
+        </div>
+        <a th:href="@{/meetings/{id}/resources(id=${meeting.id})}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Powrót do zasobów
+        </a>
+    </div>
+
+    <!-- Formularz -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Komunikaty -->
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${success}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Komunikaty AJAX -->
+                    <div id="ajaxSuccess" class="alert alert-success alert-dismissible fade show" style="display: none;">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span id="successMessage"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div id="ajaxError" class="alert alert-danger alert-dismissible fade show" style="display: none;">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span id="errorMessage"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form id="resourceForm"
+                          th:action="@{/meetings/{id}/resources/add(id=${meeting.id})}"
+                          method="post"
+                          enctype="multipart/form-data"
+                          novalidate>
+
+                        <!-- Plik -->
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Plik *</label>
+                            <input type="file"
+                                   class="form-control"
+                                   id="file"
+                                   name="file"
+                                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip,.txt"
+                                   required>
+                            <div class="form-text">
+                                Obsługiwane formaty: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, MP4, MP3, ZIP, TXT<br>
+                                Maksymalny rozmiar: 50MB
+                            </div>
+                            <div id="fileError" class="text-danger small mt-1" style="display: none;"></div>
+                        </div>
+
+                        <!-- Nazwa pliku -->
+                        <div class="mb-3">
+                            <label for="originalFilename" class="form-label">Nazwa pliku *</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="originalFilename"
+                                   name="originalFilename"
+                                   placeholder="Np. Prezentacja projektu Q4"
+                                   required>
+                            <div class="form-text">Podaj czytelną nazwę pliku</div>
+                            <div id="filenameError" class="text-danger small mt-1" style="display: none;"></div>
+                        </div>
+
+                        <!-- Poziom dostępu -->
+                        <div class="mb-3">
+                            <label for="accessLevel" class="form-label">Poziom dostępu *</label>
+                            <select class="form-select"
+                                    id="accessLevel"
+                                    name="accessLevel"
+                                    required>
+                                <option value="">Wybierz poziom dostępu...</option>
+                                <option value="PUBLIC">Publiczny - dostępny dla wszystkich</option>
+                                <option value="PARTICIPANTS" selected>Uczestnicy - tylko dla uczestników spotkania</option>
+                                <option value="ORGANIZERS">Organizatorzy - tylko dla organizatorów</option>
+                                <option value="PRIVATE">Prywatny - tylko dla mnie</option>
+                            </select>
+                            <div id="accessLevelError" class="text-danger small mt-1" style="display: none;"></div>
+                        </div>
+
+                        <!-- Tagi -->
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tagi</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="tags"
+                                   name="tags"
+                                   placeholder="prezentacja, projekt, raport">
+                            <div class="form-text">Tagi oddziel przecinkami</div>
+                        </div>
+
+                        <!-- Opis -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Opis (opcjonalnie)</label>
+                            <textarea class="form-control"
+                                      id="description"
+                                      name="description"
+                                      rows="3"
+                                      placeholder="Krótki opis zasobu..."></textarea>
+                        </div>
+
+                        <!-- Przyciski -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="bi bi-upload me-2"></i>Dodaj zasób
+                            </button>
+                            <a th:href="@{/meetings/{id}/resources(id=${meeting.id})}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Anuluj
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('resourceForm');
+        const fileInput = document.getElementById('file');
+        const filenameInput = document.getElementById('originalFilename');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Automatyczne uzupełnianie nazwy pliku
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0] && !filenameInput.value) {
+                const originalName = this.files[0].name;
+                const nameWithoutExt = originalName.replace(/\.[^/.]+$/, "");
+                filenameInput.value = nameWithoutExt;
+            }
+        });
+
+        // Walidacja rozmiaru pliku
+        fileInput.addEventListener('change', function() {
+            const maxSize = 50 * 1024 * 1024; // 50MB
+            const fileError = document.getElementById('fileError');
+
+            if (this.files && this.files[0]) {
+                if (this.files[0].size > maxSize) {
+                    fileError.textContent = 'Plik jest zbyt duży. Maksymalny rozmiar to 50MB.';
+                    fileError.style.display = 'block';
+                    this.value = '';
+                } else {
+                    fileError.style.display = 'none';
+                }
+            }
+        });
+
+        // Obsługa formularza AJAX
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Resetowanie błędów
+            document.querySelectorAll('.text-danger').forEach(el => {
+                el.style.display = 'none';
+            });
+            document.getElementById('ajaxSuccess').style.display = 'none';
+            document.getElementById('ajaxError').style.display = 'none';
+
+            // Walidacja po stronie klienta
+            if (!validateForm()) {
+                return;
+            }
+
+            const formData = new FormData(this);
+
+            try {
+                // Zmiana stanu przycisku
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner me-2"></i>Dodawanie...';
+
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Sukces - pokaż komunikat i przekieruj
+                    document.getElementById('successMessage').textContent = result.message;
+                    document.getElementById('ajaxSuccess').style.display = 'block';
+
+                    setTimeout(() => {
+                        window.location.href = '/meetings/' + [[${meeting.id}]] + '/resources?success=' + encodeURIComponent(result.message);
+                    }, 1500);
+                } else {
+                    // Błąd - pokaż komunikat
+                    document.getElementById('errorMessage').textContent = result.message || 'Wystąpił nieoczekiwany błąd';
+                    document.getElementById('ajaxError').style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-upload me-2"></i>Dodaj zasób';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = 'Wystąpił błąd podczas dodawania zasobu: ' + error.message;
+                document.getElementById('ajaxError').style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-upload me-2"></i>Dodaj zasób';
+            }
+        });
+
+        function validateForm() {
+            let isValid = true;
+
+            // Walidacja pliku
+            if (!fileInput.files || !fileInput.files[0]) {
+                document.getElementById('fileError').textContent = 'Plik jest wymagany';
+                document.getElementById('fileError').style.display = 'block';
+                isValid = false;
+            }
+
+            // Walidacja nazwy pliku
+            if (!filenameInput.value.trim()) {
+                document.getElementById('filenameError').textContent = 'Nazwa pliku jest wymagana';
+                document.getElementById('filenameError').style.display = 'block';
+                isValid = false;
+            }
+
+            // Walidacja poziomu dostępu
+            if (!document.getElementById('accessLevel').value) {
+                document.getElementById('accessLevelError').textContent = 'Poziom dostępu jest wymagany';
+                document.getElementById('accessLevelError').style.display = 'block';
+                isValid = false;
+            }
+
+            return isValid;
+        }
+    });
+</script>
+
+<style>
+    .spinner {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+</style>
+</body>
+</html>

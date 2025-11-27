@@ -211,4 +211,13 @@ public class MeetingServiceImpl implements MeetingService {
         Page<Meeting> meetings = customMeetingRepository.findFilteredMeetings(search, type, status, pageable);
         return meetings.map(meetingMapper::toResponse);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Meeting getMeeting(Long meetingId) {
+        log.debug("Getting meeting by ID: {}", meetingId);
+
+        return meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
+    }
 }

@@ -34,4 +34,7 @@ public interface MeetingService {
     List<MeetingResponse> findConflictingMeetings(Long userId, LocalDateTime startDate, LocalDateTime endDate);
 
     Page<MeetingResponse> getFilteredMeetings(String search, String type, String status, Pageable pageable);
+
+    Meeting getMeeting(Long meetingId);
+
 }

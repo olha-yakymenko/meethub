@@ -63,6 +63,12 @@ public class MeetingResource {
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 
+    @Column(name = "download_count", nullable = false)
+    private Integer downloadCount = 0;
+
+    @Column(name = "description")
+    private String description;
+
     // GETTERS
     public Long getId() { return id; }
     public Meeting getMeeting() { return meeting; }
@@ -79,6 +85,7 @@ public class MeetingResource {
     public AccessLevel getAccessLevel() { return accessLevel; }
     public LocalDateTime getUploadedAt() { return uploadedAt; }
 
+
     // SETTERS
     public void setId(Long id) { this.id = id; }
     public void setMeeting(Meeting meeting) { this.meeting = meeting; }
@@ -94,6 +101,19 @@ public class MeetingResource {
     public void setUploadedBy(User uploadedBy) { this.uploadedBy = uploadedBy; }
     public void setAccessLevel(AccessLevel accessLevel) { this.accessLevel = accessLevel; }
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+
+
+
+    public Integer getDownloadCount() { return downloadCount; }
+    public void setDownloadCount(Integer downloadCount) { this.downloadCount = downloadCount; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    // Metoda do inkrementacji licznika pobrań
+    public void incrementDownloadCount() {
+        this.downloadCount++;
+    }
 
     // Konstruktory
     public MeetingResource() {}

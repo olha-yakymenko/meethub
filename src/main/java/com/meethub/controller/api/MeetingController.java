@@ -1,5 +1,6 @@
 package com.meethub.controller.api;
 
+import ch.qos.logback.core.model.Model;
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.response.ApiResponse;
@@ -67,6 +68,9 @@ public class MeetingController {
         MeetingResponse meeting = meetingService.getMeetingById(meetingId);
         return ResponseEntity.ok(ApiResponse.success("Meeting retrieved successfully", meeting));
     }
+
+
+
 
     @GetMapping("/my-meetings")
     @Operation(summary = "Get user's meetings with pagination")
