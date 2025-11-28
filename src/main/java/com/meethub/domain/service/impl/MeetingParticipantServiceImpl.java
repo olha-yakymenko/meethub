@@ -688,4 +688,48 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
             }
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PermissionLevel getParticipantPermissionLevel(Long meetingId, Long userId) {
+        log.debug("Getting permission level for user {} in meeting {}", userId, meetingId);
+
+        if (userId == null || meetingId == null) {
+            log.debug("Null parameters provided - returning default PARTICIPANT level");
+            return PermissionLevel.PARTICIPANT;
+        }
+
+        try {
+            // ✅ SPRAWDŹ CZY UŻYTKOWNIK JEST ORGANIZATOREM
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
+
+            if (meeting.getOrganizer() != null && meeting.getOrganizer().getId().equals(userId)) {
+                log.debug("User {} is organizer of meeting {} - returning ORGANIZER level", userId, meetingId);
+                return PermissionLevel.ORGANIZER; // LUB MODERATOR JEŚLI NIE MASZ ORGANIZER W ENUM
+            }
+
+            // ✅ SPRAWDŹ UPRAWNIENIA UCZESTNIKA
+            Optional<MeetingParticipant> participantOpt = participantRepository.findByMeetingIdAndUserId(meetingId, userId);
+
+            if (participantOpt.isPresent()) {
+                MeetingParticipant participant = participantOpt.get();
+                PermissionLevel level = participant.getPermissionLevel();
+                log.debug("Found participant permission level: {} for user {} in meeting {}", level, userId, meetingId);
+                return level;
+            }
+
+            // ✅ UŻYTKOWNIK NIE JEST UCZESTNIKIEM - ZWRÓĆ DOMYŚLNY POZIOM
+            log.debug("User {} is not a participant of meeting {} - returning default PARTICIPANT level", userId, meetingId);
+            return PermissionLevel.PARTICIPANT;
+
+        } catch (ResourceNotFoundException e) {
+            log.warn("Meeting not found while checking permission level: {}", e.getMessage());
+            return PermissionLevel.PARTICIPANT;
+        } catch (Exception e) {
+            log.error("Error getting permission level for user {} in meeting {}: {}",
+                    userId, meetingId, e.getMessage(), e);
+            return PermissionLevel.PARTICIPANT; // BEZPIECZNY DOMYŚLNY POZIOM
+        }
+    }
 }

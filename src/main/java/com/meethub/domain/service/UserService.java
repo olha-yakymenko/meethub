@@ -11,4 +11,6 @@ public interface UserService {
     void deleteUser(Long userId);
     List<UserResponse> searchUsers(String query);
     boolean existsById(Long userId);
+    Long getUserIdByEmail(String email);
+
 }

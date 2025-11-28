@@ -73,5 +73,6 @@ public interface MeetingParticipantService {
     List<ParticipantResponse> getPendingRequests(Long meetingId);
     boolean isUserPendingApproval(Long meetingId, Long userId);
 
-    // W MeetingParticipantService dodaj:
+    PermissionLevel getParticipantPermissionLevel(Long meetingId, Long userId);
+
 }

@@ -3,12 +3,16 @@ package com.meethub.domain.service.impl;
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.MeetingStatus;
+import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UpdateMeetingRequest;
+import com.meethub.domain.model.response.MeetingParticipationInfo;
 import com.meethub.domain.model.response.MeetingResponse;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.repository.jpa.UserRepository;
 import com.meethub.domain.repository.jdbc.CustomMeetingRepository;
+import com.meethub.domain.service.MeetingAuthorizationService;
+import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.exception.BusinessException;
 import com.meethub.exception.ResourceNotFoundException;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -34,30 +39,8 @@ public class MeetingServiceImpl implements MeetingService {
     private final UserRepository userRepository;
     private final CustomMeetingRepository customMeetingRepository;
     private final MeetingMapper meetingMapper;
-
-//    public MeetingServiceImpl(MeetingRepository meetingRepository, UserRepository userRepository, CustomMeetingRepository customMeetingRepository, MeetingMapper meetingMapper) {
-//        this.meetingRepository = meetingRepository;
-//        this.userRepository = userRepository;
-//        this.customMeetingRepository = customMeetingRepository;
-//        this.meetingMapper = meetingMapper;
-//    }
-
-
-//    @Override
-//    @Transactional
-//    public MeetingResponse createMeeting(CreateMeetingRequest request, Long organizerId) {
-//        User organizer = userRepository.findById(organizerId)
-//                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + organizerId));
-//
-//        Meeting meeting = meetingMapper.toEntity(request);
-//        meeting.setOrganizer(organizer);
-//        meeting.setStatus(MeetingStatus.PLANNED);
-//
-//        Meeting savedMeeting = meetingRepository.save(meeting);
-//        log.info("Meeting created with id: {} by organizer: {}", savedMeeting.getId(), organizerId);
-//
-//        return meetingMapper.toResponse(savedMeeting);
-//    }
+    private final MeetingParticipantService meetingParticipantService;
+    private final MeetingAuthorizationService meetingAuthorizationService; // ✅ DODAJ TĘ ZALEŻNOŚĆ
 
     @Override
     @Transactional
@@ -100,6 +83,11 @@ public class MeetingServiceImpl implements MeetingService {
     @Override
     @Transactional
     public MeetingResponse updateMeeting(Long meetingId, UpdateMeetingRequest request, Long organizerId) {
+        // ✅ SPRAWDŹ UPRAWNIENIA PRZED AKTUALIZACJĄ
+        if (!meetingAuthorizationService.canUserEditMeeting(meetingId, organizerId)) {
+            throw new BusinessException("No permission to edit this meeting");
+        }
+
         Meeting meeting = meetingRepository.findByIdAndOrganizerId(meetingId, organizerId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Meeting not found with id: " + meetingId + " for organizer: " + organizerId));
@@ -114,6 +102,11 @@ public class MeetingServiceImpl implements MeetingService {
     @Override
     @Transactional
     public void deleteMeeting(Long meetingId, Long organizerId) {
+        // ✅ SPRAWDŹ UPRAWNIENIA PRZED USUNIĘCIEM
+        if (!meetingAuthorizationService.canUserDeleteMeeting(meetingId, organizerId)) {
+            throw new BusinessException("No permission to delete this meeting");
+        }
+
         Meeting meeting = meetingRepository.findByIdAndOrganizerId(meetingId, organizerId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Meeting not found with id: " + meetingId + " for organizer: " + organizerId));
@@ -159,6 +152,11 @@ public class MeetingServiceImpl implements MeetingService {
     @Override
     @Transactional
     public void changeMeetingStatus(Long meetingId, MeetingStatus status, Long organizerId) {
+        // ✅ SPRAWDŹ UPRAWNIENIA PRZED ZMIANĄ STATUSU
+        if (!meetingAuthorizationService.canUserEditMeeting(meetingId, organizerId)) {
+            throw new BusinessException("No permission to change status of this meeting");
+        }
+
         Meeting meeting = meetingRepository.findByIdAndOrganizerId(meetingId, organizerId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Meeting not found with id: " + meetingId + " for organizer: " + organizerId));
@@ -171,6 +169,11 @@ public class MeetingServiceImpl implements MeetingService {
     @Override
     @Transactional
     public MeetingResponse duplicateMeeting(Long meetingId, Long organizerId) {
+        // ✅ SPRAWDŹ UPRAWNIENIA PRZED DUPLIKACJĄ
+        if (!meetingAuthorizationService.canUserEditMeeting(meetingId, organizerId)) {
+            throw new BusinessException("No permission to duplicate this meeting");
+        }
+
         Meeting original = meetingRepository.findByIdAndOrganizerId(meetingId, organizerId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Meeting not found with id: " + meetingId + " for organizer: " + organizerId));
@@ -219,5 +222,44 @@ public class MeetingServiceImpl implements MeetingService {
 
         return meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
+    }
+
+    // ✅ DODAJ NOWE METODY DLA LEPSZEJ INTEGRACJI Z ZASOBAMI
+
+    @Override
+    @Transactional(readOnly = true)
+    public MeetingParticipationInfo getMeetingParticipationInfo(Long meetingId, Long userId) {
+        return meetingAuthorizationService.getUserMeetingPermissions(meetingId, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canUserAccessMeeting(Long meetingId, Long userId) {
+        try {
+            MeetingParticipationInfo info = meetingAuthorizationService.getUserMeetingPermissions(meetingId, userId);
+            return info.isCanViewDetails();
+        } catch (Exception e) {
+            log.warn("Error checking meeting access for user {} to meeting {}: {}", userId, meetingId, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MeetingResponse> getAccessibleMeetings(Long userId) {
+        // ✅ ZWRÓĆ WSZYSTKIE SPOTKANIA DO KTÓRYCH UŻYTKOWNIK MA DOSTĘP
+        List<Meeting> allMeetings = meetingRepository.findAll();
+
+        return allMeetings.stream()
+                .filter(meeting -> {
+                    try {
+                        return meetingAuthorizationService.canUserViewResource(meeting.getId(), userId);
+                    } catch (Exception e) {
+                        log.warn("Error checking access to meeting {} for user {}: {}", meeting.getId(), userId, e.getMessage());
+                        return false;
+                    }
+                })
+                .map(meetingMapper::toResponse)
+                .toList();
     }
 }
