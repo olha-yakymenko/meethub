@@ -99,4 +99,25 @@ public class MeetingParticipantController {
         List<UserResponse> users = participantService.searchUsersForInvitation(query, meetingId);
         return ResponseEntity.ok(ApiResponse.success("Users found", users));
     }
+
+    @GetMapping("/invitations")
+    @Operation(summary = "Get user's meeting invitations")
+    public ResponseEntity<ApiResponse<List<ParticipantResponse>>> getUserInvitations(
+            @AuthenticationPrincipal Long userId) {
+
+        List<ParticipantResponse> invitations = participantService.getUserInvitations(userId);
+        return ResponseEntity.ok(ApiResponse.success("Invitations retrieved successfully", invitations));
+    }
+
+    @PostMapping("/invitations/{participantId}/respond")
+    @Operation(summary = "Respond to meeting invitation")
+    public ResponseEntity<ApiResponse<Void>> respondToInvitation(
+            @PathVariable Long participantId,
+            @RequestParam ParticipationStatus response,
+            @RequestParam(required = false) String comment,
+            @AuthenticationPrincipal Long userId) {
+
+        participantService.respondToInvitation(participantId, response, comment, userId);
+        return ResponseEntity.ok(ApiResponse.success("Invitation response submitted successfully", null));
+    }
 }

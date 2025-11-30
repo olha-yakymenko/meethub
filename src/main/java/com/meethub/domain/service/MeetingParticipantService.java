@@ -42,6 +42,7 @@ import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
 
 import java.util.List;
+import java.util.Map;
 
 public interface MeetingParticipantService {
     List<ParticipantResponse> getMeetingParticipants(Long meetingId);
@@ -74,5 +75,11 @@ public interface MeetingParticipantService {
     boolean isUserPendingApproval(Long meetingId, Long userId);
 
     PermissionLevel getParticipantPermissionLevel(Long meetingId, Long userId);
+
+    List<ParticipantResponse> getUserInvitations(Long userId);
+
+    void respondToInvitation(Long participantId, ParticipationStatus response, String comment, Long userId);
+    List<ParticipantResponse> getConfirmedParticipants(Long meetingId);
+    Map<String, Long> getParticipantStatistics(Long meetingId);
 
 }

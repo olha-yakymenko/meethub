@@ -4,6 +4,7 @@ import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
+import com.meethub.domain.model.mapper.MeetingMapper;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
@@ -18,10 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +35,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     private final WaitlistEntryRepository waitlistEntryRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final MeetingMapper meetingMapper;
 
     @Override
     public List<ParticipantResponse> getMeetingParticipants(Long meetingId) {
@@ -476,14 +475,33 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
     // PRIVATE METHODS - zachowaj istniejące implementacje
 
+//    private ParticipantResponse mapToResponse(MeetingParticipant participant) {
+//        ParticipantResponse response = new ParticipantResponse();
+//        response.setId(participant.getId());
+//        response.setStatus(participant.getStatus());
+//        response.setPermissionLevel(participant.getPermissionLevel());
+//        response.setCreatedAt(participant.getCreatedAt());
+//        // Dodaj informacje o użytkowniku
+//        response.setUser(mapToUserResponse(participant.getUser()));
+//
+//        return response;
+//    }
+
     private ParticipantResponse mapToResponse(MeetingParticipant participant) {
         ParticipantResponse response = new ParticipantResponse();
         response.setId(participant.getId());
         response.setStatus(participant.getStatus());
         response.setPermissionLevel(participant.getPermissionLevel());
+        response.setComment(participant.getComment());
+        response.setResponseDate(participant.getResponseDate());
         response.setCreatedAt(participant.getCreatedAt());
-        // Dodaj informacje o użytkowniku
+        response.setUpdatedAt(participant.getUpdatedAt());
         response.setUser(mapToUserResponse(participant.getUser()));
+
+        // ✅ DODAJ MAPPING DLA MEETING
+        if (participant.getMeeting() != null) {
+            response.setMeeting(meetingMapper.toResponse(participant.getMeeting()));
+        }
 
         return response;
     }
@@ -732,4 +750,221 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
             return PermissionLevel.PARTICIPANT; // BEZPIECZNY DOMYŚLNY POZIOM
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ParticipantResponse> getUserInvitations(Long userId) {
+        log.info("Getting invitations for user: {}", userId);
+
+        List<MeetingParticipant> invitations = participantRepository.findByUserIdAndStatus(
+                userId, ParticipationStatus.INVITED);
+
+        return invitations.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void respondToInvitation(Long participantId, ParticipationStatus response, String comment, Long userId) {
+        log.info("User {} responding to invitation {} with status: {}", userId, participantId, response);
+
+        MeetingParticipant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+
+        // Sprawdź czy użytkownik jest właścicielem tego zaproszenia
+        if (!participant.getUser().getId().equals(userId)) {
+            throw new SecurityException("No permission to respond to this invitation");
+        }
+
+        // Sprawdź czy status to nadal INVITED
+        if (participant.getStatus() != ParticipationStatus.INVITED) {
+            throw new IllegalArgumentException("Invitation has already been responded to");
+        }
+
+        ParticipationStatus oldStatus = participant.getStatus();
+        participant.setStatus(response);
+        participant.setComment(comment);
+        participant.setResponseDate(LocalDateTime.now());
+
+        participantRepository.save(participant);
+
+        // Zapisz historię
+        saveStatusHistory(participant, oldStatus, response,
+                "User responded: " + comment, userId);
+
+        // Wyślij powiadomienie do organizatora
+//        if (response == ParticipationStatus.CONFIRMED) {
+//            notificationService.sendInvitationAcceptedNotification(
+//                    participant.getMeeting().getOrganizer(),
+//                    participant.getUser(),
+//                    participant.getMeeting()
+//            );
+//        } else if (response == ParticipationStatus.DECLINED) {
+//            notificationService.sendInvitationDeclinedNotification(
+//                    participant.getMeeting().getOrganizer(),
+//                    participant.getUser(),
+//                    participant.getMeeting()
+//            );
+//        }
+
+        log.info("User {} responded to invitation {} with status: {}", userId, participantId, response);
+    }
+
+
+//    @Override
+//    @Transactional(readOnly = true)
+//    public List<ParticipantResponse> getConfirmedParticipants(Long meetingId) {
+//        log.info("Getting confirmed participants for meeting: {}", meetingId);
+//
+//        try {
+//            // ✅ Opcja B: Filtrowanie w bazie danych - LEPSZE WYDAJNOŚCIOWO
+//            List<MeetingParticipant> confirmedParticipants = participantRepository
+//                    .findByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
+//
+//            List<ParticipantResponse> result = confirmedParticipants.stream()
+//                    .map(this::mapToResponse)
+//                    .collect(Collectors.toList());
+//
+//            log.info("Found {} confirmed participants for meeting {}", result.size(), meetingId);
+//            return result;
+//
+//        } catch (Exception e) {
+//            log.error("Error getting confirmed participants for meeting {}: {}", meetingId, e.getMessage(), e);
+//            return Collections.emptyList();
+//        }
+//    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ParticipantResponse> getConfirmedParticipants(Long meetingId) {
+        log.info("Getting confirmed participants for meeting: {}", meetingId);
+
+        try {
+            // ✅ Pobierz spotkanie aby dostać organizatora
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+
+            // ✅ Pobierz potwierdzonych uczestników z bazy
+            List<MeetingParticipant> confirmedParticipants = participantRepository
+                    .findByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
+
+            List<ParticipantResponse> result = confirmedParticipants.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            // ✅ DODAJ ORGANIZATORA JAKO UCZESTNIKA (jeśli go nie ma)
+            boolean organizerIsInList = result.stream()
+                    .anyMatch(p -> p.getUser().getId().equals(meeting.getOrganizer().getId()));
+
+            if (!organizerIsInList) {
+                ParticipantResponse organizerParticipant = createOrganizerParticipant(meeting);
+                result.add(organizerParticipant);
+                log.info("Added organizer as participant for meeting {}", meetingId);
+            }
+
+            log.info("Found {} confirmed participants for meeting {} (including organizer)",
+                    result.size(), meetingId);
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error getting confirmed participants for meeting {}: {}", meetingId, e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    private ParticipantResponse createOrganizerParticipant(Meeting meeting) {
+        return ParticipantResponse.builder()
+                .id(-1L) // tymczasowe ID (organizator nie ma rekordu w meeting_participants)
+                .user(mapToUserResponse(meeting.getOrganizer()))
+                .status(ParticipationStatus.CONFIRMED)
+                .permissionLevel(PermissionLevel.ORGANIZER)
+                .createdAt(meeting.getCreatedAt())
+                .updatedAt(meeting.getUpdatedAt())
+                .build();
+    }
+
+
+
+//    @Override
+//    @Transactional(readOnly = true)
+//    public Map<String, Long> getParticipantStatistics(Long meetingId) {
+//        log.info("Getting participant statistics for meeting: {}", meetingId);
+//
+//        Map<String, Long> stats = new HashMap<>();
+//
+//        try {
+//            // ✅ Opcja A: Użyj metod repozytorium (najszybsze)
+//            stats.put("total", participantRepository.countByMeetingId(meetingId));
+//            stats.put("confirmed", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED));
+//            stats.put("pending", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
+//            stats.put("invited", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.INVITED));
+//            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.WAITING_LIST));
+//            stats.put("declined", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.DECLINED));
+//
+//            log.info("Participant stats for meeting {}: {}", meetingId, stats);
+//
+//        } catch (Exception e) {
+//            log.error("Error getting participant statistics for meeting {}: {}", meetingId, e.getMessage(), e);
+//            // ✅ Zwróć bezpieczne domyślne wartości
+//            return getDefaultStats();
+//        }
+//
+//        return stats;
+//    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getParticipantStatistics(Long meetingId) {
+        log.info("Getting participant statistics for meeting: {}", meetingId);
+
+        Map<String, Long> stats = new HashMap<>();
+
+        try {
+            // ✅ Pobierz spotkanie
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+
+            // ✅ Podstawowe statystyki z bazy
+            long totalFromDb = participantRepository.countByMeetingId(meetingId);
+            long confirmedFromDb = participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
+
+            // ✅ Sprawdź czy organizator jest już w uczestnikach
+            boolean organizerIsParticipant = participantRepository
+                    .findByMeetingIdAndUserId(meetingId, meeting.getOrganizer().getId())
+                    .isPresent();
+
+            // ✅ DOSTOSUJ STATYSTYKI - uwzględnij organizatora
+            stats.put("total", organizerIsParticipant ? totalFromDb : totalFromDb + 1);
+            stats.put("confirmed", organizerIsParticipant ? confirmedFromDb : confirmedFromDb + 1);
+            stats.put("pending", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
+            stats.put("invited", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.INVITED));
+            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.WAITING_LIST));
+            stats.put("declined", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.DECLINED));
+            stats.put("organizerIncluded", organizerIsParticipant ? 1L : 0L); // dla debugu
+
+            log.info("Participant stats for meeting {}: {} (organizer included: {})",
+                    meetingId, stats, !organizerIsParticipant);
+
+        } catch (Exception e) {
+            log.error("Error getting participant statistics for meeting {}: {}", meetingId, e.getMessage(), e);
+            return getDefaultStats();
+        }
+
+        return stats;
+    }
+
+    private Map<String, Long> getDefaultStats() {
+        Map<String, Long> defaultStats = new HashMap<>();
+        defaultStats.put("total", 0L);
+        defaultStats.put("confirmed", 0L);
+        defaultStats.put("pending", 0L);
+        defaultStats.put("invited", 0L);
+        defaultStats.put("waiting", 0L);
+        defaultStats.put("declined", 0L);
+        return defaultStats;
+    }
+
 }

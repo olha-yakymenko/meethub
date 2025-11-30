@@ -21,6 +21,44 @@
         </a>
     </div>
 
+<!--    &lt;!&ndash; Filtry &ndash;&gt;-->
+<!--    <div class="card mb-4">-->
+<!--        <div class="card-body">-->
+<!--            <form th:action="@{/meetings}" method="get" class="row g-3">-->
+<!--                <div class="col-md-4">-->
+<!--                    <label class="form-label">Szukaj</label>-->
+<!--                    <input type="text" name="search" class="form-control"-->
+<!--                           th:value="${param.search}"-->
+<!--                           placeholder="Tytuł lub opis...">-->
+<!--                </div>-->
+<!--                <div class="col-md-3">-->
+<!--                    <label class="form-label">Typ</label>-->
+<!--                    <select name="type" class="form-select">-->
+<!--                        <option value="">Wszystkie</option>-->
+<!--                        <option value="ONLINE" th:selected="${param.type == 'ONLINE'}">Online</option>-->
+<!--                        <option value="IN_PERSON" th:selected="${param.type == 'IN_PERSON'}">Osobiście</option>-->
+<!--                        <option value="HYBRID" th:selected="${param.type == 'HYBRID'}">Hybrydowe</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+<!--                <div class="col-md-3">-->
+<!--                    <label class="form-label">Status</label>-->
+<!--                    <select name="status" class="form-select">-->
+<!--                        <option value="">Wszystkie</option>-->
+<!--                        <option value="PLANNED" th:selected="${param.status == 'PLANNED'}">Planowane</option>-->
+<!--                        <option value="CONFIRMED" th:selected="${param.status == 'CONFIRMED'}">Potwierdzone</option>-->
+<!--                        <option value="COMPLETED" th:selected="${param.status == 'COMPLETED'}">Zakończone</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+<!--                <div class="col-md-2 d-flex align-items-end">-->
+<!--                    <button type="submit" class="btn btn-outline-primary w-100">-->
+<!--                        <i class="bi bi-funnel me-1"></i>Filtruj-->
+<!--                    </button>-->
+<!--                </div>-->
+<!--            </form>-->
+<!--        </div>-->
+<!--    </div>-->
+
+
     <!-- Filtry -->
     <div class="card mb-4">
         <div class="card-body">
@@ -28,25 +66,27 @@
                 <div class="col-md-4">
                     <label class="form-label">Szukaj</label>
                     <input type="text" name="search" class="form-control"
-                           th:value="${param.search}"
+                           th:value="${searchParam}"
                            placeholder="Tytuł lub opis...">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Typ</label>
                     <select name="type" class="form-select">
                         <option value="">Wszystkie</option>
-                        <option value="ONLINE" th:selected="${param.type == 'ONLINE'}">Online</option>
-                        <option value="IN_PERSON" th:selected="${param.type == 'IN_PERSON'}">Osobiście</option>
-                        <option value="HYBRID" th:selected="${param.type == 'HYBRID'}">Hybrydowe</option>
+                        <!-- ✅ POPRAWIONE WARTOŚCI - zgodne z bazą danych -->
+                        <option value="VIRTUAL" th:selected="${typeParam == 'VIRTUAL'}">Online</option>
+                        <option value="PHYSICAL" th:selected="${typeParam == 'PHYSICAL'}">Osobiście</option>
+                        <option value="HYBRID" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
                         <option value="">Wszystkie</option>
-                        <option value="PLANNED" th:selected="${param.status == 'PLANNED'}">Planowane</option>
-                        <option value="CONFIRMED" th:selected="${param.status == 'CONFIRMED'}">Potwierdzone</option>
-                        <option value="COMPLETED" th:selected="${param.status == 'COMPLETED'}">Zakończone</option>
+                        <option value="PLANNED" th:selected="${statusParam == 'PLANNED'}">Planowane</option>
+                        <option value="CONFIRMED" th:selected="${statusParam == 'CONFIRMED'}">Potwierdzone</option>
+                        <option value="COMPLETED" th:selected="${statusParam == 'COMPLETED'}">Zakończone</option>
+                        <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
@@ -55,6 +95,32 @@
                     </button>
                 </div>
             </form>
+
+            <!-- ✅ DODAJ: Wyświetlanie aktywnych filtrów -->
+            <div th:if="${searchParam != null or typeParam != null or statusParam != null}"
+                 class="mt-3">
+                <small class="text-muted">Aktywne filtry:</small>
+                <div>
+                <span th:if="${searchParam}" class="badge bg-light text-dark me-1">
+                    Szukaj: <span th:text="${searchParam}"></span>
+                    <a th:href="@{/meetings(type=${typeParam}, status=${statusParam})}"
+                       class="text-danger ms-1">×</a>
+                </span>
+                    <span th:if="${typeParam}" class="badge bg-light text-dark me-1">
+                    Typ: <span th:text="${typeParam}"></span>
+                    <a th:href="@{/meetings(search=${searchParam}, status=${statusParam})}"
+                       class="text-danger ms-1">×</a>
+                </span>
+                    <span th:if="${statusParam}" class="badge bg-light text-dark me-1">
+                    Status: <span th:text="${statusParam}"></span>
+                    <a th:href="@{/meetings(search=${searchParam}, type=${typeParam})}"
+                       class="text-danger ms-1">×</a>
+                </span>
+                    <a th:href="@{/meetings}" class="btn btn-sm btn-outline-secondary ms-2">
+                        Wyczyść wszystkie
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -174,17 +240,17 @@
                         </div>
 
                         <!-- Dla niezalogowanych -->
-                        <div th:if="${currentUserId == null}">
-                            <a th:href="@{/login}" class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-box-arrow-in-right me-1"></i>Zaloguj się
-                            </a>
-                        </div>
+<!--                        <div th:if="${currentUserId == null}">-->
+<!--                            <a th:href="@{/login}" class="btn btn-outline-primary btn-sm">-->
+<!--                                <i class="bi bi-box-arrow-in-right me-1"></i>Zaloguj się-->
+<!--                            </a>-->
+<!--                        </div>-->
 
                         <!-- Szczegóły -->
-                        <a th:href="@{/meetings/{id}(id=${meeting.id})}"
-                           class="btn btn-outline-secondary btn-sm float-end">
-                            <i class="bi bi-eye me-1"></i>Szczegóły
-                        </a>
+<!--                        <a th:href="@{/meetings/{id}(id=${meeting.id})}"-->
+<!--                           class="btn btn-outline-secondary btn-sm float-end">-->
+<!--                            <i class="bi bi-eye me-1"></i>Szczegóły-->
+<!--                        </a>-->
                     </div>
                 </div>
                 </div>

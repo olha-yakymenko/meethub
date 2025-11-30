@@ -470,43 +470,112 @@
     <div class="row">
         <!-- Główne informacje -->
         <div class="col-lg-8">
+<!--            <div class="card mb-4">-->
+<!--                <div class="card-header">-->
+<!--                    <h4 class="card-title mb-0" th:text="${meeting?.title}"></h4>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    &lt;!&ndash; Opis &ndash;&gt;-->
+<!--                    <div class="mb-3" th:if="${meeting?.description}">-->
+<!--                        <h6>Opis</h6>-->
+<!--                        <p class="text-muted" th:text="${meeting?.description}"></p>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Agenda &ndash;&gt;-->
+<!--                    <div class="mb-3" th:if="${meeting?.agenda}">-->
+<!--                        <h6>Agenda</h6>-->
+<!--                        <p class="text-muted" th:text="${meeting?.agenda}"></p>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Daty &ndash;&gt;-->
+<!--                    <div class="row mb-3">-->
+<!--                        <div class="col-md-6">-->
+<!--                            <strong><i class="bi bi-calendar-event me-2"></i>Data rozpoczęcia:</strong>-->
+<!--                            <p th:text="${#temporals.format(meeting?.startDate, 'dd.MM.yyyy HH:mm')}"></p>-->
+<!--                        </div>-->
+<!--                        <div class="col-md-6">-->
+<!--                            <strong><i class="bi bi-calendar-check me-2"></i>Data zakończenia:</strong>-->
+<!--                            <p th:text="${#temporals.format(meeting?.endDate, 'dd.MM.yyyy HH:mm')}"></p>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Typ spotkania &ndash;&gt;-->
+<!--                    <div class="mb-3">-->
+<!--                        <strong><i class="bi bi-geo-alt me-2"></i>Typ spotkania:</strong>-->
+<!--                        <span class="badge"-->
+<!--                              th:class="${meeting?.type?.name() == 'ONLINE' ? 'bg-success' :-->
+<!--                                        (meeting?.type?.name() == 'IN_PERSON' ? 'bg-primary' : 'bg-warning')}"-->
+<!--                              th:text="${meeting?.type?.displayName}">-->
+<!--                        </span>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+
+            <!-- Uczestnicy -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="card-title mb-0" th:text="${meeting?.title}"></h4>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>Uczestnicy
+                        <span class="badge bg-success" th:text="${participantStats?.confirmed ?: 0}"></span>
+                        <small class="text-muted ms-2" th:if="${meeting?.maxParticipants}">
+                            / <span th:text="${meeting?.maxParticipants}"></span>
+                        </small>
+                    </h5>
+
+                    <!-- ✅ STATYSTYKI - tylko dla organizatora -->
+                    <div th:if="${meeting?.organizer?.id == userId}" class="stats-badges">
+                        <small class="text-muted me-2">Statystyki:</small>
+                        <span class="badge bg-success me-1"
+                              th:text="'Potw. ' + (${participantStats?.confirmed ?: 0})"></span>
+                        <span class="badge bg-warning me-1"
+                              th:text="'Oczek. ' + (${participantStats?.pending ?: 0})"></span>
+                        <span class="badge bg-primary me-1"
+                              th:text="'Zapr. ' + (${participantStats?.invited ?: 0})"></span>
+                        <span class="badge bg-secondary"
+                              th:text="'Lista ' + (${participantStats?.waiting ?: 0})"></span>
+                    </div>
                 </div>
+
                 <div class="card-body">
-                    <!-- Opis -->
-                    <div class="mb-3" th:if="${meeting?.description}">
-                        <h6>Opis</h6>
-                        <p class="text-muted" th:text="${meeting?.description}"></p>
-                    </div>
+                    <p class="text-muted" th:if="${meeting?.maxParticipants}">
+                        Maksymalnie: <span th:text="${meeting?.maxParticipants}"></span> osób
+                        <span th:if="${participantStats?.confirmed >= meeting?.maxParticipants}"
+                              class="badge bg-danger ms-2">Pełne</span>
+                        <span th:else class="badge bg-success ms-2">
+                Wolnych miejsc: <span th:text="${meeting?.maxParticipants - participantStats?.confirmed}"></span>
+            </span>
+                    </p>
 
-                    <!-- Agenda -->
-                    <div class="mb-3" th:if="${meeting?.agenda}">
-                        <h6>Agenda</h6>
-                        <p class="text-muted" th:text="${meeting?.agenda}"></p>
-                    </div>
-
-                    <!-- Daty -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong><i class="bi bi-calendar-event me-2"></i>Data rozpoczęcia:</strong>
-                            <p th:text="${#temporals.format(meeting?.startDate, 'dd.MM.yyyy HH:mm')}"></p>
+                    <!-- ✅ Lista tylko POTWIERDZONYCH uczestników -->
+                    <div th:if="${participants != null and !participants.empty}">
+                        <div th:each="participant : ${participants}" class="d-flex align-items-center mb-2 p-2 border rounded">
+                            <i class="bi bi-person-circle me-2 text-muted fs-5"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" th:text="${participant.user?.firstName + ' ' + participant.user?.lastName}"></div>
+                                <small class="text-muted" th:text="${participant.user?.email}"></small>
+                                <div th:if="${participant.permissionLevel?.name() != 'PARTICIPANT'}" class="mt-1">
+                                    <span class="badge bg-info" th:text="${participant.permissionLevel?.displayName}"></span>
+                                </div>
+                            </div>
+                            <span class="badge ms-2 bg-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    <span th:text="${participant.status?.displayName}"></span>
+                </span>
                         </div>
-                        <div class="col-md-6">
-                            <strong><i class="bi bi-calendar-check me-2"></i>Data zakończenia:</strong>
-                            <p th:text="${#temporals.format(meeting?.endDate, 'dd.MM.yyyy HH:mm')}"></p>
-                        </div>
                     </div>
 
-                    <!-- Typ spotkania -->
-                    <div class="mb-3">
-                        <strong><i class="bi bi-geo-alt me-2"></i>Typ spotkania:</strong>
-                        <span class="badge"
-                              th:class="${meeting?.type?.name() == 'ONLINE' ? 'bg-success' :
-                                        (meeting?.type?.name() == 'IN_PERSON' ? 'bg-primary' : 'bg-warning')}"
-                              th:text="${meeting?.type?.displayName}">
-                        </span>
+                    <div th:if="${participants == null or participants.empty}" class="text-muted text-center py-3">
+                        <i class="bi bi-people display-4"></i>
+                        <p class="mt-2">Brak potwierdzonych uczestników</p>
+                    </div>
+
+                    <!-- ✅ Link do pełnej listy uczestników (dla organizatora) -->
+                    <div th:if="${meeting?.organizer?.id == userId}" class="text-center mt-3">
+                        <a th:href="@{/meetings/{id}/participants(id=${meeting.id})}"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-people me-1"></i>Zarządzaj wszystkimi uczestnikami
+                            <span class="badge bg-secondary ms-1" th:text="${participantStats?.total ?: 0}"></span>
+                        </a>
                     </div>
                 </div>
             </div>

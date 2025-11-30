@@ -87,55 +87,49 @@
 
 
 
+
+
+
+
+
 package com.meethub.domain.repository.jdbc;
 
 import com.meethub.domain.model.entity.Meeting;
+import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.MeetingType;
+import com.meethub.domain.model.enums.MeetingStatus;
+import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.response.StatisticsResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class CustomMeetingRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private static final String FIND_NEARBY_MEETINGS_SQL = """
-        SELECT m.*, l.latitude, l.longitude,
-               earth_distance(
-                   ll_to_earth(:lat, :lng),
-                   ll_to_earth(l.latitude, l.longitude)
-               ) as distance
-        FROM meetings m
-        JOIN locations l ON m.location_id = l.id
-        WHERE m.visibility = 'PUBLIC'
-          AND m.status = 'CONFIRMED'
-          AND m.start_date > CURRENT_TIMESTAMP
-          AND earth_distance(
-                  ll_to_earth(:lat, :lng),
-                  ll_to_earth(l.latitude, l.longitude)
-              ) < :radius
-        ORDER BY distance, m.start_date
-        LIMIT :limit
-        """;
-
-    // DODAJ TE METODY:
-
     public Page<Meeting> findFilteredMeetings(String search, String type, String status, Pageable pageable) {
+        log.info("JDBC Filtering - search: '{}', type: '{}', status: '{}'", search, type, status);
+
+        // ✅ BUDUJ ZAPYTANIE GŁÓWNE
         StringBuilder sql = new StringBuilder("""
-            SELECT m.*, u.first_name, u.last_name, u.email 
+            SELECT m.*, 
+                   u.id as organizer_id, u.first_name, u.last_name, u.email, u.phone_number,
+                   u.created_at as user_created_at, u.updated_at as user_updated_at
             FROM meetings m
             LEFT JOIN users u ON m.organizer_id = u.id
             WHERE 1=1
@@ -143,45 +137,76 @@ public class CustomMeetingRepository {
 
         List<Object> params = new ArrayList<>();
 
-        // Filtry
-        if (search != null && !search.trim().isEmpty()) {
+        // ✅ FILTR WYSZUKIWANIA
+        if (StringUtils.hasText(search)) {
             sql.append(" AND (LOWER(m.title) LIKE LOWER(?) OR LOWER(m.description) LIKE LOWER(?))");
-            String searchPattern = "%" + search + "%";
+            String searchPattern = "%" + search.trim() + "%";
             params.add(searchPattern);
             params.add(searchPattern);
         }
 
-        if (type != null && !type.trim().isEmpty()) {
+        // ✅ FILTR TYPU
+        if (StringUtils.hasText(type)) {
             sql.append(" AND m.type = ?");
-            params.add(type);
+            params.add(type.toUpperCase());
         }
 
-        if (status != null && !status.trim().isEmpty()) {
+        // ✅ FILTR STATUSU
+        if (StringUtils.hasText(status)) {
             sql.append(" AND m.status = ?");
-            params.add(status);
+            params.add(status.toUpperCase());
         }
 
-        // Sortowanie
-        sql.append(" ORDER BY m.start_date DESC");
+        // ✅ SORTOWANIE
+        sql.append(" ORDER BY m.created_at DESC");
 
-        // Paginacja - najpierw count
-        String countSql = "SELECT COUNT(*) FROM (" + sql.toString().replace("m.*, u.first_name, u.last_name, u.email", "1") + ") AS count_table";
-        Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
+        // ✅ COUNT QUERY (OSOBNE - BEZ LIMIT/OFFSET)
+        String countSql = "SELECT COUNT(*) FROM (" +
+                sql.toString()
+                        .replaceFirst("SELECT m.*,.*?FROM", "SELECT 1 FROM")
+                        .replaceFirst("ORDER BY.*", "")
+                        .replaceFirst("LIMIT.*", "")
+                        .replaceFirst("OFFSET.*", "")
+                + ") AS count_table";
+        log.debug("Count SQL: {}", countSql);
+        log.debug("Count params: {}", params);
 
-        // Paginacja - dane
+        Long total = 0L;
+        try {
+            total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
+        } catch (Exception e) {
+            log.error("Error executing count query: {}", e.getMessage());
+            total = 0L;
+        }
+
+        // ✅ DODAJ PAGINACJĘ DO GŁÓWNEGO ZAPYTANIA
         sql.append(" LIMIT ? OFFSET ?");
         params.add(pageable.getPageSize());
         params.add(pageable.getOffset());
 
-        List<Meeting> meetings = jdbcTemplate.query(sql.toString(), new MeetingRowMapper(), params.toArray());
+        log.debug("Main SQL: {}", sql);
+        log.debug("Main params: {}", params);
 
+        // ✅ WYKONAJ ZAPYTANIE
+        List<Meeting> meetings = new ArrayList<>();
+        try {
+            meetings = jdbcTemplate.query(sql.toString(), new MeetingWithOrganizerRowMapper(), params.toArray());
+        } catch (Exception e) {
+            log.error("Error executing main query: {}", e.getMessage(), e);
+        }
+
+        log.info("Found {} filtered meetings (total: {})", meetings.size(), total);
         return new PageImpl<>(meetings, pageable, total != null ? total : 0);
     }
 
     public List<Meeting> findNearbyMeetings(double latitude, double longitude, double radius, int limit) {
-        // Tymczasowa implementacja - zakładając, że nie masz jeszcze locations
+        log.info("Finding nearby meetings - lat: {}, lng: {}, radius: {}, limit: {}", latitude, longitude, radius, limit);
+
+        // ✅ UPROSZCZONE ZAPYTANIE (bez geolokalizacji)
         String sql = """
-            SELECT m.*, u.first_name, u.last_name, u.email 
+            SELECT m.*, 
+                   u.id as organizer_id, u.first_name, u.last_name, u.email, u.phone_number,
+                   u.created_at as user_created_at, u.updated_at as user_updated_at
             FROM meetings m 
             LEFT JOIN users u ON m.organizer_id = u.id
             WHERE m.visibility = 'PUBLIC' 
@@ -190,7 +215,13 @@ public class CustomMeetingRepository {
             ORDER BY m.start_date ASC 
             LIMIT ?
             """;
-        return jdbcTemplate.query(sql, new MeetingRowMapper(), limit);
+
+        try {
+            return jdbcTemplate.query(sql, new MeetingWithOrganizerRowMapper(), limit);
+        } catch (Exception e) {
+            log.error("Error finding nearby meetings: {}", e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     public List<StatisticsResponse> getMeetingStatistics(Long organizerId) {
@@ -207,57 +238,98 @@ public class CustomMeetingRepository {
             GROUP BY m.organizer_id
             """;
 
-        return jdbcTemplate.query(sql, new StatisticsRowMapper(), organizerId);
+        try {
+            return jdbcTemplate.query(sql, new StatisticsRowMapper(), organizerId);
+        } catch (Exception e) {
+            log.error("Error getting meeting statistics: {}", e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
-    private static class MeetingRowMapper implements RowMapper<Meeting> {
+    // ✅ NOWY ROWMAPPER Z ORGANIZATOREM
+    private static class MeetingWithOrganizerRowMapper implements RowMapper<Meeting> {
         @Override
         public Meeting mapRow(ResultSet rs, int rowNum) throws SQLException {
             Meeting meeting = new Meeting();
+
+            // ✅ PODSTAWOWE INFORMACJE O SPOTKANIU
             meeting.setId(rs.getLong("id"));
             meeting.setTitle(rs.getString("title"));
             meeting.setDescription(rs.getString("description"));
             meeting.setAgenda(rs.getString("agenda"));
 
-            // Mapowanie enumów - obsługa nulli
+            // ✅ MAPUJ ORGANIZATORA
+            User organizer = new User();
+            organizer.setId(rs.getLong("organizer_id"));
+            organizer.setFirstName(rs.getString("first_name"));
+            organizer.setLastName(rs.getString("last_name"));
+            organizer.setEmail(rs.getString("email"));
+            organizer.setPhoneNumber(rs.getString("phone_number"));
+            if (rs.getTimestamp("user_created_at") != null) {
+                organizer.setCreatedAt(rs.getTimestamp("user_created_at").toLocalDateTime());
+            }
+            if (rs.getTimestamp("user_updated_at") != null) {
+                organizer.setUpdatedAt(rs.getTimestamp("user_updated_at").toLocalDateTime());
+            }
+            meeting.setOrganizer(organizer);
+
+            // ✅ MAPOWANIE ENUMÓW Z OBSŁUGĄ BŁĘDÓW
+            mapEnums(rs, meeting);
+
+            // ✅ DATY
+            if (rs.getTimestamp("start_date") != null) {
+                meeting.setStartDate(rs.getTimestamp("start_date").toLocalDateTime());
+            }
+            if (rs.getTimestamp("end_date") != null) {
+                meeting.setEndDate(rs.getTimestamp("end_date").toLocalDateTime());
+            }
+
+            meeting.setMaxParticipants(rs.getObject("max_participants") != null ?
+                    rs.getInt("max_participants") : null);
+
+            if (rs.getTimestamp("created_at") != null) {
+                meeting.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+            }
+            if (rs.getTimestamp("updated_at") != null) {
+                meeting.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+            }
+
+            return meeting;
+        }
+
+        private void mapEnums(ResultSet rs, Meeting meeting) throws SQLException {
+            // ✅ TYP SPOTKANIA
             String type = rs.getString("type");
             if (type != null) {
                 try {
-                    meeting.setType(com.meethub.domain.model.enums.MeetingType.valueOf(type));
+                    meeting.setType(MeetingType.valueOf(type));
                 } catch (IllegalArgumentException e) {
+                    log.warn("Invalid meeting type: {}, defaulting to ONLINE", type);
                     meeting.setType(MeetingType.ONLINE);
                 }
             }
 
+            // ✅ STATUS SPOTKANIA
             String status = rs.getString("status");
             if (status != null) {
                 try {
-                    meeting.setStatus(com.meethub.domain.model.enums.MeetingStatus.valueOf(status));
+                    meeting.setStatus(MeetingStatus.valueOf(status));
                 } catch (IllegalArgumentException e) {
-                    meeting.setStatus(com.meethub.domain.model.enums.MeetingStatus.PLANNED);
+                    log.warn("Invalid meeting status: {}, defaulting to PLANNED", status);
+                    meeting.setStatus(MeetingStatus.PLANNED);
                 }
             }
 
+            // ✅ WIDOCZNOŚĆ
             String visibility = rs.getString("visibility");
             if (visibility != null) {
                 try {
-                    meeting.setVisibility(com.meethub.domain.model.enums.MeetingVisibility.valueOf(visibility));
+                    meeting.setVisibility(MeetingVisibility.valueOf(visibility));
                 } catch (IllegalArgumentException e) {
-                    meeting.setVisibility(com.meethub.domain.model.enums.MeetingVisibility.PRIVATE);
+                    log.warn("Invalid meeting visibility: {}, defaulting to PRIVATE", visibility);
+                    meeting.setVisibility(MeetingVisibility.PRIVATE);
                 }
             }
-
-            meeting.setStartDate(rs.getTimestamp("start_date") != null ?
-                    rs.getTimestamp("start_date").toLocalDateTime() : null);
-            meeting.setEndDate(rs.getTimestamp("end_date") != null ?
-                    rs.getTimestamp("end_date").toLocalDateTime() : null);
-            meeting.setMaxParticipants(rs.getInt("max_participants"));
-            meeting.setCreatedAt(rs.getTimestamp("created_at") != null ?
-                    rs.getTimestamp("created_at").toLocalDateTime() : null);
-            meeting.setUpdatedAt(rs.getTimestamp("updated_at") != null ?
-                    rs.getTimestamp("updated_at").toLocalDateTime() : null);
-
-            return meeting;
         }
     }
 

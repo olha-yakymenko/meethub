@@ -41,19 +41,12 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     @Query("SELECT mp FROM MeetingParticipant mp WHERE mp.meeting.id = :meetingId AND mp.user.id = :userId")
     Optional<MeetingParticipant> findByMeetingIdAndUserId(@Param("meetingId") Long meetingId, @Param("userId") Long userId);
 
-    /**
-     * Sprawdź czy użytkownik jest organizatorem spotkania
-     */
-    @Query("SELECT COUNT(mp) > 0 FROM MeetingParticipant mp WHERE mp.meeting.id = :meetingId AND mp.user.id = :userId AND mp.permissionLevel = 'ORGANIZER'")
-    boolean isUserOrganizer(@Param("meetingId") Long meetingId, @Param("userId") Long userId);
+    List<MeetingParticipant> findByUserIdAndStatus(Long userId, ParticipationStatus status);
 
-    /**
-     * Znajdź uczestników z określonym poziomem uprawnień
-     */
-    List<MeetingParticipant> findByMeetingIdAndPermissionLevel(Long meetingId, PermissionLevel permissionLevel);
 
-    /**
-     * Policz uczestników z określonym statusem i uprawnieniami
-     */
-    long countByMeetingIdAndStatusAndPermissionLevel(Long meetingId, ParticipationStatus status, PermissionLevel permissionLevel);
+
+        // ✅ Metody do statystyk
+        long countByMeetingId(Long meetingId);
+
+
 }

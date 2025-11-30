@@ -138,6 +138,17 @@
                         <i class="bi bi-person-check me-1"></i>Moje spotkania
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/invitations}">
+                        📨 Zaproszenia
+                        <span th:if="${invitations != null and !invitations.empty}"
+                              class="badge bg-danger" th:text="${invitations.size()}">
+                </span>
+                    </a>
+                </li>
+
+
                 <!-- 🔽 DODANE: MENU LOKALIZACJE 🔽 -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="locationsDropdown"

@@ -6,6 +6,7 @@ import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.response.MeetingParticipationInfo;
 import com.meethub.domain.model.response.MeetingResponse;
+import com.meethub.domain.model.response.ParticipantResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -41,4 +42,7 @@ public interface MeetingService {
     MeetingParticipationInfo getMeetingParticipationInfo(Long meetingId, Long userId);
     boolean canUserAccessMeeting(Long meetingId, Long userId);
     List<MeetingResponse> getAccessibleMeetings(Long userId);
+
+
+//    List<ParticipantResponse> getConfirmedParticipants(Long meetingId);
 }

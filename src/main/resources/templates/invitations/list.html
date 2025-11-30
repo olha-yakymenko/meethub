@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Mój Pulpit - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <h1>Moje zaproszenia do spotkań</h1>
+        <p class="text-muted" th:text="'Liczba zaproszeń: ' + ${totalInvitations}"></p>
+    </div>
+
+    <!-- Komunikaty -->
+    <div th:if="${success}" class="alert alert-success">
+        <span th:text="${success}"></span>
+    </div>
+    <div th:if="${error}" class="alert alert-danger">
+        <span th:text="${error}"></span>
+    </div>
+
+    <!-- Lista zaproszeń -->
+    <div th:if="${totalInvitations == 0}" class="empty-state">
+        <div class="empty-state-icon">📨</div>
+        <h3>Brak zaproszeń</h3>
+        <p>Nie masz żadnych oczekujących zaproszeń do spotkań.</p>
+    </div>
+
+    <div th:each="invitation : ${invitations}" class="invitation-card">
+        <div class="invitation-header">
+            <h3 th:text="${invitation.meeting.title}">Tytuł spotkania</h3>
+            <span class="invitation-date" th:text="${#temporals.format(invitation.meeting.startDate, 'dd.MM.yyyy HH:mm')}">
+                    Data spotkania
+                </span>
+        </div>
+
+        <div class="invitation-details">
+            <p><strong>Organizator:</strong>
+                <span th:text="${invitation.meeting.organizer.firstName + ' ' + invitation.meeting.organizer.lastName}">
+                        Organizator
+                    </span>
+            </p>
+            <p><strong>Opis:</strong>
+                <span th:text="${invitation.meeting.description ?: 'Brak opisu'}">Opis</span>
+            </p>
+            <p><strong>Lokalizacja:</strong>
+                <span th:text="${invitation.meeting.location ?: 'Online'}">Lokalizacja</span>
+            </p>
+            <p><strong>Zaproszono:</strong>
+                <span th:text="${#temporals.format(invitation.createdAt, 'dd.MM.yyyy HH:mm')}">
+                        Data zaproszenia
+                    </span>
+            </p>
+        </div>
+
+        <!-- Formularz odpowiedzi -->
+        <div class="invitation-actions">
+            <form th:action="@{/invitations/{participantId}/respond(participantId=${invitation.id})}"
+                  method="post" class="response-form">
+
+                <div class="form-group">
+                    <label for="comment-${invitation.id}">Komentarz (opcjonalnie):</label>
+                    <textarea id="comment-${invitation.id}" name="comment"
+                              class="form-control" rows="2"
+                              placeholder="Dodaj komentarz do swojej odpowiedzi..."></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" name="response" value="CONFIRMED"
+                            class="btn btn-success">
+                        ✅ Akceptuj
+                    </button>
+                    <button type="submit" name="response" value="TENTATIVE"
+                            class="btn btn-warning">
+                        ⏳ Wstrzymaj
+                    </button>
+                    <button type="submit" name="response" value="DECLINED"
+                            class="btn btn-danger">
+                        ❌ Odrzuć
+                    </button>
+                </div>
+            </form>
+
+            <div class="view-meeting-link">
+                <a th:href="@{/meetings/{id}(id=${invitation.meeting.id})}"
+                   class="btn btn-outline-primary">
+                    👁️ Zobacz szczegóły spotkania
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

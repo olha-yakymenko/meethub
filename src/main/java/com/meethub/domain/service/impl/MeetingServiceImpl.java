@@ -262,4 +262,6 @@ public class MeetingServiceImpl implements MeetingService {
                 .map(meetingMapper::toResponse)
                 .toList();
     }
+
+
 }

@@ -1062,19 +1062,22 @@
 
 package com.meethub.controller.web;
 
+import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UserRegistrationRequest;
 import com.meethub.domain.model.response.MeetingParticipationInfo;
 import com.meethub.domain.model.response.MeetingResponse;
+import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
-import com.meethub.domain.service.AuthService;
-import com.meethub.domain.service.MeetingAuthorizationService;
-import com.meethub.domain.service.MeetingService;
+import com.meethub.domain.service.*;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -1084,6 +1087,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -1092,6 +1096,8 @@ public class WebController {
     private final AuthService authService;
     private final MeetingService meetingService;
     private final MeetingAuthorizationService meetingAuthorizationService;
+    private final UserService userService;
+    private final MeetingParticipantService meetingParticipantService;
 
     @GetMapping("/")
     public String home(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
@@ -1113,11 +1119,69 @@ public class WebController {
         return "index";
     }
 
+//    @GetMapping("/meetings")
+//    public String meetings(
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "12") int size,
+//            Model model) {
+//
+//        try {
+//            Pageable pageable = PageRequest.of(page, size);
+//            Page<MeetingResponse> meetingsPage;
+//
+//            if (userDetails != null) {
+//                // ✅ Dla zalogowanych - użyj metody z filtrowaniem
+//                meetingsPage = meetingService.getFilteredMeetings(null, null, null, pageable);
+//            } else {
+//                // ✅ Dla niezalogowanych - pobierz publiczne spotkania
+//                List<MeetingResponse> publicMeetings = meetingService.getUpcomingPublicMeetings();
+//
+//                // Konwersja List na Page (uproszczone)
+//                int start = (int) pageable.getOffset();
+//                int end = Math.min((start + pageable.getPageSize()), publicMeetings.size());
+//
+//                if (start > publicMeetings.size()) {
+//                    meetingsPage = Page.empty(pageable);
+//                } else {
+//                    meetingsPage = new org.springframework.data.domain.PageImpl<>(
+//                            publicMeetings.subList(start, end),
+//                            pageable,
+//                            publicMeetings.size()
+//                    );
+//                }
+//            }
+//
+//            model.addAttribute("meetings", meetingsPage.getContent());
+//            model.addAttribute("currentPage", page);
+//            model.addAttribute("totalPages", meetingsPage.getTotalPages());
+//            model.addAttribute("totalItems", meetingsPage.getTotalElements());
+//
+//        } catch (Exception e) {
+//            // W przypadku błędu, ustaw puste dane
+//            model.addAttribute("meetings", Collections.emptyList());
+//            model.addAttribute("currentPage", 0);
+//            model.addAttribute("totalPages", 0);
+//            model.addAttribute("totalItems", 0);
+//            model.addAttribute("warning", "Nie udało się załadować listy spotkań");
+//        }
+//
+//        if (userDetails != null) {
+//            model.addAttribute("user", userDetails);
+//        }
+//
+//        return "meetings/list";
+//    }
+
+
     @GetMapping("/meetings")
     public String meetings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
             Model model) {
 
         try {
@@ -1125,20 +1189,19 @@ public class WebController {
             Page<MeetingResponse> meetingsPage;
 
             if (userDetails != null) {
-                // ✅ Dla zalogowanych - użyj metody z filtrowaniem
-                meetingsPage = meetingService.getFilteredMeetings(null, null, null, pageable);
+                // ✅ Przekaż parametry filtrowania do service
+                meetingsPage = meetingService.getFilteredMeetings(search, type, status, pageable);
             } else {
-                // ✅ Dla niezalogowanych - pobierz publiczne spotkania
+                // Dla niezalogowanych - pobierz publiczne spotkania
                 List<MeetingResponse> publicMeetings = meetingService.getUpcomingPublicMeetings();
 
-                // Konwersja List na Page (uproszczone)
                 int start = (int) pageable.getOffset();
                 int end = Math.min((start + pageable.getPageSize()), publicMeetings.size());
 
                 if (start > publicMeetings.size()) {
                     meetingsPage = Page.empty(pageable);
                 } else {
-                    meetingsPage = new org.springframework.data.domain.PageImpl<>(
+                    meetingsPage = new PageImpl<>(
                             publicMeetings.subList(start, end),
                             pageable,
                             publicMeetings.size()
@@ -1151,8 +1214,12 @@ public class WebController {
             model.addAttribute("totalPages", meetingsPage.getTotalPages());
             model.addAttribute("totalItems", meetingsPage.getTotalElements());
 
+            // ✅ DODAJ TE LINIJKI - przekaż parametry do modelu
+            model.addAttribute("searchParam", search);
+            model.addAttribute("typeParam", type);
+            model.addAttribute("statusParam", status);
+
         } catch (Exception e) {
-            // W przypadku błędu, ustaw puste dane
             model.addAttribute("meetings", Collections.emptyList());
             model.addAttribute("currentPage", 0);
             model.addAttribute("totalPages", 0);
@@ -1162,6 +1229,7 @@ public class WebController {
 
         if (userDetails != null) {
             model.addAttribute("user", userDetails);
+            model.addAttribute("currentUserId", userDetails.getId()); // ✅ Dodaj to
         }
 
         return "meetings/list";
@@ -1281,6 +1349,52 @@ public class WebController {
 //    }
 
 
+//    @GetMapping("/meetings/{id}")
+//    public String meetingDetails(
+//            @PathVariable Long id,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            MeetingResponse meeting = meetingService.getMeetingById(id);
+//            model.addAttribute("meeting", meeting);
+//
+//            Long userId = userDetails != null ? userDetails.getId() : null;
+//
+//            // ✅ DELEGACJA LOGIKI DO SERWISU
+//            MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+//
+//            // ✅ PRZEKAŻ DANE DO TEMPLATE
+//            model.addAttribute("isOrganizer", participationInfo.isOrganizer());
+//            model.addAttribute("isParticipant", participationInfo.isParticipant());
+//            model.addAttribute("isRelated", participationInfo.isRelated());
+//            model.addAttribute("participantRole", participationInfo.getParticipantRole());
+//            model.addAttribute("permissions", participationInfo.getPermissions());
+//            model.addAttribute("canEdit", participationInfo.isCanEdit());
+//            model.addAttribute("canDelete", participationInfo.isCanDelete());
+//            model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
+//            model.addAttribute("canJoin", participationInfo.isCanJoin());
+//
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//                model.addAttribute("userId", userId);
+//            } else {
+//                model.addAttribute("userId", null);
+//            }
+//
+//            return "meetings/details";
+//
+//        } catch (Exception e) {
+//
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//            }
+//
+//            model.addAttribute("error", "Spotkanie nie zostało znalezione");
+//            return "redirect:/meetings";
+//        }
+//    }
+
     @GetMapping("/meetings/{id}")
     public String meetingDetails(
             @PathVariable Long id,
@@ -1293,10 +1407,17 @@ public class WebController {
 
             Long userId = userDetails != null ? userDetails.getId() : null;
 
-            // ✅ DELEGACJA LOGIKI DO SERWISU
-            MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+            // ✅ Pobierz POTWIERDZONYCH uczestników do wyświetlenia
+            List<ParticipantResponse> confirmedParticipants = meetingParticipantService.getConfirmedParticipants(id);
 
-            // ✅ PRZEKAŻ DANE DO TEMPLATE
+            // ✅ Pobierz PEŁNE STATYSTYKI
+            Map<String, Long> participantStats = meetingParticipantService.getParticipantStatistics(id);
+
+            model.addAttribute("participants", confirmedParticipants);
+            model.addAttribute("participantStats", participantStats);
+
+            // ✅ Reszta logiki
+            MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
             model.addAttribute("isOrganizer", participationInfo.isOrganizer());
             model.addAttribute("isParticipant", participationInfo.isParticipant());
             model.addAttribute("isRelated", participationInfo.isRelated());
@@ -1310,8 +1431,6 @@ public class WebController {
             if (userDetails != null) {
                 model.addAttribute("user", userDetails);
                 model.addAttribute("userId", userId);
-            } else {
-                model.addAttribute("userId", null);
             }
 
             return "meetings/details";
@@ -1321,9 +1440,73 @@ public class WebController {
             if (userDetails != null) {
                 model.addAttribute("user", userDetails);
             }
-
-            model.addAttribute("error", "Spotkanie nie zostało znalezione");
+            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania");
             return "redirect:/meetings";
         }
     }
+    @GetMapping("/meetings/create")
+    public String showCreateMeetingForm(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model) {
+
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+
+        model.addAttribute("user", userDetails);
+        // Dodaj pusty obiekt dla formularza
+        model.addAttribute("createMeetingRequest", new com.meethub.domain.model.request.CreateMeetingRequest());
+        return "meetings/create"; // nazwa twojego template
+    }
+
+
+    @PostMapping("/meetings/create")
+    public String createMeeting(
+            @Valid @ModelAttribute("createMeetingRequest") CreateMeetingRequest request,
+            BindingResult result,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+
+        if (result.hasErrors()) {
+            model.addAttribute("user", userDetails);
+            return "meetings/create";
+        }
+
+        try {
+            MeetingResponse meeting = meetingService.createMeeting(request, userDetails.getId());
+            redirectAttributes.addFlashAttribute("message",
+                    "Spotkanie '" + meeting.getTitle() + "' zostało utworzone pomyślnie!");
+            return "redirect:/meetings/" + meeting.getId();
+
+        } catch (Exception e) {
+            model.addAttribute("user", userDetails);
+            model.addAttribute("error", "Błąd podczas tworzenia spotkania: " + e.getMessage());
+            return "meetings/create";
+        }
+    }
+
+    @GetMapping("/api/users/search")
+    @ResponseBody
+    public ResponseEntity<List<UserResponse>> searchUsers(
+            @RequestParam String query,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            List<UserResponse> users = userService.searchUsers(query);
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
 }

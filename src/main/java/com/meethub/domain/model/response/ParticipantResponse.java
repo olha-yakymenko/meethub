@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class ParticipantResponse {
     private Long id;
     private UserResponse user;
+    private MeetingResponse meeting;
     private ParticipationStatus status;
     private PermissionLevel permissionLevel;
     private String comment;
