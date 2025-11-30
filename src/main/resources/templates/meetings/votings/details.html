@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Szczegóły głosowania - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">
+                <i class="bi bi-bar-chart me-2"></i>
+                <span th:text="${voting.title}"></span>
+            </h1>
+            <p class="text-muted" th:text="${voting.description}"></p>
+        </div>
+
+        <!-- Status głosowania -->
+        <div class="text-end">
+            <span th:if="${voting.status.name() == 'ACTIVE'}"
+                  class="badge bg-success fs-6">
+                <i class="bi bi-clock me-1"></i>Aktywne
+            </span>
+            <span th:if="${voting.status.name() == 'CLOSED'}"
+                  class="badge bg-secondary fs-6">
+                <i class="bi bi-lock me-1"></i>Zamknięte
+            </span>
+
+            <div th:if="${voting.deadlineDate}" class="mt-1">
+                <small class="text-muted">
+                    Głosowanie kończy się:
+                    <span th:text="${#temporals.format(voting.deadlineDate, 'dd.MM.yyyy HH:mm')}"></span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Komunikaty -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <!-- Formularz głosowania -->
+        <div class="col-lg-8" th:if="${voting.status.name() == 'ACTIVE' and !voting.hasVoted}">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Oddaj swój głos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- POPRAWIONY FORMULARZ - bez zagnieżdżania -->
+                    <form th:action="@{/meetings/{meetingId}/votings/{votingId}/vote(meetingId=${meetingId}, votingId=${voting.id})}"
+                          method="post">
+
+                        <div th:each="option : ${voting.options}" class="mb-3 p-3 border rounded voting-option">
+                            <div class="form-check">
+                                <!-- Dla pojedynczego wyboru -->
+                                <input th:if="${voting.type.name() == 'SINGLE_CHOICE'}"
+                                       class="form-check-input"
+                                       type="radio"
+                                       name="optionIds"
+                                       th:id="${'option_' + option.id}"
+                                       th:value="${option.id}"
+                                       required>
+
+                                <!-- Dla wielokrotnego wyboru -->
+                                <input th:if="${voting.type.name() == 'MULTIPLE_CHOICE'}"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       name="optionIds"
+                                       th:id="${'option_' + option.id}"
+                                       th:value="${option.id}">
+
+                                <label class="form-check-label w-100" th:for="${'option_' + option.id}">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong th:text="${#temporals.format(option.optionDate, 'dd.MM.yyyy HH:mm')}"></strong>
+                                            <span th:if="${option.durationMinutes}" class="text-muted ms-2">
+                                                (<span th:text="${option.durationMinutes}"></span> min)
+                                            </span>
+                                        </div>
+                                        <span class="badge bg-light text-dark"
+                                              th:text="${option.voteCount} + ' głosów'"></span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Informacja o maksymalnej liczbie wyborów -->
+                        <div th:if="${voting.maxChoices != null}" class="mt-2">
+                            <small class="text-muted">
+                                Możesz wybrać maksymalnie <span th:text="${voting.maxChoices}"></span> opcji
+                            </small>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Zagłosuj
+                            </button>
+                            <a th:href="@{/meetings/{meetingId}/votings(meetingId=${meetingId})}"
+                               class="btn btn-outline-secondary ms-2">
+                                Powrót do listy
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wyniki głosowania -->
+        <div class="col-lg-8" th:if="${voting.status.name() == 'CLOSED' or voting.hasVoted}">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Wyniki głosowania
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:each="option : ${voting.options}"
+                         class="mb-3 p-3 border rounded"
+                         th:classappend="${voting.stats.winningOption != null and voting.stats.winningOption.optionId == option.id} ? 'winning-option' : ''">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <strong th:text="${#temporals.format(option.optionDate, 'dd.MM.yyyy HH:mm')}"></strong>
+                                <span th:if="${option.durationMinutes}" class="text-muted ms-2">
+                                    (<span th:text="${option.durationMinutes}"></span> min)
+                                </span>
+                                <span th:if="${option.isSuggested}" class="badge bg-info ms-2">
+                                    <i class="bi bi-lightbulb me-1"></i>Sugerowane
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-bold" th:text="${option.voteCount}"></span>
+                                <span class="text-muted">głosów</span>
+                                <span th:if="${option.percentage}" class="ms-2 text-muted">
+                                    (<span th:text="${#numbers.formatDecimal(option.percentage, 1, 1)}"></span>%)
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Pasek postępu -->
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar"
+                                 th:style="'width: ' + ${option.percentage} + '%;'"
+                                 th:class="${voting.stats.winningOption != null and voting.stats.winningOption.optionId == option.id} ?
+                                           'bg-success' : 'bg-primary'">
+                                <span th:if="${option.percentage > 10}"
+                                      th:text="${#numbers.formatDecimal(option.percentage, 1, 1)} + '%'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Zwycięzca -->
+                        <div th:if="${voting.stats.winningOption != null and voting.stats.winningOption.optionId == option.id}"
+                             class="mt-1">
+                            <span class="badge bg-success">
+                                <i class="bi bi-trophy me-1"></i>Wybrany termin
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Statystyki -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <div class="row text-center">
+                            <div class="col">
+                                <h5 th:text="${voting.stats.totalVotes}"></h5>
+                                <small class="text-muted">Łącznie głosów</small>
+                            </div>
+                            <div class="col">
+                                <h5 th:text="${voting.stats.totalVoters}"></h5>
+                                <small class="text-muted">Uczestników głosowało</small>
+                            </div>
+                            <div class="col">
+                                <h5 th:text="${voting.stats.totalOptions}"></h5>
+                                <small class="text-muted">Opcji</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel boczny -->
+        <div class="col-lg-4">
+            <!-- Informacje o głosowaniu -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Informacje
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Typ głosowania:</strong>
+                        <span class="float-end" th:text="${voting.type.name()} == 'SINGLE_CHOICE' ? 'Pojedynczy wybór' : 'Wielokrotny wybór'"></span>
+                    </div>
+                    <div class="mb-2" th:if="${voting.maxChoices}">
+                        <strong>Maks. wyborów:</strong>
+                        <span class="float-end" th:text="${voting.maxChoices}"></span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Status:</strong>
+                        <span class="float-end badge"
+                              th:class="${voting.status.name() == 'ACTIVE' ? 'bg-success' : 'bg-secondary'}">
+                            <span th:text="${voting.status.name() == 'ACTIVE' ? 'Aktywne' : 'Zamknięte'}"></span>
+                        </span>
+                    </div>
+                    <div th:if="${voting.hasVoted}" class="text-center mt-3">
+                        <span class="badge bg-success p-2">
+                            <i class="bi bi-check-circle me-1"></i>Twój głos został oddany
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Akcje organizatora -->
+            <div th:if="${voting.status.name() == 'ACTIVE' and userId == meeting.organizer.id}"
+                 class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>Akcje organizatora
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/meetings/{meetingId}/votings/{votingId}/close(meetingId=${meetingId}, votingId=${voting.id})}"
+                          method="post">
+                        <button type="submit" class="btn btn-warning w-100"
+                                onclick="return confirm('Czy na pewno chcesz zamknąć głosowanie?')">
+                            <i class="bi bi-lock me-2"></i>Zamknij głosowanie
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Powrót -->
+            <div class="card">
+                <div class="card-body text-center">
+                    <a th:href="@{/meetings/{meetingId}/votings(meetingId=${meetingId})}"
+                       class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-left me-2"></i>Powrót do listy głosowań
+                    </a>
+                    <a th:href="@{/meetings/{meetingId}(meetingId=${meetingId})}"
+                       class="btn btn-outline-primary w-100 mt-2">
+                        <i class="bi bi-calendar me-2"></i>Powrót do spotkania
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .voting-option {
+        border: 2px solid #e9ecef;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .voting-option:hover {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+
+    .voting-option.selected {
+        border-color: #28a745;
+        background-color: #e8f5e8;
+    }
+
+    .winning-option {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border: 2px solid #28a745;
+    }
+</style>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Edytuj spotkanie - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Utwórz nowe głosowanie
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/meetings/{meetingId}/votings/create(meetingId=${meetingId})}"
+                          method="post" th:object="${createVotingRequest}">
+
+                        <!-- Tytuł -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Tytuł głosowania *</label>
+                            <input type="text" class="form-control" id="title" th:field="*{title}"
+                                   placeholder="np. Wybór terminu spotkania" required>
+                            <div class="form-text">Krótki opis głosowania</div>
+                        </div>
+
+                        <!-- Opis -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Opis</label>
+                            <textarea class="form-control" id="description" th:field="*{description}"
+                                      rows="3" placeholder="Dodatkowe informacje o głosowaniu..."></textarea>
+                        </div>
+
+                        <!-- Typ głosowania -->
+                        <div class="mb-3">
+                            <label class="form-label">Typ głosowania *</label>
+                            <select class="form-select" th:field="*{type}" required>
+                                <option value="">Wybierz typ głosowania</option>
+                                <option value="SINGLE_CHOICE">Pojedynczy wybór</option>
+                                <option value="MULTIPLE_CHOICE">Wielokrotny wybór</option>
+                                <option value="RANKED">Głosowanie rankingowe</option>
+                            </select>
+                        </div>
+
+                        <!-- Maksymalna liczba wyborów -->
+                        <div class="mb-3">
+                            <label for="maxChoices" class="form-label">Maksymalna liczba wyborów</label>
+                            <input type="number" class="form-control" id="maxChoices"
+                                   th:field="*{maxChoices}" min="1" max="10">
+                            <div class="form-text">Pozostaw puste dla nieograniczonej liczby</div>
+                        </div>
+
+                        <!-- Data zakończenia -->
+                        <div class="mb-3">
+                            <label for="deadlineDate" class="form-label">Data zakończenia głosowania</label>
+                            <input type="datetime-local" class="form-control" id="deadlineDate"
+                                   th:field="*{deadlineDate}">
+                        </div>
+
+                        <!-- Opcje -->
+                        <div class="mb-4">
+                            <label class="form-label">Opcje głosowania *</label>
+                            <div id="options-container">
+                                <div class="option-item mb-2 p-2 border rounded">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Data i godzina</label>
+                                            <input type="datetime-local" class="form-control option-date"
+                                                   name="options[0].optionDate" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Czas trwania (min)</label>
+                                            <input type="number" class="form-control option-duration"
+                                                   name="options[0].durationMinutes" value="60" min="15" max="480">
+                                        </div>
+                                        <div class="col-md-2 d-flex align-items-end">
+                                            <button type="button" class="btn btn-danger btn-sm remove-option"
+                                                    style="display: none;">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="add-option" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-plus me-1"></i>Dodaj opcję
+                            </button>
+                        </div>
+
+                        <!-- Ustawienia dodatkowe -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       th:field="*{allowSuggestions}" id="allowSuggestions">
+                                <label class="form-check-label" for="allowSuggestions">
+                                    Zezwól uczestnikom na sugerowanie nowych opcji
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       th:field="*{autoClose}" id="autoClose">
+                                <label class="form-check-label" for="autoClose">
+                                    Automatycznie zamknij głosowanie po upływie terminu
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Przyciski -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Utwórz głosowanie
+                            </button>
+                            <a th:href="@{/meetings/{meetingId}/votings(meetingId=${meetingId})}"
+                               class="btn btn-outline-secondary">
+                                Anuluj
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let optionCounter = 1;
+        const container = document.getElementById('options-container');
+
+        document.getElementById('add-option').addEventListener('click', function() {
+            const newOption = document.createElement('div');
+            newOption.className = 'option-item mb-2 p-2 border rounded';
+            newOption.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Data i godzina</label>
+                        <input type="datetime-local" class="form-control option-date"
+                               name="options[${optionCounter}].optionDate" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Czas trwania (min)</label>
+                        <input type="number" class="form-control option-duration"
+                               name="options[${optionCounter}].durationMinutes" value="60" min="15" max="480">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger btn-sm remove-option">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newOption);
+            optionCounter++;
+
+            // Pokazuj przyciski usuwania gdy jest więcej niż 1 opcja
+            updateRemoveButtons();
+        });
+
+        container.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-option')) {
+                e.target.closest('.option-item').remove();
+                optionCounter--;
+                updateRemoveButtons();
+            }
+        });
+
+        function updateRemoveButtons() {
+            const options = container.querySelectorAll('.option-item');
+            const removeButtons = container.querySelectorAll('.remove-option');
+
+            removeButtons.forEach(btn => {
+                btn.style.display = options.length > 1 ? 'block' : 'none';
+            });
+        }
+
+        // Ustaw domyślną datę na jutro
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateInputs = container.querySelectorAll('.option-date');
+        dateInputs.forEach(input => {
+            input.value = tomorrow.toISOString().slice(0, 16);
+        });
+    });
+</script>
+</body>
+</html>

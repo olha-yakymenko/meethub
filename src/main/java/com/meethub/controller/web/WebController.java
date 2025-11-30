@@ -1064,10 +1064,7 @@ package com.meethub.controller.web;
 
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UserRegistrationRequest;
-import com.meethub.domain.model.response.MeetingParticipationInfo;
-import com.meethub.domain.model.response.MeetingResponse;
-import com.meethub.domain.model.response.ParticipantResponse;
-import com.meethub.domain.model.response.UserResponse;
+import com.meethub.domain.model.response.*;
 import com.meethub.domain.service.*;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -1088,6 +1085,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -1098,6 +1096,7 @@ public class WebController {
     private final MeetingAuthorizationService meetingAuthorizationService;
     private final UserService userService;
     private final MeetingParticipantService meetingParticipantService;
+    private final MeetingVotingService meetingVotingService;
 
     @GetMapping("/")
     public String home(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
@@ -1395,6 +1394,58 @@ public class WebController {
 //        }
 //    }
 
+//    @GetMapping("/meetings/{id}")
+//    public String meetingDetails(
+//            @PathVariable Long id,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            MeetingResponse meeting = meetingService.getMeetingById(id);
+//            model.addAttribute("meeting", meeting);
+//
+//            Long userId = userDetails != null ? userDetails.getId() : null;
+//
+//            // ✅ Pobierz POTWIERDZONYCH uczestników do wyświetlenia
+//            List<ParticipantResponse> confirmedParticipants = meetingParticipantService.getConfirmedParticipants(id);
+//
+//            // ✅ Pobierz PEŁNE STATYSTYKI
+//            Map<String, Long> participantStats = meetingParticipantService.getParticipantStatistics(id);
+//
+//            model.addAttribute("participants", confirmedParticipants);
+//            model.addAttribute("participantStats", participantStats);
+//
+//            // ✅ Reszta logiki
+//            MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+//            model.addAttribute("isOrganizer", participationInfo.isOrganizer());
+//            model.addAttribute("isParticipant", participationInfo.isParticipant());
+//            model.addAttribute("isRelated", participationInfo.isRelated());
+//            model.addAttribute("participantRole", participationInfo.getParticipantRole());
+//            model.addAttribute("permissions", participationInfo.getPermissions());
+//            model.addAttribute("canEdit", participationInfo.isCanEdit());
+//            model.addAttribute("canDelete", participationInfo.isCanDelete());
+//            model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
+//            model.addAttribute("canJoin", participationInfo.isCanJoin());
+//
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//                model.addAttribute("userId", userId);
+//            }
+//
+//            return "meetings/details";
+//
+//        } catch (Exception e) {
+//
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//            }
+//            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania");
+//            return "redirect:/meetings";
+//        }
+//    }
+
+
+
     @GetMapping("/meetings/{id}")
     public String meetingDetails(
             @PathVariable Long id,
@@ -1416,6 +1467,27 @@ public class WebController {
             model.addAttribute("participants", confirmedParticipants);
             model.addAttribute("participantStats", participantStats);
 
+            // ✅ DODAJ: Pobierz głosowania
+            if (userId != null) {
+                List<VotingResponse> allVotings = meetingVotingService.getMeetingVotings(id, userId);
+
+                // Podziel na aktywne i zamknięte
+                List<VotingResponse> activeVotings = allVotings.stream()
+                        .filter(voting -> voting.getStatus().name().equals("ACTIVE"))
+                        .collect(Collectors.toList());
+
+                List<VotingResponse> closedVotings = allVotings.stream()
+                        .filter(voting -> voting.getStatus().name().equals("CLOSED"))
+                        .collect(Collectors.toList());
+
+                model.addAttribute("activeVotings", activeVotings);
+                model.addAttribute("closedVotings", closedVotings);
+            } else {
+                // Dla niezalogowanych - puste listy
+                model.addAttribute("activeVotings", Collections.emptyList());
+                model.addAttribute("closedVotings", Collections.emptyList());
+            }
+
             // ✅ Reszta logiki
             MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
             model.addAttribute("isOrganizer", participationInfo.isOrganizer());
@@ -1436,7 +1508,6 @@ public class WebController {
             return "meetings/details";
 
         } catch (Exception e) {
-
             if (userDetails != null) {
                 model.addAttribute("user", userDetails);
             }
@@ -1444,6 +1515,10 @@ public class WebController {
             return "redirect:/meetings";
         }
     }
+
+
+
+
     @GetMapping("/meetings/create")
     public String showCreateMeetingForm(
             @AuthenticationPrincipal CustomUserDetails userDetails,

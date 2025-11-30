@@ -1323,3 +1323,69 @@ UPDATE meethub_schema.email_templates SET
     version = 1,
     channel = 'EMAIL'
 WHERE name IS NULL OR category IS NULL OR is_active IS NULL;
+
+
+
+-- =============================================
+-- TABELE SYSTEMU GŁOSOWANIA
+-- =============================================
+
+-- Tabela głosowań
+CREATE TABLE IF NOT EXISTS meeting_votings (
+    id BIGSERIAL PRIMARY KEY,
+    meeting_id BIGINT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    type VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    max_choices INTEGER,
+    allow_suggestions BOOLEAN DEFAULT FALSE,
+    deadline_date TIMESTAMP,
+    auto_close BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela opcji głosowania
+CREATE TABLE IF NOT EXISTS voting_options (
+    id BIGSERIAL PRIMARY KEY,
+    voting_id BIGINT NOT NULL REFERENCES meeting_votings(id) ON DELETE CASCADE,
+    option_date TIMESTAMP NOT NULL,
+    option_duration_minutes INTEGER,
+    is_suggested BOOLEAN DEFAULT FALSE,
+    suggested_by BIGINT REFERENCES users(id)
+);
+
+-- Tabela głosów
+CREATE TABLE IF NOT EXISTS votes (
+    id BIGSERIAL PRIMARY KEY,
+    voting_id BIGINT NOT NULL REFERENCES meeting_votings(id) ON DELETE CASCADE,
+    option_id BIGINT NOT NULL REFERENCES voting_options(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vote_weight INTEGER DEFAULT 1,
+    preference_order INTEGER,
+    voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- INDEKSY DLA WYDajNOŚCI
+-- =============================================
+
+-- Indeksy dla meeting_votings
+CREATE INDEX IF NOT EXISTS idx_voting_meeting ON meeting_votings(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_voting_status ON meeting_votings(status);
+CREATE INDEX IF NOT EXISTS idx_voting_deadline ON meeting_votings(deadline_date);
+
+-- Indeksy dla voting_options
+CREATE INDEX IF NOT EXISTS idx_option_voting ON voting_options(voting_id);
+CREATE INDEX IF NOT EXISTS idx_option_date ON voting_options(option_date);
+
+-- Indeksy dla votes
+CREATE INDEX IF NOT EXISTS idx_vote_voting ON votes(voting_id);
+CREATE INDEX IF NOT EXISTS idx_vote_option ON votes(option_id);
+CREATE INDEX IF NOT EXISTS idx_vote_user ON votes(user_id);
+CREATE INDEX IF NOT EXISTS idx_vote_user_voting ON votes(user_id, voting_id);
+CREATE INDEX IF NOT EXISTS idx_vote_preference ON votes(preference_order);
+
+-- Unikalne ograniczenia
+ALTER TABLE votes ADD CONSTRAINT unique_user_voting_option UNIQUE (user_id, voting_id, option_id);
