@@ -122,46 +122,139 @@
         <!-- Sidebar -->
         <div class="col-lg-4">
             <!-- Akcje -->
+<!--            <div class="card mb-4">-->
+<!--                <div class="card-header">-->
+<!--                    <h6 class="card-title mb-0"><i class="bi bi-lightning me-2"></i>Akcje</h6>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <div class="d-grid gap-2">-->
+<!--                        &lt;!&ndash; Dołączanie dla użytkownika &ndash;&gt;-->
+<!--                        <a th:if="${!isOrganizer and task.allowSelfAssignment}"-->
+<!--                           th:href="@{/meetings/{meetingId}/tasks/{taskId}/assign-self(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                           class="btn btn-success">-->
+<!--                            <i class="bi bi-person-plus me-2"></i>Dołącz do zadania-->
+<!--                        </a>-->
+
+<!--                        &lt;!&ndash; Akcje organizatora &ndash;&gt;-->
+<!--                        <div th:if="${isOrganizer}" class="border-top pt-3 mt-3">-->
+<!--                            <small class="text-muted d-block mb-2">Akcje organizatora:</small>-->
+
+<!--                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/edit(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                               class="btn btn-outline-warning btn-sm w-100 mb-2">-->
+<!--                                <i class="bi bi-pencil me-1"></i>Edytuj zadanie-->
+<!--                            </a>-->
+
+<!--                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/assign(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                               class="btn btn-outline-info btn-sm w-100 mb-2">-->
+<!--                                <i class="bi bi-person-plus me-1"></i>Przypisz użytkowników-->
+<!--                            </a>-->
+
+<!--                            <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/delete(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                                  method="post"-->
+<!--                                  onsubmit="return confirm('Czy na pewno chcesz usunąć to zadanie?')">-->
+<!--                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">-->
+<!--                                    <i class="bi bi-trash me-1"></i>Usuń zadanie-->
+<!--                                </button>-->
+<!--                            </form>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Powrót &ndash;&gt;-->
+<!--                        <a th:href="@{/meetings/{meetingId}/tasks(meetingId=${meeting.id})}" class="btn btn-outline-secondary mt-3">-->
+<!--                            <i class="bi bi-arrow-left me-2"></i>Powrót do listy-->
+<!--                        </a>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+
+            <!-- W sekcji listy przypisań w details.html ZAMIEN na: -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h6 class="card-title mb-0"><i class="bi bi-lightning me-2"></i>Akcje</h6>
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>Przypisani użytkownicy
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <!-- Dołączanie dla użytkownika -->
-                        <a th:if="${!isOrganizer and task.allowSelfAssignment}"
-                           th:href="@{/meetings/{meetingId}/tasks/{taskId}/assign-self(meetingId=${meeting.id}, taskId=${task.id})}"
-                           class="btn btn-success">
-                            <i class="bi bi-person-plus me-2"></i>Dołącz do zadania
-                        </a>
+                    <div th:if="${task.assignments != null and !task.assignments.empty}">
+                        <div th:each="assignment : ${task.assignments}" class="mb-3 p-3 border rounded">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-person-circle me-2 text-muted fs-4"></i>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <div class="fw-bold" th:text="${assignment.user.firstName + ' ' + assignment.user.lastName}"></div>
+                                            <small class="text-muted" th:text="${assignment.user.email}"></small>
+                                        </div>
+                                        <span class="badge ms-2"
+                                              th:class="${assignment.status.name() == 'ASSIGNED' ? 'bg-secondary' :
+                                            (assignment.status.name() == 'IN_PROGRESS' ? 'bg-warning' :
+                                            (assignment.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger'))}"
+                                              th:text="${assignment.status.displayName}">
+                            </span>
+                                    </div>
 
-                        <!-- Akcje organizatora -->
-                        <div th:if="${isOrganizer}" class="border-top pt-3 mt-3">
-                            <small class="text-muted d-block mb-2">Akcje organizatora:</small>
+                                    <!-- Komentarz -->
+                                    <div th:if="${assignment.comment != null}" class="mb-2">
+                                        <small class="text-muted">Komentarz:</small>
+                                        <div class="p-2 bg-light rounded">
+                                            <span th:text="${assignment.comment}"></span>
+                                        </div>
+                                    </div>
 
-                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/edit(meetingId=${meeting.id}, taskId=${task.id})}"
-                               class="btn btn-outline-warning btn-sm w-100 mb-2">
-                                <i class="bi bi-pencil me-1"></i>Edytuj zadanie
-                            </a>
+                                    <!-- Formularze aktualizacji (tylko dla użytkownika lub organizatora) -->
+                                    <div th:if="${assignment.user.id == userId or isOrganizer}"
+                                         class="border-top pt-2 mt-2">
 
-                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/assign(meetingId=${meeting.id}, taskId=${task.id})}"
-                               class="btn btn-outline-info btn-sm w-100 mb-2">
-                                <i class="bi bi-person-plus me-1"></i>Przypisz użytkowników
-                            </a>
+                                        <!-- Formularz zmiany statusu -->
+                                        <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/assignment/{assignmentId}/status(meetingId=${meeting.id}, taskId=${task.id}, assignmentId=${assignment.id})}"
+                                              method="post"
+                                              class="mb-2">
+                                            <label class="form-label small">Zmień status:</label>
+                                            <div class="d-flex gap-2">
+                                                <select name="status" class="form-select form-select-sm">
+                                                    <option value="ASSIGNED" th:selected="${assignment.status.name() == 'ASSIGNED'}">Przypisany</option>
+                                                    <option value="IN_PROGRESS" th:selected="${assignment.status.name() == 'IN_PROGRESS'}">W trakcie</option>
+                                                    <option value="COMPLETED" th:selected="${assignment.status.name() == 'COMPLETED'}">Ukończony</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                            </div>
+                                        </form>
 
-                            <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/delete(meetingId=${meeting.id}, taskId=${task.id})}"
-                                  method="post"
-                                  onsubmit="return confirm('Czy na pewno chcesz usunąć to zadanie?')">
-                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
-                                    <i class="bi bi-trash me-1"></i>Usuń zadanie
-                                </button>
-                            </form>
+                                        <!-- Formularz dodawania/edycji komentarza -->
+                                        <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/assignment/{assignmentId}/comment(meetingId=${meeting.id}, taskId=${task.id}, assignmentId=${assignment.id})}"
+                                              method="post">
+                                            <label class="form-label small">Dodaj/edytuj komentarz:</label>
+                                            <div class="d-flex gap-2">
+                                    <textarea name="comment"
+                                              class="form-control form-control-sm"
+                                              rows="2"
+                                              placeholder="Dodaj komentarz..."
+                                              th:text="${assignment.comment}"></textarea>
+                                                <button type="submit" class="btn btn-sm btn-secondary align-self-start">
+                                                    <i class="bi bi-save"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <!-- Przycisk usuwania przypisania (tylko dla organizatora) -->
+                                    <div th:if="${isOrganizer}" class="mt-2 text-end">
+                                        <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/assignment/{assignmentId}/remove(meetingId=${meeting.id}, taskId=${task.id}, assignmentId=${assignment.id})}"
+                                              method="post"
+                                              onsubmit="return confirm('Czy na pewno chcesz usunąć to przypisanie?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash me-1"></i>Usuń przypisanie
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <!-- Powrót -->
-                        <a th:href="@{/meetings/{meetingId}/tasks(meetingId=${meeting.id})}" class="btn btn-outline-secondary mt-3">
-                            <i class="bi bi-arrow-left me-2"></i>Powrót do listy
-                        </a>
+                    </div>
+                    <div th:if="${task.assignments == null or task.assignments.empty}" class="text-muted text-center py-4">
+                        <i class="bi bi-people fs-1"></i>
+                        <p class="mt-2 mb-0">Brak przypisanych użytkowników</p>
                     </div>
                 </div>
             </div>

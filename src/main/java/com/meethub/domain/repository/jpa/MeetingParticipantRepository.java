@@ -1,6 +1,7 @@
 package com.meethub.domain.repository.jpa;
 
 import com.meethub.domain.model.entity.MeetingParticipant;
+import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -48,5 +49,8 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
         // ✅ Metody do statystyk
         long countByMeetingId(Long meetingId);
 
+    // Dodaj tę metodę do MeetingParticipantRepository.java:
+    @Query("SELECT mp.user FROM MeetingParticipant mp WHERE mp.meeting.id = :meetingId AND mp.status = 'CONFIRMED'")
+    List<User> findUsersByMeetingId(@Param("meetingId") Long meetingId);
 
 }

@@ -505,52 +505,6 @@ public class MeetingVotingServiceImpl implements MeetingVotingService {
         return 1;
     }
 
-    // ========== MAPPING METHODS ==========
-
-//    private VotingResponse mapToVotingResponse(MeetingVoting voting, Long userId) {
-//        List<VotingOptionResponse> optionResponses = voting.getOptions().stream()
-//                .map(option -> mapToOptionResponse(option, userId))
-//                .collect(Collectors.toList());
-//
-//        VoteStatsResponse stats = calculateVotingStats(voting);
-//        List<VoteResponse> userVotes = getUserVotes(voting.getId(), userId);
-//
-//        // Oblicz całkowitą liczbę głosów dla procentów
-//        int totalVotes = optionResponses.stream()
-//                .mapToInt(opt -> opt.getVoteCount() != null ? opt.getVoteCount() : 0)
-//                .sum();
-//
-//        // Ustaw procenty dla każdej opcji
-//        for (VotingOptionResponse option : optionResponses) {
-//            if (totalVotes > 0 && option.getVoteCount() != null) {
-//                double percentage = (option.getVoteCount() * 100.0) / totalVotes;
-//                option.setPercentage(percentage);
-//            }
-//        }
-//
-//        return VotingResponse.builder()
-//                .id(voting.getId())
-//                .title(voting.getTitle())
-//                .description(voting.getDescription())
-//                .status(voting.getStatus())
-//                .type(voting.getType())
-//                .maxChoices(voting.getMaxChoices())
-//                .allowSuggestions(voting.getAllowSuggestions())
-//                .deadlineDate(voting.getDeadlineDate())
-//                .autoClose(voting.getAutoClose())
-//                .createdAt(voting.getCreatedAt())
-//                .updatedAt(voting.getUpdatedAt())
-//                .options(optionResponses)
-//                .stats(stats)
-//                .hasVoted(!userVotes.isEmpty())
-//                .userVotes(userVotes)
-//                .createdBy(mapToUserResponse(voting.getMeeting().getOrganizer()))
-//                .canVote(canUserVote(voting, userId))
-//                .canManage(canUserManage(voting, userId))
-//                .build();
-//    }
-
-
 
     private VotingResponse mapToVotingResponse(MeetingVoting voting, Long userId) {
         System.out.println("=== DEBUG: mapToVotingResponse ===");
@@ -610,37 +564,6 @@ public class MeetingVotingServiceImpl implements MeetingVotingService {
         return result;
     }
 
-
-
-
-//    private VotingOptionResponse mapToOptionResponse(VotingOption option, Long userId) {
-//        if (option == null) {
-//            return null;
-//        }
-//
-//        long voteCount = voteRepository.countByOptionId(option.getId());
-//        boolean userVotedFor = voteRepository.existsByVotingIdAndUserIdAndOptionId(
-//                option.getVoting().getId(), userId, option.getId());
-//
-//        // Użyj tablicy z jednym elementem (effectively final)
-//        final String[] suggestedByName = { null };
-//
-//        if (option.getSuggestedBy() != null) {
-//            userRepository.findById(option.getSuggestedBy())
-//                    .ifPresent(user -> suggestedByName[0] = user.getFirstName() + " " + user.getLastName());
-//        }
-//
-//        return VotingOptionResponse.builder()
-//                .id(option.getId())
-//                .optionDate(option.getOptionDate())
-//                .durationMinutes(option.getDurationMinutes())
-//                .isSuggested(option.getIsSuggested())
-//                .suggestedBy(option.getSuggestedBy())
-//                .suggestedByName(suggestedByName[0]) // Użyj elementu tablicy
-//                .voteCount((int) voteCount)
-//                .userVotedFor(userVotedFor)
-//                .build();
-//    }
 
 
     private VoteStatsResponse calculateVotingStats(MeetingVoting voting) {

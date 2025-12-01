@@ -2,10 +2,10 @@ package com.meethub.controller.web;
 
 // MeetingTaskController.java
 
-import com.meethub.domain.model.entity.Meeting;
-import com.meethub.domain.model.entity.Task;
+import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.request.CreateTaskRequest;
 import com.meethub.domain.model.request.UpdateTaskRequest;
+import com.meethub.domain.repository.jpa.MeetingParticipantRepository;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.service.TaskService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/meetings/{meetingId}/tasks")
@@ -25,6 +26,7 @@ public class MeetingTaskController {
 
     private final TaskService taskService;
     private final MeetingRepository meetingRepository;
+    private final MeetingParticipantRepository participantRepository;
 
     @GetMapping
     public String getMeetingTasks(@PathVariable Long meetingId,
@@ -116,39 +118,39 @@ public class MeetingTaskController {
         }
     }
 
-    @GetMapping("/{taskId}/edit")
-    public String showEditTaskForm(@PathVariable Long meetingId,
-                                   @PathVariable Long taskId,
-                                   @AuthenticationPrincipal CustomUserDetails userDetails,
-                                   Model model) {
-        try {
-            Task task = taskService.getTaskById(taskId);
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
-
-            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
-                throw new RuntimeException("Tylko organizator może edytować zadania");
-            }
-
-            UpdateTaskRequest updateRequest = UpdateTaskRequest.builder()
-                    .title(task.getTitle())
-                    .description(task.getDescription())
-                    .deadline(task.getDeadline())
-                    .allowSelfAssignment(task.getAllowSelfAssignment())
-//                    .maxFilesPerUser(task.getMaxFilesPerUser())
-//                    .maxFileSize(task.getMaxFileSize())
-                    .build();
-
-            model.addAttribute("meeting", meeting);
-            model.addAttribute("task", task);
-            model.addAttribute("updateTaskRequest", updateRequest);
-
-            return "meetings/tasks/edit";
-        } catch (Exception e) {
-            model.addAttribute("error", e.getMessage());
-            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
-        }
-    }
+//    @GetMapping("/{taskId}/edit")
+//    public String showEditTaskForm(@PathVariable Long meetingId,
+//                                   @PathVariable Long taskId,
+//                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                   Model model) {
+//        try {
+//            Task task = taskService.getTaskById(taskId);
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
+//                throw new RuntimeException("Tylko organizator może edytować zadania");
+//            }
+//
+//            UpdateTaskRequest updateRequest = UpdateTaskRequest.builder()
+//                    .title(task.getTitle())
+//                    .description(task.getDescription())
+//                    .deadline(task.getDeadline())
+//                    .allowSelfAssignment(task.getAllowSelfAssignment())
+////                    .maxFilesPerUser(task.getMaxFilesPerUser())
+////                    .maxFileSize(task.getMaxFileSize())
+//                    .build();
+//
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("task", task);
+//            model.addAttribute("updateTaskRequest", updateRequest);
+//
+//            return "meetings/tasks/edit";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+//        }
+//    }
 
     @PostMapping("/{taskId}/edit")
     public String updateTask(@PathVariable Long meetingId,
@@ -195,23 +197,23 @@ public class MeetingTaskController {
         return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
     }
 
-    @PostMapping("/{taskId}/assignment/{assignmentId}/status")
-    public String updateAssignmentStatus(@PathVariable Long meetingId,
-                                         @PathVariable Long taskId,
-                                         @PathVariable Long assignmentId,
-                                         @RequestParam String status,
-                                         @AuthenticationPrincipal CustomUserDetails userDetails,
-                                         RedirectAttributes redirectAttributes) {
-        try {
-            taskService.updateAssignmentStatus(assignmentId,
-                    com.meethub.domain.model.enums.AssignmentStatus.valueOf(status),
-                    userDetails.getId());
-            redirectAttributes.addFlashAttribute("success", "Status zadania został zaktualizowany");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
-    }
+//    @PostMapping("/{taskId}/assignment/{assignmentId}/status")
+//    public String updateAssignmentStatus(@PathVariable Long meetingId,
+//                                         @PathVariable Long taskId,
+//                                         @PathVariable Long assignmentId,
+//                                         @RequestParam String status,
+//                                         @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                         RedirectAttributes redirectAttributes) {
+//        try {
+//            taskService.updateAssignmentStatus(assignmentId,
+//                    com.meethub.domain.model.enums.AssignmentStatus.valueOf(status),
+//                    userDetails.getId());
+//            redirectAttributes.addFlashAttribute("success", "Status zadania został zaktualizowany");
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("error", e.getMessage());
+//        }
+//        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+//    }
 
     @PostMapping("/{taskId}/assignment/{assignmentId}/comment")
     public String updateAssignmentComment(@PathVariable Long meetingId,
@@ -227,5 +229,142 @@ public class MeetingTaskController {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+    }
+
+
+
+
+
+
+
+    @GetMapping("/{taskId}/assign")
+    public String showAssignUsersForm(@PathVariable Long meetingId,
+                                      @PathVariable Long taskId,
+                                      @AuthenticationPrincipal CustomUserDetails userDetails,
+                                      Model model) {
+        try {
+            Task task = taskService.getTaskById(taskId);
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
+                throw new RuntimeException("Tylko organizator może przypisywać użytkowników");
+            }
+
+            // Pobierz potwierdzonych uczestników spotkania
+            List<MeetingParticipant> participants = participantRepository.findByMeetingId(meetingId);
+            List<User> confirmedUsers = participants.stream()
+                    .filter(p -> p.getStatus() == com.meethub.domain.model.enums.ParticipationStatus.CONFIRMED)
+                    .map(MeetingParticipant::getUser)
+                    .collect(Collectors.toList());
+
+            // Pobierz już przypisanych użytkowników
+            List<TaskAssignment> assignments = taskService.getTaskAssignments(taskId);
+            List<User> assignedUsers = assignments.stream()
+                    .map(TaskAssignment::getUser)
+                    .collect(Collectors.toList());
+
+            // Dostępni użytkownicy = potwierdzeni uczestnicy - już przypisani
+            List<User> availableUsers = confirmedUsers.stream()
+                    .filter(user -> !assignedUsers.contains(user))
+                    .collect(Collectors.toList());
+
+            model.addAttribute("meeting", meeting);
+            model.addAttribute("task", task);
+            model.addAttribute("availableUsers", availableUsers);
+            model.addAttribute("assignedUsers", assignedUsers);
+            model.addAttribute("assignments", assignments);
+
+            return "meetings/tasks/assign";
+        } catch (Exception e) {
+            model.addAttribute("error", e.getMessage());
+            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+        }
+    }
+
+    @PostMapping("/{taskId}/assign")
+    public String assignUserToTask(@PathVariable Long meetingId,
+                                   @PathVariable Long taskId,
+                                   @RequestParam Long userId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            taskService.assignTask(taskId, userId, userDetails.getId());
+            redirectAttributes.addFlashAttribute("success", "Użytkownik został przypisany do zadania");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/assign";
+    }
+
+    @PostMapping("/{taskId}/assignment/{assignmentId}/remove")
+    public String removeAssignment(@PathVariable Long meetingId,
+                                   @PathVariable Long taskId,
+                                   @PathVariable Long assignmentId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            taskService.removeAssignment(assignmentId, userDetails.getId());
+            redirectAttributes.addFlashAttribute("success", "Przypisanie zostało usunięte");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/assign";
+    }
+
+    // Poprawiona metoda do edycji statusu (dodaj parametr status)
+    @PostMapping("/{taskId}/assignment/{assignmentId}/status")
+    public String updateAssignmentStatus(@PathVariable Long meetingId,
+                                         @PathVariable Long taskId,
+                                         @PathVariable Long assignmentId,
+                                         @RequestParam("status") String status, // Dodaj @RequestParam
+                                         @AuthenticationPrincipal CustomUserDetails userDetails,
+                                         RedirectAttributes redirectAttributes) {
+        try {
+            taskService.updateAssignmentStatus(assignmentId,
+                    com.meethub.domain.model.enums.AssignmentStatus.valueOf(status),
+                    userDetails.getId());
+            redirectAttributes.addFlashAttribute("success", "Status zadania został zaktualizowany");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+    }
+
+    @GetMapping("/{taskId}/edit")
+    public String showEditTaskForm(@PathVariable Long meetingId,
+                                   @PathVariable Long taskId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   Model model) {
+        try {
+            System.out.println("DEBUG: Loading edit form for task: " + taskId);
+            Task task = taskService.getTaskById(taskId);
+            System.out.println("DEBUG: Task title: " + task.getTitle());
+            System.out.println("DEBUG: Task deadline: " + task.getDeadline());
+            System.out.println("DEBUG: Task allowSelfAssignment: " + task.getAllowSelfAssignment());
+
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
+                throw new RuntimeException("Tylko organizator może edytować zadania");
+            }
+
+            // Przekształć LocalDateTime na String w formacie wymaganym przez input datetime-local
+            String formattedDeadline = task.getDeadline().toString().replace("T", " ");
+            model.addAttribute("meeting", meeting);
+            model.addAttribute("task", task);
+            model.addAttribute("formattedDeadline", formattedDeadline); // Dodaj formatowaną datę
+
+            System.out.println("DEBUG: Formatted deadline: " + formattedDeadline);
+            System.out.println("DEBUG: Attributes added to model");
+
+            return "meetings/tasks/edit";
+        } catch (Exception e) {
+            System.out.println("DEBUG: Error in edit form: " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("error", e.getMessage());
+            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+        }
     }
 }

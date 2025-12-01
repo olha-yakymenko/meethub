@@ -381,20 +381,20 @@ public class LocationServiceImpl implements LocationService {
         return address.toString();
     }
 
-    private boolean isValidVirtualMeetingUrl(String url) {
-        if (url == null || url.trim().isEmpty()) {
-            return false;
-        }
-
-        String lowerUrl = url.toLowerCase();
-        return lowerUrl.startsWith("http://") ||
-                lowerUrl.startsWith("https://") ||
-                lowerUrl.startsWith("zoommtg://") ||
-                lowerUrl.startsWith("teams://") ||
-                lowerUrl.contains("zoom.us/j/") ||
-                lowerUrl.contains("meet.google.com/") ||
-                lowerUrl.contains("teams.microsoft.com/");
-    }
+//    private boolean isValidVirtualMeetingUrl(String url) {
+//        if (url == null || url.trim().isEmpty()) {
+//            return false;
+//        }
+//
+//        String lowerUrl = url.toLowerCase();
+//        return lowerUrl.startsWith("http://") ||
+//                lowerUrl.startsWith("https://") ||
+//                lowerUrl.startsWith("zoommtg://") ||
+//                lowerUrl.startsWith("teams://") ||
+//                lowerUrl.contains("zoom.us/j/") ||
+//                lowerUrl.contains("meet.google.com/") ||
+//                lowerUrl.contains("teams.microsoft.com/");
+//    }
 
     private String generatePlatformUrl(String platform, String meetingId, String passcode) {
         String cleanPlatform = platform.toUpperCase().trim();

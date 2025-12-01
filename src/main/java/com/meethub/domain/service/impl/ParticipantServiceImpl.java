@@ -886,70 +886,6 @@ public class ParticipantServiceImpl implements ParticipantService {
         participantRepository.deleteById(participantId);
     }
 
-//    @Override
-//    @Transactional(noRollbackFor = {SecurityException.class, IllegalArgumentException.class})
-//    public MeetingParticipant joinPublicMeeting(Long meetingId, Long userId) {
-//        log.info("Attempting to join public meeting {} by user {}", meetingId, userId);
-//
-//        try {
-//            Meeting meeting = meetingRepository.findById(meetingId)
-//                    .orElseThrow(() -> new ResourceNotFoundException("Spotkanie nie zostało znalezione"));
-//
-//            // Sprawdź czy spotkanie jest publiczne
-//            if (meeting.getVisibility() != MeetingVisibility.PUBLIC) {
-//                throw new SecurityException("To spotkanie nie jest publiczne");
-//            }
-//
-//            User user = userRepository.findById(userId)
-//                    .orElseThrow(() -> new ResourceNotFoundException("Użytkownik nie został znaleziony"));
-//
-//            // Sprawdź czy już nie jest uczestnikiem
-//            Optional<MeetingParticipant> existingParticipant = participantRepository.findByMeetingIdAndUserId(meetingId, userId);
-//            if (existingParticipant.isPresent()) {
-//                MeetingParticipant participant = existingParticipant.get();
-//                if (participant.getStatus() == ParticipationStatus.CONFIRMED) {
-//                    throw new IllegalArgumentException("Jesteś już uczestnikiem tego spotkania");
-//                }
-//                // Jeśli jest zaproszony lub oczekujący, zmień status na potwierdzony
-//                participant.setStatus(ParticipationStatus.CONFIRMED);
-//                participant.setResponseDate(LocalDateTime.now());
-//                return participantRepository.save(participant);
-//            }
-//
-//            // Sprawdź czy są jeszcze miejsca
-//            if (!hasAvailableSpots(meetingId)) {
-//                throw new IllegalArgumentException("Brak wolnych miejsc na tym spotkaniu");
-//            }
-//
-//            // Dodaj użytkownika jako potwierdzonego uczestnika
-//            MeetingParticipant participant = MeetingParticipant.builder()
-//                    .meeting(meeting)
-//                    .user(user)
-//                    .status(ParticipationStatus.CONFIRMED)
-//                    .permissionLevel(PermissionLevel.PARTICIPANT)
-//                    .responseDate(LocalDateTime.now())
-//                    .build();
-//
-//            MeetingParticipant savedParticipant = participantRepository.save(participant);
-//
-//            log.info("User {} successfully joined public meeting {}", userId, meetingId);
-//
-//            // Wyślij powiadomienie do organizatora
-//            try {
-//                notificationService.sendParticipantJoinedNotification(meeting.getOrganizer(), user, meeting);
-//            } catch (Exception e) {
-//                log.warn("Failed to send notification: {}", e.getMessage());
-//            }
-//
-//            return savedParticipant;
-//
-//        } catch (Exception e) {
-//            log.error("Error joining public meeting {} by user {}: {}", meetingId, userId, e.getMessage());
-//            throw e; // Przekaż wyjątek dalej bez oznaczania transakcji jako rollback-only
-//        }
-//    }
-
-
     @Override
     @Transactional(noRollbackFor = {SecurityException.class, IllegalArgumentException.class})
     public MeetingParticipant joinPublicMeeting(Long meetingId, Long userId) {
@@ -1110,52 +1046,6 @@ public class ParticipantServiceImpl implements ParticipantService {
         }
     }
 
-//    @Override
-//    @Transactional
-//    public void approveJoinRequest(Long meetingId, Long participantId, Long organizerId) {
-//        log.info("Approving join request {} for meeting {} by organizer {}", participantId, meetingId, organizerId);
-//
-//        Meeting meeting = meetingRepository.findById(meetingId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
-//
-//        // Sprawdź czy użytkownik jest organizatorem
-//        if (!meeting.getOrganizer().getId().equals(organizerId)) {
-//            throw new SecurityException("Only organizer can approve join requests");
-//        }
-//
-//        MeetingParticipant participant = participantRepository.findById(participantId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Participant not found"));
-//
-//        // Sprawdź czy uczestnik należy do tego spotkania
-//        if (!participant.getMeeting().getId().equals(meetingId)) {
-//            throw new IllegalArgumentException("Participant does not belong to this meeting");
-//        }
-//
-//        // Sprawdź czy status to PENDING
-//        if (participant.getStatus() != ParticipationStatus.PENDING) {
-//            throw new IllegalArgumentException("Participant is not pending approval");
-//        }
-//
-//        // Sprawdź czy są jeszcze miejsca
-//        if (!hasAvailableSpots(meetingId)) {
-//            throw new IllegalArgumentException("No available spots in this meeting");
-//        }
-//
-//        participant.setStatus(ParticipationStatus.CONFIRMED);
-//        participantRepository.save(participant);
-//
-//        // Wyślij powiadomienie do użytkownika
-//        try {
-//            notificationService.sendRequestApprovedNotification(participant.getUser(), meeting);
-//        } catch (Exception e) {
-//            log.warn("Failed to send notification: {}", e.getMessage());
-//        }
-//
-//        log.info("Join request approved for participant {} in meeting {}", participantId, meetingId);
-//    }
-
-
-
     @Override
     @Transactional(noRollbackFor = {SecurityException.class, IllegalArgumentException.class})
     public void approveJoinRequest(Long meetingId, Long participantId, Long organizerId) {
@@ -1207,48 +1097,6 @@ public class ParticipantServiceImpl implements ParticipantService {
             throw e;
         }
     }
-
-//    @Override
-//    @Transactional
-//    public void rejectJoinRequest(Long meetingId, Long participantId, Long organizerId) {
-//        log.info("Rejecting join request {} for meeting {} by organizer {}", participantId, meetingId, organizerId);
-//
-//        Meeting meeting = meetingRepository.findById(meetingId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
-//
-//        // Sprawdź czy użytkownik jest organizatorem
-//        if (!meeting.getOrganizer().getId().equals(organizerId)) {
-//            throw new SecurityException("Only organizer can reject join requests");
-//        }
-//
-//        MeetingParticipant participant = participantRepository.findById(participantId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Participant not found"));
-//
-//        // Sprawdź czy uczestnik należy do tego spotkania
-//        if (!participant.getMeeting().getId().equals(meetingId)) {
-//            throw new IllegalArgumentException("Participant does not belong to this meeting");
-//        }
-//
-//        // Sprawdź czy status to PENDING
-//        if (participant.getStatus() != ParticipationStatus.PENDING) {
-//            throw new IllegalArgumentException("Participant is not pending approval");
-//        }
-//
-//        // Zmień status na odrzucony
-//        participant.setStatus(ParticipationStatus.DECLINED);
-//        participant.setResponseDate(LocalDateTime.now());
-//        participantRepository.save(participant);
-//
-//        // Wyślij powiadomienie do użytkownika
-//        try {
-//            notificationService.sendRequestRejectedNotification(participant.getUser(), meeting);
-//        } catch (Exception e) {
-//            log.warn("Failed to send notification: {}", e.getMessage());
-//        }
-//
-//        log.info("Join request rejected for participant {} in meeting {}", participantId, meetingId);
-//    }
-
 
     @Override
     @Transactional(noRollbackFor = {SecurityException.class, IllegalArgumentException.class})

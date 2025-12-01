@@ -34,11 +34,11 @@ public class UpdateTaskRequest {
     @Builder.Default
     private Boolean allowSelfAssignment = true;
 
-    @Builder.Default
-    private Integer maxFilesPerUser = 10;
-
-    @Builder.Default
-    private Long maxFileSize = 10 * 1024 * 1024L;
+//    @Builder.Default
+//    private Integer maxFilesPerUser = 10;
+//
+//    @Builder.Default
+//    private Long maxFileSize = 10 * 1024 * 1024L;
 
     // DODAJ TO POLE jeśli chcesz edytować też typy plików
     private List<String> allowedFileTypes;
