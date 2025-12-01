@@ -1389,3 +1389,60 @@ CREATE INDEX IF NOT EXISTS idx_vote_preference ON votes(preference_order);
 
 -- Unikalne ograniczenia
 ALTER TABLE votes ADD CONSTRAINT unique_user_voting_option UNIQUE (user_id, voting_id, option_id);
+
+
+
+-- Tasks table
+CREATE TABLE IF NOT EXISTS tasks (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'TODO',
+    deadline TIMESTAMP,
+    meeting_id BIGINT NOT NULL,
+    created_by BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Task assignments table
+CREATE TABLE IF NOT EXISTS task_assignments (
+    id BIGSERIAL PRIMARY KEY,
+    status VARCHAR(50) NOT NULL DEFAULT 'ASSIGNED',
+    comment TEXT,
+    completed_at TIMESTAMP,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    task_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(task_id, user_id)
+);
+
+-- Task files table
+CREATE TABLE IF NOT EXISTS task_files (
+    id BIGSERIAL PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size BIGINT,
+    content_type VARCHAR(100),
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assignment_id BIGINT NOT NULL,
+    FOREIGN KEY (assignment_id) REFERENCES task_assignments(id) ON DELETE CASCADE
+);
+
+-- Indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_tasks_meeting_id ON tasks(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON tasks(created_by);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_assignments_task_id ON task_assignments(task_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON task_assignments(user_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_status ON task_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_files_assignment_id ON task_files(assignment_id);
+
+ALTER TABLE tasks ADD COLUMN allow_self_assignment BOOLEAN;
+ALTER TABLE tasks ADD COLUMN allowed_file_types TEXT DEFAULT 'pdf,doc,docx,jpg,png';
+

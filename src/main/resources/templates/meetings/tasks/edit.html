@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Szczegóły zadania - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">
+                <i class="bi bi-list-task me-2"></i>
+                <span th:text="${task.title}"></span>
+            </h1>
+            <p class="text-muted" th:text="'Spotkanie: ' + ${meeting.title}"></p>
+        </div>
+        <div>
+            <a th:href="@{/meetings/{meetingId}/tasks(meetingId=${meeting.id})}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Powrót do listy
+            </a>
+        </div>
+    </div>
+
+    <!-- Komunikaty -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <!-- Główne informacje -->
+        <div class="col-lg-8">
+            <!-- Opis zadania -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-card-text me-2"></i>Opis zadania
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p th:text="${task.description}" class="card-text"></p>
+
+                    <!-- Metadane -->
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <small class="text-muted">Status:</small>
+                            <div>
+                                <span class="badge"
+                                      th:class="${task.status.name() == 'TODO' ? 'bg-secondary' :
+                (task.status.name() == 'IN_PROGRESS' ? 'bg-warning' :
+                (task.status.name() == 'DONE' ? 'bg-success' : 'bg-danger'))}"
+                                      th:text="${task.status.displayName}">
+</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Termin:</small>
+                            <div class="fw-bold" th:text="${#temporals.format(task.deadline, 'dd.MM.yyyy HH:mm')}"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Utworzono:</small>
+                            <div class="text-muted" th:text="${#temporals.format(task.createdAt, 'dd.MM.yyyy HH:mm')}"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Przez:</small>
+                            <div class="text-muted" th:text="${task.createdBy.firstName + ' ' + task.createdBy.lastName}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Ustawienia -->
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <h6 class="mb-2">Ustawienia zadania:</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <small class="text-muted">Samodzielne dołączanie:</small>
+                                <div>
+                                    <span th:if="${task.allowSelfAssignment}" class="badge bg-success">Dozwolone</span>
+                                    <span th:if="${!task.allowSelfAssignment}" class="badge bg-secondary">Zablokowane</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">Maks. plików:</small>
+                                <div class="fw-bold" th:text="${task.maxFilesPerUser}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">Maks. rozmiar:</small>
+                                <div class="fw-bold" th:text="${task.maxFileSize + ' MB'}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista przypisań -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>Przypisani użytkownicy
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${task.assignments != null and !task.assignments.empty}">
+                        <div th:each="assignment : ${task.assignments}" class="d-flex align-items-center mb-2 p-2 border rounded">
+                            <i class="bi bi-person-circle me-2 text-muted"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" th:text="${assignment.user.firstName + ' ' + assignment.user.lastName}"></div>
+                                <small class="text-muted" th:text="${assignment.user.email}"></small>
+                            </div>
+                            <span class="badge ms-2"
+                                  th:class="${assignment.status.name() == 'ASSIGNED' ? 'bg-secondary' :
+                                            (assignment.status.name() == 'IN_PROGRESS' ? 'bg-warning' :
+                                            (assignment.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger'))}"
+                                  th:text="${assignment.status.displayName}">
+                            </span>
+                        </div>
+                    </div>
+                    <div th:if="${task.assignments == null or task.assignments.empty}" class="text-muted text-center py-3">
+                        <i class="bi bi-people"></i>
+                        <p class="mt-2 mb-0">Brak przypisanych użytkowników</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Akcje -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0"><i class="bi bi-lightning me-2"></i>Akcje</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <!-- Dołączanie dla użytkownika -->
+                        <a th:if="${!isOrganizer and task.allowSelfAssignment}"
+                           th:href="@{/meetings/{meetingId}/tasks/{taskId}/assign-self(meetingId=${meeting.id}, taskId=${task.id})}"
+                           class="btn btn-success">
+                            <i class="bi bi-person-plus me-2"></i>Dołącz do zadania
+                        </a>
+
+                        <!-- Akcje organizatora -->
+                        <div th:if="${isOrganizer}" class="border-top pt-3 mt-3">
+                            <small class="text-muted d-block mb-2">Akcje organizatora:</small>
+
+                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/edit(meetingId=${meeting.id}, taskId=${task.id})}"
+                               class="btn btn-outline-warning btn-sm w-100 mb-2">
+                                <i class="bi bi-pencil me-1"></i>Edytuj zadanie
+                            </a>
+
+                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/assign(meetingId=${meeting.id}, taskId=${task.id})}"
+                               class="btn btn-outline-info btn-sm w-100 mb-2">
+                                <i class="bi bi-person-plus me-1"></i>Przypisz użytkowników
+                            </a>
+
+                            <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/delete(meetingId=${meeting.id}, taskId=${task.id})}"
+                                  method="post"
+                                  onsubmit="return confirm('Czy na pewno chcesz usunąć to zadanie?')">
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                    <i class="bi bi-trash me-1"></i>Usuń zadanie
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Powrót -->
+                        <a th:href="@{/meetings/{meetingId}/tasks(meetingId=${meeting.id})}" class="btn btn-outline-secondary mt-3">
+                            <i class="bi bi-arrow-left me-2"></i>Powrót do listy
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statystyki -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0"><i class="bi bi-graph-up me-2"></i>Statystyki</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Przypisania:</strong>
+                        <span class="float-end" th:text="${task.assignments.size()}"></span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Status:</strong>
+                        <span class="float-end" th:text="${task.status.displayName}"></span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Termin:</strong>
+                        <span class="float-end" th:text="${#temporals.format(task.deadline, 'dd.MM.yyyy HH:mm')}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

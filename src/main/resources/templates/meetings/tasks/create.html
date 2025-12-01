@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Edytuj spotkanie - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">
+                <i class="bi bi-plus-circle me-2"></i>
+                Nowe zadanie
+            </h1>
+            <p class="text-muted" th:text="'Spotkanie: ' + ${meeting.title}"></p>
+        </div>
+        <div>
+            <a th:href="@{/meetings/{meetingId}/tasks(meetingId=${meeting.id})}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Powrót do listy
+            </a>
+        </div>
+    </div>
+
+    <!-- Komunikaty -->
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Formularz -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Szczegóły zadania
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/meetings/{meetingId}/tasks/create(meetingId=${meeting.id})}"
+                          method="post"
+                          th:object="${createTaskRequest}">
+
+                        <!-- Tytuł -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">
+                                <strong>Tytuł zadania *</strong>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="title"
+                                   th:field="*{title}"
+                                   required
+                                   maxlength="255"
+                                   placeholder="Wprowadź tytuł zadania">
+                            <div class="form-text">
+                                Krótki i opisowy tytuł zadania (max 255 znaków)
+                            </div>
+                        </div>
+
+                        <!-- Opis -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">
+                                <strong>Opis zadania *</strong>
+                            </label>
+                            <textarea class="form-control"
+                                      id="description"
+                                      th:field="*{description}"
+                                      rows="5"
+                                      required
+                                      maxlength="2000"
+                                      placeholder="Opisz szczegóły zadania, wymagania i oczekiwania"></textarea>
+                            <div class="form-text">
+                                Szczegółowy opis zadania (max 2000 znaków)
+                            </div>
+                        </div>
+
+                        <!-- Termin -->
+                        <div class="mb-3">
+                            <label for="deadline" class="form-label">
+                                <strong>Termin wykonania *</strong>
+                            </label>
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   id="deadline"
+                                   th:field="*{deadline}"
+                                   required>
+                            <div class="form-text">
+                                Data i godzina, do kiedy zadanie powinno być wykonane
+                            </div>
+                        </div>
+
+                        <!-- Ustawienia zaawansowane -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="card-title mb-0">
+                                    <i class="bi bi-gear me-2"></i>Ustawienia zaawansowane
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <!-- Samoprzypisanie -->
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="allowSelfAssignment"
+                                           th:field="*{allowSelfAssignment}">
+                                    <label class="form-check-label" for="allowSelfAssignment">
+                                        <strong>Zezwól na samodzielne dołączanie</strong>
+                                    </label>
+                                    <div class="form-text">
+                                        Użytkownicy będą mogli sami dołączać do tego zadania
+                                    </div>
+                                </div>
+
+                                <!-- Maksymalna liczba plików -->
+                                <div class="mb-3">
+                                    <label for="maxFilesPerUser" class="form-label">
+                                        <strong>Maksymalna liczba plików na użytkownika</strong>
+                                    </label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="maxFilesPerUser"
+                                           th:field="*{maxFilesPerUser}"
+                                           min="1"
+                                           max="50"
+                                           placeholder="10">
+                                    <div class="form-text">
+                                        Maksymalna liczba plików, które użytkownik może przesłać do tego zadania
+                                    </div>
+                                </div>
+
+                                <!-- Maksymalny rozmiar pliku -->
+                                <div class="mb-3">
+                                    <label for="maxFileSize" class="form-label">
+                                        <strong>Maksymalny rozmiar pliku (MB)</strong>
+                                    </label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="maxFileSize"
+                                           th:field="*{maxFileSize}"
+                                           min="1"
+                                           max="100"
+                                           placeholder="10">
+                                    <div class="form-text">
+                                        Maksymalny rozmiar pojedynczego pliku w megabajtach
+                                    </div>
+                                </div>
+
+                                <!-- Dozwolone typy plików -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <strong>Dozwolone typy plików</strong>
+                                    </label>
+                                    <div class="form-text mb-2">
+                                        Zaznacz typy plików, które użytkownicy mogą przesyłać (pozostaw puste dla wszystkich typów)
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="pdf"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-pdf text-danger me-1"></i>PDF
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="docx"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-word text-primary me-1"></i>Word
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="xlsx"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-excel text-success me-1"></i>Excel
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="jpg"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-image text-warning me-1"></i>JPG
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="png"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-image text-info me-1"></i>PNG
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="zip"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-zip text-secondary me-1"></i>ZIP
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="txt"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-text text-dark me-1"></i>TXT
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       value="pptx"
+                                                       th:field="*{allowedFileTypes}">
+                                                <label class="form-check-label">
+                                                    <i class="bi bi-file-ppt text-danger me-1"></i>PowerPoint
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Przyciski -->
+                        <div class="d-flex justify-content-between">
+                            <a th:href="@{/meetings/{meetingId}/tasks(meetingId=${meeting.id})}"
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Utwórz zadanie
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

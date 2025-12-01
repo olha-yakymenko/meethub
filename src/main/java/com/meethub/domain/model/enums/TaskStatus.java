@@ -5,7 +5,9 @@ public enum TaskStatus {
     IN_PROGRESS("In Progress"),
     COMPLETED("Completed"),
     CANCELLED("Cancelled"),
+    TODO("todo"),
     BLOCKED("Blocked");
+
 
     private final String displayName;
 
