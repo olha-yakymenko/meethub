@@ -5,6 +5,27 @@
       th:replace="~{layout}">
 <head>
     <title th:text="${meeting?.title + ' - MeetHub'}">Szczegóły spotkania - MeetHub</title>
+    <style>
+        .rating-stars {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+        }
+        .rating-stars input[type="radio"] {
+            display: none;
+        }
+        .rating-stars label.star {
+            font-size: 2rem;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .rating-stars input[type="radio"]:checked ~ label.star,
+        .rating-stars label.star:hover,
+        .rating-stars label.star:hover ~ label.star {
+            color: #ffc107;
+        }
+    </style>
 </head>
 <body>
 <div th:fragment="content">
@@ -24,6 +45,196 @@
     <div class="row">
         <!-- Główne informacje -->
         <div class="col-lg-8">
+            <!-- 📊 SEKCJA ANALIZY STATYSTYK (tylko dla organizatora/admina) -->
+            <div th:if="${isOrganizer != null and (isOrganizer or isAdmin)}" class="card mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Analiza statystyk spotkania
+                        <span class="badge bg-light text-primary" th:if="${meetingStatistics != null}"
+                              th:text="'Wersja: ' + ${#temporals.format(meetingStatistics.generatedAt, 'dd.MM.yyyy HH:mm')}"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Ładowanie statystyk -->
+                    <div th:if="${meetingStatistics == null}" class="text-center py-3">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Ładowanie...</span>
+                        </div>
+                        <p class="text-muted">Ładowanie statystyk...</p>
+                        <form th:action="@{/api/analytics/meetings/{meetingId}/statistics(meetingId=${meeting.id})}"
+                              method="post" class="d-inline">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Wygeneruj statystyki
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Wyświetlanie statystyk -->
+                    <div th:if="${meetingStatistics != null}" class="row">
+                        <!-- KPI Karty -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body text-center">
+                                    <div class="display-6 fw-bold text-success"
+                                         th:text="${#numbers.formatDecimal(meetingStatistics.attendanceRate, 1, 1)} + '%'">0%</div>
+                                    <div class="text-muted">Frekwencja</div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-people me-1"></i>
+                                            <span th:text="${meetingStatistics.attendedParticipants}"></span>/
+                                            <span th:text="${meetingStatistics.totalParticipants}"></span>
+                                            uczestników
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-warning">
+                                <div class="card-body text-center">
+                                    <div class="display-6 fw-bold text-warning"
+                                         th:text="${#numbers.formatDecimal(meetingStatistics.engagementScore, 1, 1)}">0</div>
+                                    <div class="text-muted">Zaangażowanie</div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-lightning me-1"></i>
+                                            <span th:text="${#numbers.formatDecimal(meetingStatistics.taskCompletionRate, 1, 1)}"></span>% zadań
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Szczegółowe statystyki -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">Szczegółowe metryki</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Potwierdzenia:</span>
+                                        <strong class="text-info"
+                                                th:text="${#numbers.formatDecimal(meetingStatistics.confirmationRate, 1, 1)} + '%'">0%</strong>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-info"
+                                             th:style="'width: ' + ${meetingStatistics.confirmationRate} + '%;'"></div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Feedback:</span>
+                                        <strong class="text-primary"
+                                                th:text="${meetingStatistics.feedbackCount} + ' ocen'">0</strong>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary"
+                                             th:style="'width: ' + ${(meetingStatistics.avgFeedbackRating != null) ? meetingStatistics.avgFeedbackRating * 20 : 0} + '%;'"></div>
+                                    </div>
+                                    <small class="text-muted"
+                                           th:if="${meetingStatistics.avgFeedbackRating != null}"
+                                           th:text="'Śr. ocena: ' + ${#numbers.formatDecimal(meetingStatistics.avgFeedbackRating, 1, 1)} + '/5'"></small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Śr. czas odpowiedzi:</span>
+                                        <strong class="text-secondary"
+                                                th:text="${#numbers.formatDecimal(meetingStatistics.avgResponseTimeHours, 1, 1)} + ' godz'">0</strong>
+                                    </div>
+                                    <small class="text-muted">Od zaproszenia do potwierdzenia</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Przyciski akcji -->
+                        <div class="col-12 mt-3">
+                            <div class="d-flex flex-wrap gap-2">
+                                <!-- Pobierz raport CSV -->
+                                <a th:href="@{/api/analytics/meetings/{meetingId}/export/csv(meetingId=${meeting.id})}"
+                                   class="btn btn-outline-success">
+                                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Pobierz CSV
+                                </a>
+
+                                <!-- Pobierz raport PDF -->
+                                <a th:href="@{/api/analytics/meetings/{meetingId}/export/pdf(meetingId=${meeting.id})}"
+                                   class="btn btn-outline-danger">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>Pobierz PDF
+                                </a>
+
+                                <!-- Odśwież statystyki -->
+                                <form th:action="@{/api/analytics/meetings/{meetingId}/statistics(meetingId=${meeting.id})}"
+                                      method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Odśwież
+                                    </button>
+                                </form>
+
+                                <!-- Pełny raport -->
+                                <a th:href="@{/analytics/meetings/{meetingId}/report(meetingId=${meeting.id})}"
+                                   class="btn btn-primary">
+                                    <i class="bi bi-graph-up me-1"></i>Pełny raport
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Brak statystyk (spotkanie się jeszcze nie odbyło) -->
+                    <div th:if="${meeting?.endDate != null and meeting?.endDate.isAfter(T(java.time.LocalDateTime).now())}"
+                         class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Statystyki będą dostępne po zakończeniu spotkania.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📝 SEKCJA FEEDBACK (dla uczestników) -->
+            <div class="card mb-4" th:if="${isParticipant != null and isParticipant}">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-star me-2"></i>Twoja opinia o spotkaniu
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${userFeedback != null}">
+                        <p>Twoja ocena:
+                            <span class="badge bg-success">
+                        <span th:text="${userFeedback.rating}"></span>/5
+                    </span>
+                        </p>
+                        <p th:if="${userFeedback.comment != null and userFeedback.comment != ''}" th:text="${userFeedback.comment}"></p>
+                        <small class="text-muted">
+                            Dodano: <span th:text="${#temporals.format(userFeedback.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
+                        </small>
+                    </div>
+                    <div th:if="${userFeedback == null}">
+                        <form th:action="@{/api/v1/feedbacks/meetings/{meetingId}(meetingId=${meeting.id})}"
+                              method="post">
+                            <div class="mb-3">
+                                <label class="form-label">Oceń spotkanie (1-5):</label>
+                                <div class="rating-stars">
+                                    <input type="radio" id="star5" name="rating" value="5" class="d-none" required>
+                                    <label for="star5" class="star">★</label>
+                                    <input type="radio" id="star4" name="rating" value="4" class="d-none">
+                                    <label for="star4" class="star">★</label>
+                                    <input type="radio" id="star3" name="rating" value="3" class="d-none">
+                                    <label for="star3" class="star">★</label>
+                                    <input type="radio" id="star2" name="rating" value="2" class="d-none">
+                                    <label for="star2" class="star">★</label>
+                                    <input type="radio" id="star1" name="rating" value="1" class="d-none">
+                                    <label for="star1" class="star">★</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Komentarz (opcjonalnie):</label>
+                                <textarea name="comment" class="form-control" rows="3" maxlength="500"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Wyślij opinię</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
             <!-- Aktywne głosowania -->
             <div class="card mb-4" th:if="${activeVotings != null and !activeVotings.empty}">
                 <div class="card-header bg-warning bg-opacity-10">
@@ -215,8 +426,7 @@
                     </h5>
 
                     <!-- Statystyki - tylko dla organizatora -->
-                    <div th:if="${meeting?.organizer?.id == userId}" class="stats-badges">
-                        <small class="text-muted me-2">Statystyki:</small>
+                    <div th:if="${isOrganizer}" class="stats-badges">                        <small class="text-muted me-2">Statystyki:</small>
                         <span class="badge bg-success me-1"
                               th:text="'Potw. ' + (${participantStats?.confirmed ?: 0})"></span>
                         <span class="badge bg-warning me-1"
@@ -329,8 +539,7 @@
                     <div th:if="${resources == null or resources.empty}" class="text-muted text-center py-3">
                         <i class="bi bi-folder-x display-4"></i>
                         <p class="mt-2">Brak zasobów</p>
-                        <div th:if="${meeting.organizer.id == userId}">
-                            <a th:href="@{/meetings/{id}/resources/add(id=${meeting.id})}" class="btn btn-primary btn-sm mt-2">
+                        <div th:if="${isOrganizer}">                            <a th:href="@{/meetings/{id}/resources/add(id=${meeting.id})}" class="btn btn-primary btn-sm mt-2">
                                 <i class="bi bi-plus-circle me-1"></i>Dodaj pierwszy zasób
                             </a>
                         </div>
@@ -340,8 +549,7 @@
                         <a th:href="@{/meetings/{id}/resources(id=${meeting.id})}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-folder me-1"></i>Zobacz wszystkie zasoby
                         </a>
-                        <a th:if="${meeting.organizer.id == userId}"
-                           th:href="@{/meetings/{id}/resources/add(id=${meeting.id})}"
+                        <a th:if="${isOrganizer}"                           th:href="@{/meetings/{id}/resources/add(id=${meeting.id})}"
                            class="btn btn-primary btn-sm ms-2">
                             <i class="bi bi-plus-circle me-1"></i>Dodaj zasób
                         </a>
@@ -418,8 +626,13 @@
                         </div>
 
                         <!-- Akcje organizatora -->
-                        <div th:if="${meeting?.organizer?.id == userId}" class="border-top pt-3 mt-3">
-                            <small class="text-muted d-block mb-2">Akcje organizatora:</small>
+                        <div th:if="${isOrganizer}" class="border-top pt-3 mt-3">                            <small class="text-muted d-block mb-2">Akcje organizatora:</small>
+
+                            <!-- 📊 PRZYCISK ANALITYKI (w sidebarze) -->
+                            <a th:href="@{/analytics/meetings/{meetingId}/report(meetingId=${meeting.id})}"
+                               class="btn btn-outline-info btn-sm w-100 mb-2">
+                                <i class="bi bi-graph-up me-1"></i>Analiza statystyk
+                            </a>
 
                             <a th:href="@{/meetings/{id}/participants/invite(id=${meeting.id})}"
                                class="btn btn-outline-primary btn-sm w-100 mb-2">
@@ -495,6 +708,60 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-refresh statystyk co 60 sekund jeśli spotkanie aktywne
+            const refreshStats = () => {
+                const meetingEnd = new Date('[[${meeting?.endDate}]]');
+                const now = new Date();
+
+                if (meetingEnd > now && [[${isOrganizer}]]) {
+                    setTimeout(() => {
+                        fetch('/api/analytics/meetings/[[${meeting?.id}]]/statistics', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        }).then(response => {
+                            if (response.ok) {
+                                location.reload();
+                            }
+                        });
+                    }, 60000);
+                }
+            };
+
+            // Obsługa gwiazdek oceniania
+            const stars = document.querySelectorAll('.rating-stars input[type="radio"]');
+            stars.forEach(star => {
+                star.addEventListener('change', function() {
+                    const labels = document.querySelectorAll('.rating-stars label.star');
+                    labels.forEach(label => {
+                        label.style.color = '#ddd';
+                    });
+
+                    const checkedStar = document.querySelector('.rating-stars input[type="radio"]:checked');
+                    if (checkedStar) {
+                        const checkedId = checkedStar.id;
+                        const label = document.querySelector(`label[for="${checkedId}"]`);
+                        label.style.color = '#ffc107';
+
+                        // Podświetl wszystkie gwiazdki do wybranej
+                        let nextSibling = label.nextElementSibling;
+                        while (nextSibling) {
+                            if (nextSibling.classList.contains('star')) {
+                                nextSibling.style.color = '#ffc107';
+                            }
+                            nextSibling = nextSibling.nextElementSibling;
+                        }
+                    }
+                });
+            });
+
+            refreshStats();
+        });
+    </script>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -1,6 +1,14 @@
 package com.meethub.domain.model.entity;
 
-// 📊 Encja statystyk spotkania
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+
+
+
 @Entity
 @Table(name = "meeting_statistics")
 @Getter
@@ -27,30 +35,52 @@ public class MeetingStatistics {
     @Column(name = "attended_participants")
     private Integer attendedParticipants;
 
-    @Column(name = "attendance_rate")
-    private Double attendanceRate; // % obecności
+    // ZMIENIĆ NA BigDecimal:
+    @Column(name = "attendance_rate", precision = 5, scale = 2)
+    private BigDecimal attendanceRate; // ZMIENIONE z Double
 
-    @Column(name = "confirmation_rate")
-    private Double confirmationRate; // % potwierdzeń
+    @Column(name = "confirmation_rate", precision = 5, scale = 2)
+    private BigDecimal confirmationRate; // ZMIENIONE z Double
 
-    @Column(name = "avg_response_time_hours")
-    private Double avgResponseTimeHours; // Średni czas odpowiedzi
+    @Column(name = "avg_response_time_hours", precision = 8, scale = 2)
+    private BigDecimal avgResponseTimeHours; // ZMIENIONE z Double
 
+    @Column(name = "engagement_score", precision = 5, scale = 2)
+    private BigDecimal engagementScore; // ZMIENIONE z Double
+
+    @Column(name = "task_completion_rate", precision = 5, scale = 2)
+    private BigDecimal taskCompletionRate; // ZMIENIONE z Double
+
+    @Column(name = "avg_feedback_rating", precision = 3, scale = 2)
+    private BigDecimal avgFeedbackRating; // ZMIENIONE z Double
+
+    // Reszta pól pozostaje bez zmian
     @Column(name = "no_show_count")
-    private Integer noShowCount; // Nie przyszli mimo potwierdzenia
-
-    @Column(name = "engagement_score")
-    private Double engagementScore; // 0-100 punktów zaangażowania
-
-    @Column(name = "task_completion_rate")
-    private Double taskCompletionRate; // % wykonanych zadań
+    private Integer noShowCount;
 
     @Column(name = "feedback_count")
     private Integer feedbackCount;
 
-    @Column(name = "avg_feedback_rating")
-    private Double avgFeedbackRating;
-
     @Column(name = "generated_at", nullable = false)
     private LocalDateTime generatedAt;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (generatedAt == null) {
+            generatedAt = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

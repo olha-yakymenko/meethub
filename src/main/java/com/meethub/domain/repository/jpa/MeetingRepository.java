@@ -66,9 +66,9 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
     List<Meeting> findByOrganizerIdAndStatusOrderByStartDateAsc(@Param("organizerId") Long organizerId,
                                                                 @Param("status") MeetingStatus status);
 
-    @Query("SELECT COUNT(m) FROM Meeting m WHERE m.organizer.id = :organizerId AND m.startDate > :date")
-    long countUpcomingMeetingsByOrganizer(@Param("organizerId") Long organizerId,
-                                          @Param("date") LocalDateTime date);
+//    @Query("SELECT COUNT(m) FROM Meeting m WHERE m.organizer.id = :organizerId AND m.startDate > :date")
+//    long countUpcomingMeetingsByOrganizer(@Param("organizerId") Long organizerId,
+//                                          @Param("date") LocalDateTime date);
 
     @Query("SELECT m FROM Meeting m WHERE m.organizer.id = :organizerId AND LOWER(m.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Meeting> findByOrganizerIdAndTitleContaining(@Param("organizerId") Long organizerId,

@@ -1,12 +1,10 @@
 package com.meethub.domain.model.entity;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDate;
 
 // 🎯 Encja predykcji
 @Entity

@@ -38,8 +38,10 @@ import com.meethub.domain.model.entity.MeetingParticipant;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
+import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
+import org.springframework.core.io.ByteArrayResource;
 
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,9 @@ public interface MeetingParticipantService {
     MeetingParticipant updateParticipantStatus(Long meetingId, Long participantId, ParticipationStatus status, String comment, Long userId);
     MeetingParticipant updateParticipantPermission(Long meetingId, Long participantId, PermissionLevel permissionLevel, Long organizerId);
     void removeParticipant(Long meetingId, Long participantId, Long organizerId);
+
+    ParticipantResponse updateParticipant(Long participantId, UpdateParticipantRequest request);
+
 
     // Nowe metody dla różnych typów spotkań
     MeetingParticipant joinPublicMeeting(Long meetingId, Long userId);
@@ -82,4 +87,32 @@ public interface MeetingParticipantService {
     List<ParticipantResponse> getConfirmedParticipants(Long meetingId);
     Map<String, Long> getParticipantStatistics(Long meetingId);
 
+
+    boolean hasAccessToMeeting(Long meetingId, Long userId);
+    boolean isOrganizer(Long meetingId, Long userId);
+    boolean canEditParticipant(Long meetingId, Long participantId, Long userId);
+    boolean canRemoveParticipant(Long meetingId, Long participantId, Long userId);
+
+    // Metody dla web controller
+    List<ParticipantResponse> inviteParticipants(Long meetingId, InviteParticipantsRequest request);
+    ParticipantResponse getParticipant(Long participantId);
+    void removeParticipant(Long participantId);
+
+    // Metody dla tokenów (web)
+    ParticipantResponse confirmParticipation(String token, String comment);
+    ParticipantResponse declineParticipation(String token, String comment);
+    ParticipantResponse setTentative(String token, String comment);
+
+    // Statystyki dla web
+    ParticipantStats getMeetingStats(Long meetingId);
+    Map<String, Object> getDetailedStats(Long meetingId);
+    ByteArrayResource exportParticipantsToCsv(Long meetingId);
+
+    // Klasa dla statystyk
+    interface ParticipantStats {
+        long getTotalInvited();
+        long getTotalConfirmed();
+        long getWaitlistCount();
+        long getPendingCount();
+    }
 }

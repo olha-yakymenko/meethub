@@ -1,3 +1,4 @@
+// LocationServiceImpl.java (poprawiona wersja)
 package com.meethub.domain.service.impl;
 
 import com.meethub.domain.model.entity.Location;
@@ -10,6 +11,7 @@ import com.meethub.domain.model.response.LocationResponse;
 import com.meethub.domain.repository.jpa.LocationRepository;
 import com.meethub.domain.service.GeocodingService;
 import com.meethub.domain.service.LocationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Validated
 public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
@@ -32,64 +36,17 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     @Transactional
-    public LocationResponse createLocation(CreateLocationRequest request) {
+    public LocationResponse createLocation(@Valid CreateLocationRequest request) {
         log.info("Creating location: {}", request.getName());
 
-        // Walidacja podstawowych pól
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Nazwa lokalizacji jest wymagana");
-        }
-        if (request.getType() == null) {
-            throw new IllegalArgumentException("Typ lokalizacji jest wymagany");
-        }
-
-        // Walidacja unikalności dla lokalizacji wirtualnej
-        if (request.getType() == LocationType.VIRTUAL &&
-                request.getVirtualMeetingUrl() != null) {
-            locationRepository.findByVirtualMeetingUrl(request.getVirtualMeetingUrl())
-                    .ifPresent(location -> {
-                        throw new IllegalArgumentException("URL spotkania już istnieje");
-                    });
-        }
-
-        // Walidacja unikalności dla lokalizacji fizycznej
-        if (request.getType() == LocationType.PHYSICAL &&
-                request.getName() != null && request.getAddress() != null) {
-            if (locationRepository.existsByNameAndAddress(request.getName(), request.getAddress())) {
-                throw new IllegalArgumentException("Lokalizacja o tej nazwie i adresie już istnieje");
-            }
-        }
+        // Dodatkowa walidacja logiki biznesowej
+        validateCreateRequest(request);
 
         Location location = mapToEntity(request);
 
         // Geokodowanie dla lokalizacji fizycznej
         if (location.getType() == LocationType.PHYSICAL && needsGeocoding(location)) {
-            try {
-                String fullAddress = buildFullAddressForGeocoding(location);
-                Location geocoded = geocodingService.geocodeAddress(fullAddress);
-
-                if (geocoded != null && geocoded.getLatitude() != null && geocoded.getLongitude() != null) {
-                    location.setLatitude(geocoded.getLatitude());
-                    location.setLongitude(geocoded.getLongitude());
-
-                    // Uzupełnij brakujące dane tylko jeśli nie zostały podane
-                    if (location.getCity() == null && geocoded.getCity() != null) {
-                        location.setCity(geocoded.getCity());
-                    }
-                    if (location.getCountry() == null && geocoded.getCountry() != null) {
-                        location.setCountry(geocoded.getCountry());
-                    }
-                    if (location.getTimezone() == null && geocoded.getTimezone() != null) {
-                        location.setTimezone(geocoded.getTimezone());
-                    }
-
-                    log.info("Successfully geocoded address: {} -> {}, {}",
-                            fullAddress, location.getLatitude(), location.getLongitude());
-                }
-            } catch (Exception e) {
-                log.warn("Geocoding failed for address: {}. Error: {}",
-                        location.getAddress(), e.getMessage());
-            }
+            performGeocoding(location);
         }
 
         Location saved = locationRepository.save(location);
@@ -100,52 +57,20 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     @Transactional
-    public LocationResponse updateLocation(Long id, UpdateLocationRequest request) {
+    public LocationResponse updateLocation(Long id, @Valid UpdateLocationRequest request) {
         log.info("Updating location: {}", id);
 
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lokalizacja nie znaleziona"));
 
-        // Walidacja podstawowych pól
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Nazwa lokalizacji jest wymagana");
-        }
-        if (request.getType() == null) {
-            throw new IllegalArgumentException("Typ lokalizacji jest wymagany");
-        }
-
         // Sprawdź czy zmiana typu nie powoduje konfliktów
-        if (location.getType() != request.getType() && !location.getMeetings().isEmpty()) {
-            throw new IllegalStateException("Nie można zmienić typu lokalizacji używanej w spotkaniach");
-        }
+        validateTypeChange(location, request.getType());
 
-        location.setName(request.getName());
-        location.setType(request.getType());
-        location.setAddress(request.getAddress());
-        location.setCity(request.getCity());
-        location.setCountry(request.getCountry());
-        location.setLatitude(request.getLatitude());
-        location.setLongitude(request.getLongitude());
-        location.setVirtualMeetingUrl(request.getVirtualMeetingUrl());
-        location.setAccessCode(request.getAccessCode());
-        location.setDrivingInstructions(request.getDrivingInstructions());
-        location.setTimezone(request.getTimezone());
+        updateLocationEntity(location, request);
 
         // Ponowne geokodowanie jeśli zmieniono adres
         if (location.getType() == LocationType.PHYSICAL && needsGeocoding(location)) {
-            try {
-                String fullAddress = buildFullAddressForGeocoding(location);
-                Location geocoded = geocodingService.geocodeAddress(fullAddress);
-
-                if (geocoded != null && geocoded.getLatitude() != null && geocoded.getLongitude() != null) {
-                    location.setLatitude(geocoded.getLatitude());
-                    location.setLongitude(geocoded.getLongitude());
-                    log.info("Updated coordinates for location {}: {}, {}",
-                            id, location.getLatitude(), location.getLongitude());
-                }
-            } catch (Exception e) {
-                log.warn("Geocoding during update failed for address: {}", location.getAddress(), e);
-            }
+            performGeocoding(location);
         }
 
         Location updated = locationRepository.save(location);
@@ -162,13 +87,7 @@ public class LocationServiceImpl implements LocationService {
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lokalizacja nie znaleziona"));
 
-        // Sprawdź czy lokalizacja jest używana w spotkaniach
-        if (!location.getMeetings().isEmpty()) {
-            throw new IllegalStateException(
-                    "Nie można usunąć lokalizacji używanej w spotkaniach. " +
-                            "Lokalizacja jest używana w " + location.getMeetings().size() + " spotkaniach."
-            );
-        }
+        validateLocationDeletion(location);
 
         locationRepository.delete(location);
         log.info("Location deleted successfully: {}", id);
@@ -179,7 +98,6 @@ public class LocationServiceImpl implements LocationService {
         return getLocationById(id);
     }
 
-
     @Override
     public LocationListResponse searchLocations(LocationSearchRequest request) {
         Pageable pageable = PageRequest.of(
@@ -187,11 +105,7 @@ public class LocationServiceImpl implements LocationService {
                 request.getSize() != null ? request.getSize() : 20
         );
 
-        // ✅ Konwertuj LocationType na String dla nativeQuery
-        String typeString = null;
-        if (request.getType() != null) {
-            typeString = request.getType().name();
-        }
+        String typeString = request.getType() != null ? request.getType().name() : null;
 
         Page<Location> locationsPage = locationRepository.searchLocations(
                 request.getQuery(), typeString, request.getCity(), pageable);
@@ -213,28 +127,9 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public List<LocationResponse> findNearbyLocations(BigDecimal lat, BigDecimal lng, Double radiusKm) {
-        if (lat == null || lng == null) {
-            throw new IllegalArgumentException("Współrzędne są wymagane");
-        }
+        validateCoordinates(lat, lng);
 
-        // Walidacja zakresu współrzędnych
-        if (lat.compareTo(new BigDecimal("-90")) < 0 || lat.compareTo(new BigDecimal("90")) > 0) {
-            throw new IllegalArgumentException("Szerokość geograficzna musi być między -90 a 90");
-        }
-        if (lng.compareTo(new BigDecimal("-180")) < 0 || lng.compareTo(new BigDecimal("180")) > 0) {
-            throw new IllegalArgumentException("Długość geograficzna musi być między -180 a 180");
-        }
-
-        Double searchRadius = radiusKm != null ? radiusKm : 10.0;
-
-        // Ogranicz promień do rozsądnych wartości
-        if (searchRadius <= 0) {
-            throw new IllegalArgumentException("Promień musi być większy niż 0");
-        }
-        if (searchRadius > 1000) {
-            searchRadius = 1000.0; // Maksymalnie 1000 km
-            log.warn("Promień wyszukiwania ograniczony do 1000 km");
-        }
+        Double searchRadius = validateAndLimitRadius(radiusKm);
 
         log.info("Searching locations near ({}, {}) within {} km", lat, lng, searchRadius);
 
@@ -250,7 +145,6 @@ public class LocationServiceImpl implements LocationService {
             throw new RuntimeException("Błąd podczas wyszukiwania lokalizacji w pobliżu: " + e.getMessage());
         }
     }
-
 
     @Override
     public String generateMapUrl(Long locationId) {
@@ -270,19 +164,12 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public String generateDirectionsUrl(Long locationId, String origin) {
-        if (origin == null || origin.trim().isEmpty()) {
-            origin = "";
-        }
+        String finalOrigin = origin != null ? origin.trim() : "";
 
-        String finalOrigin = origin;
         return locationRepository.findById(locationId)
                 .map(location -> {
-                    String destination;
-                    if (location.hasCoordinates()) {
-                        destination = location.getLatitude() + "," + location.getLongitude();
-                    } else if (location.getFullAddress() != null && !location.getFullAddress().isEmpty()) {
-                        destination = encodeUrl(location.getFullAddress());
-                    } else {
+                    String destination = getDestinationFromLocation(location);
+                    if (destination == null) {
                         return null;
                     }
 
@@ -294,15 +181,10 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public LocationResponse generateVirtualLocation(String platform, String meetingId, String passcode) {
-        if (platform == null || platform.trim().isEmpty()) {
-            throw new IllegalArgumentException("Platforma jest wymagana");
-        }
-        if (meetingId == null || meetingId.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID spotkania jest wymagane");
-        }
+        validateVirtualLocationParameters(platform, meetingId);
 
         String virtualMeetingUrl = generatePlatformUrl(platform, meetingId, passcode);
-        String locationName = platform.substring(0, 1).toUpperCase() + platform.substring(1).toLowerCase() + " Meeting";
+        String locationName = generateLocationNameFromPlatform(platform);
 
         Location location = Location.builder()
                 .name(locationName)
@@ -318,7 +200,173 @@ public class LocationServiceImpl implements LocationService {
         return mapToResponse(saved);
     }
 
-    // METODY POMOCNICZE
+    @Override
+    public LocationResponse getLocationById(Long id) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Lokalizacja nie znaleziona"));
+        return mapToResponse(location);
+    }
+
+    @Override
+    public boolean validateLocation(Long locationId) {
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new IllegalArgumentException("Lokalizacja nie znaleziona"));
+
+        return switch (location.getType()) {
+            case VIRTUAL -> isValidVirtualLocation(location);
+            case PHYSICAL -> isValidPhysicalLocation(location);
+        };
+    }
+
+    // METODY POMOCNICZE - PRYWATNE
+
+    private void validateCreateRequest(CreateLocationRequest request) {
+        // Walidacja unikalności dla lokalizacji wirtualnej
+        if (request.getType() == LocationType.VIRTUAL &&
+                request.getVirtualMeetingUrl() != null) {
+            locationRepository.findByVirtualMeetingUrl(request.getVirtualMeetingUrl())
+                    .ifPresent(location -> {
+                        throw new IllegalArgumentException("URL spotkania już istnieje");
+                    });
+        }
+
+        // Walidacja unikalności dla lokalizacji fizycznej
+        if (request.getType() == LocationType.PHYSICAL &&
+                request.getName() != null && request.getAddress() != null) {
+            if (locationRepository.existsByNameAndAddress(request.getName(), request.getAddress())) {
+                throw new IllegalArgumentException("Lokalizacja o tej nazwie i adresie już istnieje");
+            }
+        }
+
+        // Walidacja współrzędnych
+        validateCoordinates(request.getLatitude(), request.getLongitude());
+    }
+
+    private void validateTypeChange(Location location, LocationType newType) {
+        if (location.getType() != newType && !location.getMeetings().isEmpty()) {
+            throw new IllegalStateException("Nie można zmienić typu lokalizacji używanej w spotkaniach");
+        }
+    }
+
+    private void updateLocationEntity(Location location, UpdateLocationRequest request) {
+        location.setName(request.getName());
+        location.setType(request.getType());
+        location.setAddress(request.getAddress());
+        location.setCity(request.getCity());
+        location.setCountry(request.getCountry());
+        location.setLatitude(request.getLatitude());
+        location.setLongitude(request.getLongitude());
+        location.setVirtualMeetingUrl(request.getVirtualMeetingUrl());
+        location.setAccessCode(request.getAccessCode());
+        location.setDrivingInstructions(request.getDrivingInstructions());
+        location.setTimezone(request.getTimezone());
+    }
+
+    private void validateLocationDeletion(Location location) {
+        if (!location.getMeetings().isEmpty()) {
+            throw new IllegalStateException(
+                    "Nie można usunąć lokalizacji używanej w spotkaniach. " +
+                            "Lokalizacja jest używana w " + location.getMeetings().size() + " spotkaniach."
+            );
+        }
+    }
+
+    private void validateCoordinates(BigDecimal lat, BigDecimal lng) {
+        if (lat == null || lng == null) {
+            return; // Współrzędne są opcjonalne
+        }
+
+        if (lat.compareTo(new BigDecimal("-90")) < 0 || lat.compareTo(new BigDecimal("90")) > 0) {
+            throw new IllegalArgumentException("Szerokość geograficzna musi być między -90 a 90");
+        }
+        if (lng.compareTo(new BigDecimal("-180")) < 0 || lng.compareTo(new BigDecimal("180")) > 0) {
+            throw new IllegalArgumentException("Długość geograficzna musi być między -180 a 180");
+        }
+    }
+
+    private Double validateAndLimitRadius(Double radiusKm) {
+        if (radiusKm == null) {
+            return 10.0;
+        }
+
+        if (radiusKm <= 0) {
+            throw new IllegalArgumentException("Promień musi być większy niż 0");
+        }
+
+        if (radiusKm > 1000) {
+            log.warn("Promień wyszukiwania ograniczony do 1000 km");
+            return 1000.0;
+        }
+
+        return radiusKm;
+    }
+
+    private void performGeocoding(Location location) {
+        try {
+            String fullAddress = buildFullAddressForGeocoding(location);
+            Location geocoded = geocodingService.geocodeAddress(fullAddress);
+
+            if (geocoded != null && geocoded.getLatitude() != null && geocoded.getLongitude() != null) {
+                location.setLatitude(geocoded.getLatitude());
+                location.setLongitude(geocoded.getLongitude());
+
+                // Uzupełnij brakujące dane tylko jeśli nie zostały podane
+                if (location.getCity() == null && geocoded.getCity() != null) {
+                    location.setCity(geocoded.getCity());
+                }
+                if (location.getCountry() == null && geocoded.getCountry() != null) {
+                    location.setCountry(geocoded.getCountry());
+                }
+                if (location.getTimezone() == null && geocoded.getTimezone() != null) {
+                    location.setTimezone(geocoded.getTimezone());
+                }
+
+                log.info("Successfully geocoded address: {} -> {}, {}",
+                        fullAddress, location.getLatitude(), location.getLongitude());
+            }
+        } catch (Exception e) {
+            log.warn("Geocoding failed for address: {}. Error: {}",
+                    location.getAddress(), e.getMessage());
+        }
+    }
+
+    private String getDestinationFromLocation(Location location) {
+        if (location.hasCoordinates()) {
+            return location.getLatitude() + "," + location.getLongitude();
+        } else if (location.getFullAddress() != null && !location.getFullAddress().isEmpty()) {
+            return encodeUrl(location.getFullAddress());
+        }
+        return null;
+    }
+
+    private void validateVirtualLocationParameters(String platform, String meetingId) {
+        if (platform == null || platform.trim().isEmpty()) {
+            throw new IllegalArgumentException("Platforma jest wymagana");
+        }
+        if (meetingId == null || meetingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("ID spotkania jest wymagane");
+        }
+    }
+
+    private String generateLocationNameFromPlatform(String platform) {
+        String cleanPlatform = platform.trim();
+        if (cleanPlatform.isEmpty()) {
+            return "Virtual Meeting";
+        }
+
+        return cleanPlatform.substring(0, 1).toUpperCase() +
+                cleanPlatform.substring(1).toLowerCase() + " Meeting";
+    }
+
+    private boolean isValidVirtualLocation(Location location) {
+        return location.getVirtualMeetingUrl() != null &&
+                !location.getVirtualMeetingUrl().trim().isEmpty();
+    }
+
+    private boolean isValidPhysicalLocation(Location location) {
+        return location.hasCoordinates() ||
+                (location.getAddress() != null && !location.getAddress().trim().isEmpty());
+    }
 
     private Location mapToEntity(CreateLocationRequest request) {
         return Location.builder()
@@ -359,7 +407,8 @@ public class LocationServiceImpl implements LocationService {
     }
 
     private boolean needsGeocoding(Location location) {
-        return (location.getLatitude() == null || location.getLongitude() == null) &&
+        return location.getType() == LocationType.PHYSICAL &&
+                (location.getLatitude() == null || location.getLongitude() == null) &&
                 location.getAddress() != null && !location.getAddress().trim().isEmpty();
     }
 
@@ -380,21 +429,6 @@ public class LocationServiceImpl implements LocationService {
 
         return address.toString();
     }
-
-//    private boolean isValidVirtualMeetingUrl(String url) {
-//        if (url == null || url.trim().isEmpty()) {
-//            return false;
-//        }
-//
-//        String lowerUrl = url.toLowerCase();
-//        return lowerUrl.startsWith("http://") ||
-//                lowerUrl.startsWith("https://") ||
-//                lowerUrl.startsWith("zoommtg://") ||
-//                lowerUrl.startsWith("teams://") ||
-//                lowerUrl.contains("zoom.us/j/") ||
-//                lowerUrl.contains("meet.google.com/") ||
-//                lowerUrl.contains("teams.microsoft.com/");
-//    }
 
     private String generatePlatformUrl(String platform, String meetingId, String passcode) {
         String cleanPlatform = platform.toUpperCase().trim();
@@ -424,26 +458,5 @@ public class LocationServiceImpl implements LocationService {
             return "";
         }
         return text.trim().replace(" ", "+");
-    }
-
-    @Override
-    public LocationResponse getLocationById(Long id) {
-        Location location = locationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Lokalizacja nie znaleziona"));
-        return mapToResponse(location);
-    }
-
-    @Override
-    public boolean validateLocation(Long locationId) {
-        Location location = locationRepository.findById(locationId)
-                .orElseThrow(() -> new IllegalArgumentException("Lokalizacja nie znaleziona"));
-
-        if (location.getType() == LocationType.VIRTUAL) {
-            return location.getVirtualMeetingUrl() != null &&
-                    !location.getVirtualMeetingUrl().trim().isEmpty();
-        } else {
-            return location.hasCoordinates() ||
-                    (location.getAddress() != null && !location.getAddress().trim().isEmpty());
-        }
     }
 }

@@ -8,11 +8,17 @@ import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.service.MeetingService;
-import com.meethub.domain.service.ParticipantService;
+import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,7 +35,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ParticipantController {
 
-    private final ParticipantService participantService;
+    private final MeetingParticipantService participantService;
     private final MeetingService meetingService;
     private final MeetingRepository meetingRepository;
 
@@ -46,7 +52,7 @@ public class ParticipantController {
             }
 
             List<ParticipantResponse> participants = participantService.getMeetingParticipants(meetingId);
-            ParticipantService.ParticipantStats stats = participantService.getMeetingStats(meetingId);
+            MeetingParticipantService.ParticipantStats stats = participantService.getMeetingStats(meetingId);
 
             model.addAttribute("participants", participants);
             model.addAttribute("stats", stats);
@@ -418,5 +424,38 @@ public class ParticipantController {
         }
 
         return "redirect:/meetings/" + meetingId;
+    }
+
+
+    @GetMapping("/export")
+    public ResponseEntity<Resource> exportParticipants(@PathVariable Long meetingId,
+                                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (!participantService.isOrganizer(meetingId, userDetails.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // Logika eksportu CSV/PDF
+        ByteArrayResource resource = participantService.exportParticipantsToCsv(meetingId);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=participants_" + meetingId + ".csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(resource);
+    }
+
+    @GetMapping("/stats")
+    public String showStats(@PathVariable Long meetingId,
+                            @AuthenticationPrincipal CustomUserDetails userDetails,
+                            Model model) {
+        if (!participantService.isOrganizer(meetingId, userDetails.getId())) {
+            model.addAttribute("error", "Brak uprawnień");
+            return "error/403";
+        }
+
+        var stats = participantService.getDetailedStats(meetingId);
+        model.addAttribute("stats", stats);
+        model.addAttribute("meetingId", meetingId);
+
+        return "participants/stats";
     }
 }

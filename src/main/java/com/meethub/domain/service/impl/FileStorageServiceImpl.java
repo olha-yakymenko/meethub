@@ -37,7 +37,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     /**
      * Inicjalizacja katalogu do przechowywania plików
      */
-    private Path getFileStorageLocation() {
+    Path getFileStorageLocation() {
         if (fileStorageLocation == null) {
             this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
             try {

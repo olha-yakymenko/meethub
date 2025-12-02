@@ -1062,6 +1062,10 @@
 
 package com.meethub.controller.web;
 
+import com.meethub.domain.model.entity.Feedback;
+import com.meethub.domain.model.entity.Meeting;
+import com.meethub.domain.model.entity.MeetingParticipant;
+import com.meethub.domain.model.entity.MeetingStatistics;
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UserRegistrationRequest;
 import com.meethub.domain.model.response.*;
@@ -1069,12 +1073,14 @@ import com.meethub.domain.service.*;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -1085,6 +1091,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -1097,6 +1104,11 @@ public class WebController {
     private final UserService userService;
     private final MeetingParticipantService meetingParticipantService;
     private final MeetingVotingService meetingVotingService;
+
+    private final FeedbackService feedbackService;
+    private final MeetingResourceService resourceService;
+    private final MeetingAnalyticsService meetingAnalyticsService; // DODAJ TEN SERWIS!
+
 
     @GetMapping("/")
     public String home(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
@@ -1446,6 +1458,79 @@ public class WebController {
 
 
 
+//    @GetMapping("/meetings/{id}")
+//    public String meetingDetails(
+//            @PathVariable Long id,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            MeetingResponse meeting = meetingService.getMeetingById(id);
+//            model.addAttribute("meeting", meeting);
+//
+//            Long userId = userDetails != null ? userDetails.getId() : null;
+//
+//            // ✅ Pobierz POTWIERDZONYCH uczestników do wyświetlenia
+//            List<ParticipantResponse> confirmedParticipants = meetingParticipantService.getConfirmedParticipants(id);
+//
+//            // ✅ Pobierz PEŁNE STATYSTYKI
+//            Map<String, Long> participantStats = meetingParticipantService.getParticipantStatistics(id);
+//
+//            model.addAttribute("participants", confirmedParticipants);
+//            model.addAttribute("participantStats", participantStats);
+//
+//            // ✅ DODAJ: Pobierz głosowania
+//            if (userId != null) {
+//                List<VotingResponse> allVotings = meetingVotingService.getMeetingVotings(id, userId);
+//
+//                // Podziel na aktywne i zamknięte
+//                List<VotingResponse> activeVotings = allVotings.stream()
+//                        .filter(voting -> voting.getStatus().name().equals("ACTIVE"))
+//                        .collect(Collectors.toList());
+//
+//                List<VotingResponse> closedVotings = allVotings.stream()
+//                        .filter(voting -> voting.getStatus().name().equals("CLOSED"))
+//                        .collect(Collectors.toList());
+//
+//                model.addAttribute("activeVotings", activeVotings);
+//                model.addAttribute("closedVotings", closedVotings);
+//            } else {
+//                // Dla niezalogowanych - puste listy
+//                model.addAttribute("activeVotings", Collections.emptyList());
+//                model.addAttribute("closedVotings", Collections.emptyList());
+//            }
+//
+//            // ✅ Reszta logiki
+//            MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+//            model.addAttribute("isOrganizer", participationInfo.isOrganizer());
+//            model.addAttribute("isParticipant", participationInfo.isParticipant());
+//            model.addAttribute("isRelated", participationInfo.isRelated());
+//            model.addAttribute("participantRole", participationInfo.getParticipantRole());
+//            model.addAttribute("permissions", participationInfo.getPermissions());
+//            model.addAttribute("canEdit", participationInfo.isCanEdit());
+//            model.addAttribute("canDelete", participationInfo.isCanDelete());
+//            model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
+//            model.addAttribute("canJoin", participationInfo.isCanJoin());
+//
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//                model.addAttribute("userId", userId);
+//            }
+//
+//            return "meetings/details";
+//
+//        } catch (Exception e) {
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//            }
+//            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania");
+//            return "redirect:/meetings";
+//        }
+//    }
+//
+
+
+
     @GetMapping("/meetings/{id}")
     public String meetingDetails(
             @PathVariable Long id,
@@ -1467,55 +1552,163 @@ public class WebController {
             model.addAttribute("participants", confirmedParticipants);
             model.addAttribute("participantStats", participantStats);
 
+            // ✅ DODAJ: Pobierz statystyki spotkania (ANALYTICS)
+            if (userId != null) {
+                // Sprawdź czy użytkownik jest organizatorem/adminem
+                MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+                boolean isOrganizer = participationInfo.isOrganizer();
+                boolean isAdmin = userDetails.getAuthorities().stream()
+                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+                // Tylko organizator/admin widzi statystyki
+                if (isOrganizer || isAdmin) {
+                    try {
+                        // Pobierz istniejące statystyki
+                        Optional<MeetingStatistics> statsOpt = meetingAnalyticsService.getMeetingStatistics(id);
+
+                        if (statsOpt.isPresent()) {
+                            // Jeśli istnieją, dodaj do modelu
+                            model.addAttribute("meetingStatistics", statsOpt.get());
+                        } else {
+                            // Jeśli nie istnieją, ustaw null (HTML pokaże "Ładowanie...")
+                            model.addAttribute("meetingStatistics", null);
+                        }
+
+                        // Dodaj flagi do modelu
+                        model.addAttribute("isOrganizer", true);
+                        model.addAttribute("isAdmin", isAdmin);
+
+                    } catch (Exception e) {
+                        model.addAttribute("meetingStatistics", null);
+                    }
+                } else {
+                    // Nie-organizator nie widzi statystyk
+                    model.addAttribute("meetingStatistics", null);
+                    model.addAttribute("isOrganizer", false);
+                    model.addAttribute("isAdmin", false);
+                }
+            } else {
+                // Niezalogowany użytkownik
+                model.addAttribute("meetingStatistics", null);
+                model.addAttribute("isOrganizer", false);
+                model.addAttribute("isAdmin", false);
+            }
+
             // ✅ DODAJ: Pobierz głosowania
             if (userId != null) {
-                List<VotingResponse> allVotings = meetingVotingService.getMeetingVotings(id, userId);
+                try {
+                    List<VotingResponse> allVotings = meetingVotingService.getMeetingVotings(id, userId);
 
-                // Podziel na aktywne i zamknięte
-                List<VotingResponse> activeVotings = allVotings.stream()
-                        .filter(voting -> voting.getStatus().name().equals("ACTIVE"))
-                        .collect(Collectors.toList());
+                    // Podziel na aktywne i zamknięte
+                    List<VotingResponse> activeVotings = allVotings.stream()
+                            .filter(voting -> voting.getStatus().name().equals("ACTIVE"))
+                            .collect(Collectors.toList());
 
-                List<VotingResponse> closedVotings = allVotings.stream()
-                        .filter(voting -> voting.getStatus().name().equals("CLOSED"))
-                        .collect(Collectors.toList());
+                    List<VotingResponse> closedVotings = allVotings.stream()
+                            .filter(voting -> voting.getStatus().name().equals("CLOSED"))
+                            .collect(Collectors.toList());
 
-                model.addAttribute("activeVotings", activeVotings);
-                model.addAttribute("closedVotings", closedVotings);
+                    model.addAttribute("activeVotings", activeVotings);
+                    model.addAttribute("closedVotings", closedVotings);
+                } catch (Exception e) {
+                    // Obsłuż błąd pobierania głosowań
+                    model.addAttribute("activeVotings", Collections.emptyList());
+                    model.addAttribute("closedVotings", Collections.emptyList());
+                }
             } else {
                 // Dla niezalogowanych - puste listy
                 model.addAttribute("activeVotings", Collections.emptyList());
                 model.addAttribute("closedVotings", Collections.emptyList());
             }
 
-            // ✅ Reszta logiki
-            MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
-            model.addAttribute("isOrganizer", participationInfo.isOrganizer());
-            model.addAttribute("isParticipant", participationInfo.isParticipant());
-            model.addAttribute("isRelated", participationInfo.isRelated());
-            model.addAttribute("participantRole", participationInfo.getParticipantRole());
-            model.addAttribute("permissions", participationInfo.getPermissions());
-            model.addAttribute("canEdit", participationInfo.isCanEdit());
-            model.addAttribute("canDelete", participationInfo.isCanDelete());
-            model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
-            model.addAttribute("canJoin", participationInfo.isCanJoin());
+            // ✅ Pobierz feedback użytkownika jeśli jest uczestnikiem - POPRAWIONE!
+            if (userId != null) {
+                try {
+                    MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
 
-            if (userDetails != null) {
-                model.addAttribute("user", userDetails);
-                model.addAttribute("userId", userId);
+                    if (participationInfo.isParticipant()) {
+                        // Dodaj osobny try-catch dla pobierania feedbacku
+                        try {
+                            Feedback userFeedback = feedbackService.getUserFeedback(id, userId);
+                            if (userFeedback != null) {
+                                model.addAttribute("userFeedback", userFeedback);
+                            }
+                        } catch (Exception e) {
+                            // Jeśli nie ma feedbacku lub jest błąd, ustaw null
+                            model.addAttribute("userFeedback", null);
+                        }
+                    }
+                } catch (Exception e) {
+                    // Błąd w pobieraniu permissions - kontynuuj bez feedbacku
+                    model.addAttribute("userFeedback", null);
+                }
+            }
+
+            // ✅ Pobierz zasoby spotkania
+            if (userId != null) {
+                try {
+                    List<MeetingResourceResponse> resources = resourceService.getMeetingResources(id, userId);
+                    model.addAttribute("resources", resources);
+                    model.addAttribute("resourcesCount", resources.size());
+                } catch (Exception e) {
+                    model.addAttribute("resources", Collections.emptyList());
+                    model.addAttribute("resourcesCount", 0);
+                }
+            } else {
+                model.addAttribute("resources", Collections.emptyList());
+                model.addAttribute("resourcesCount", 0);
+            }
+
+            // ✅ Reszta logiki (bez duplikacji isOrganizer)
+            if (userId != null) {
+                try {
+                    MeetingParticipationInfo participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+
+                    // Nie nadpisuj isOrganizer jeśli już ustawione przez sekcję statystyk
+                    if (!model.containsAttribute("isOrganizer")) {
+                        model.addAttribute("isOrganizer", participationInfo.isOrganizer());
+                    }
+
+                    model.addAttribute("isParticipant", participationInfo.isParticipant());
+                    model.addAttribute("isRelated", participationInfo.isRelated());
+                    model.addAttribute("participantRole", participationInfo.getParticipantRole());
+                    model.addAttribute("permissions", participationInfo.getPermissions());
+                    model.addAttribute("canEdit", participationInfo.isCanEdit());
+                    model.addAttribute("canDelete", participationInfo.isCanDelete());
+                    model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
+                    model.addAttribute("canJoin", participationInfo.isCanJoin());
+
+                    model.addAttribute("user", userDetails);
+                    model.addAttribute("userId", userId);
+                } catch (Exception e) {
+                    // Jeśli błąd w pobieraniu permissions, ustaw domyślne wartości
+                    model.addAttribute("isOrganizer", false);
+                    model.addAttribute("isParticipant", false);
+                    model.addAttribute("isRelated", false);
+                    model.addAttribute("canJoin", meeting.getVisibility().name().equals("PUBLIC"));
+                }
+            } else {
+                // Dla niezalogowanych ustaw podstawowe flagi
+                model.addAttribute("isOrganizer", false);
+                model.addAttribute("isParticipant", false);
+                model.addAttribute("isRelated", false);
+                model.addAttribute("canJoin", meeting.getVisibility().name().equals("PUBLIC"));
             }
 
             return "meetings/details";
 
         } catch (Exception e) {
+            // Loguj szczegółowy błąd
+            System.err.println("ERROR in meetingDetails: " + e.getMessage());
+            e.printStackTrace();
+
             if (userDetails != null) {
                 model.addAttribute("user", userDetails);
             }
-            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania");
+            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania: " + e.getMessage());
             return "redirect:/meetings";
         }
     }
-
 
 
 

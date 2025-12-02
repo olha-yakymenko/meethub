@@ -1446,3 +1446,103 @@ CREATE INDEX IF NOT EXISTS idx_files_assignment_id ON task_files(assignment_id);
 ALTER TABLE tasks ADD COLUMN allow_self_assignment BOOLEAN;
 ALTER TABLE tasks ADD COLUMN allowed_file_types TEXT DEFAULT 'pdf,doc,docx,jpg,png';
 
+
+
+
+
+
+
+
+-- Tabela feedbacks
+CREATE TABLE feedbacks (
+    id BIGSERIAL PRIMARY KEY,
+    meeting_id BIGINT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(meeting_id, user_id)
+);
+
+CREATE INDEX idx_feedbacks_meeting ON feedbacks(meeting_id);
+CREATE INDEX idx_feedbacks_user ON feedbacks(user_id);
+
+-- Tabela meeting_statistics
+CREATE TABLE meeting_statistics (
+    id BIGSERIAL PRIMARY KEY,
+    meeting_id BIGINT NOT NULL UNIQUE REFERENCES meetings(id) ON DELETE CASCADE,
+    total_participants INTEGER DEFAULT 0,
+    confirmed_participants INTEGER DEFAULT 0,
+    attended_participants INTEGER DEFAULT 0,
+    attendance_rate DECIMAL(5,2) DEFAULT 0.00,
+    confirmation_rate DECIMAL(5,2) DEFAULT 0.00,
+    avg_response_time_hours DECIMAL(8,2) DEFAULT 0.00,
+    no_show_count INTEGER DEFAULT 0,
+    engagement_score DECIMAL(5,2) DEFAULT 0.00,
+    task_completion_rate DECIMAL(5,2) DEFAULT 0.00,
+    feedback_count INTEGER DEFAULT 0,
+    avg_feedback_rating DECIMAL(3,2) DEFAULT 0.00,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_meeting_stats_meeting ON meeting_statistics(meeting_id);
+
+ALTER TABLE feedbacks ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT NOW();
+
+
+CREATE TABLE meeting_predictions (
+    id BIGSERIAL PRIMARY KEY,
+    organizer_id BIGINT NOT NULL,
+    prediction_date DATE NOT NULL,
+    predicted_meetings INTEGER,
+    predicted_participants INTEGER,
+    predicted_attendance_rate DOUBLE PRECISION,
+    best_day VARCHAR(255),
+    best_time VARCHAR(255),
+    confidence_score DOUBLE PRECISION,
+    factors_json TEXT,
+    CONSTRAINT fk_meeting_prediction_organizer
+        FOREIGN KEY (organizer_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+-- Sprawdź czy tabela istnieje
+SELECT EXISTS (
+    SELECT FROM information_schema.tables
+    WHERE table_schema = 'meethub_schema'
+    AND table_name = 'meeting_statistics'
+);
+
+-- Jeśli tabela nie istnieje, utwórz ją
+CREATE TABLE IF NOT EXISTS meeting_statistics (
+    id BIGSERIAL PRIMARY KEY,
+    meeting_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    generated_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    total_participants INTEGER DEFAULT 0,
+    confirmed_participants INTEGER DEFAULT 0,
+    attended_participants INTEGER DEFAULT 0,
+    attendance_rate DOUBLE PRECISION DEFAULT 0.0,
+    confirmation_rate DOUBLE PRECISION DEFAULT 0.0,
+    no_show_count INTEGER DEFAULT 0,
+    feedback_count INTEGER DEFAULT 0,
+    avg_feedback_rating DOUBLE PRECISION DEFAULT 0.0,
+    engagement_score DOUBLE PRECISION DEFAULT 0.0,
+    task_completion_rate DOUBLE PRECISION DEFAULT 0.0,
+    avg_response_time_hours DOUBLE PRECISION DEFAULT 0.0,
+    CONSTRAINT fk_meeting_statistics_meeting
+        FOREIGN KEY (meeting_id)
+        REFERENCES meetings(id)
+        ON DELETE CASCADE
+);
+
+-- Dodaj indeksy
+CREATE INDEX IF NOT EXISTS idx_meeting_statistics_meeting
+    ON meeting_statistics(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_statistics_created
+    ON meeting_statistics(created_at);
+
+ALTER TABLE meeting_statistics
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;

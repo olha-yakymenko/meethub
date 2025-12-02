@@ -385,7 +385,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     }
 
     // Pozostałe metody pomocnicze
-    private boolean hasPermissionToAddResource(Meeting meeting, User user) {
+    boolean hasPermissionToAddResource(Meeting meeting, User user) {
         return meeting.getOrganizer().equals(user) ||
                 meeting.getParticipants().stream()
                         .anyMatch(p -> p.getUser().equals(user) && p.isConfirmed());
@@ -426,7 +426,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
         }
     }
 
-    private MeetingResourceResponse mapToResponse(MeetingResource resource, User currentUser, Meeting meeting) {
+    MeetingResourceResponse mapToResponse(MeetingResource resource, User currentUser, Meeting meeting) {
         MeetingResourceResponse response = new MeetingResourceResponse();
         response.setId(resource.getId());
         response.setFilename(resource.getFilename());

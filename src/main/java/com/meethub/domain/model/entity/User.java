@@ -472,6 +472,10 @@ public class User {
         return enabledNotificationChannels.contains(channel);
     }
 
+    public boolean isEnabled() {
+        return enabled;
+    }
+
     // Metoda pomocnicza do znajdowania uczestnictwa w spotkaniu
     public MeetingParticipant getMeetingParticipant(Meeting meeting) {
         if (meeting == null) return null;
