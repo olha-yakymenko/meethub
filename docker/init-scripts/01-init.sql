@@ -1468,24 +1468,119 @@ CREATE INDEX idx_feedbacks_meeting ON feedbacks(meeting_id);
 CREATE INDEX idx_feedbacks_user ON feedbacks(user_id);
 
 -- Tabela meeting_statistics
+--CREATE TABLE meeting_statistics (
+--    id BIGSERIAL PRIMARY KEY,
+--    meeting_id BIGINT NOT NULL UNIQUE REFERENCES meetings(id) ON DELETE CASCADE,
+--    total_participants INTEGER DEFAULT 0,
+--    confirmed_participants INTEGER DEFAULT 0,
+--    attended_participants INTEGER DEFAULT 0,
+--    attendance_rate DECIMAL(5,2) DEFAULT 0.00,
+--    confirmation_rate DECIMAL(5,2) DEFAULT 0.00,
+--    avg_response_time_hours DECIMAL(8,2) DEFAULT 0.00,
+--    no_show_count INTEGER DEFAULT 0,
+--    engagement_score DECIMAL(5,2) DEFAULT 0.00,
+--    task_completion_rate DECIMAL(5,2) DEFAULT 0.00,
+--    feedback_count INTEGER DEFAULT 0,
+--    avg_feedback_rating DECIMAL(3,2) DEFAULT 0.00,
+--    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+--);
+--
+--CREATE INDEX idx_meeting_stats_meeting ON meeting_statistics(meeting_id);
+
+-- Migration: Create meeting_statistics table
 CREATE TABLE meeting_statistics (
     id BIGSERIAL PRIMARY KEY,
-    meeting_id BIGINT NOT NULL UNIQUE REFERENCES meetings(id) ON DELETE CASCADE,
-    total_participants INTEGER DEFAULT 0,
+    meeting_id BIGINT NOT NULL UNIQUE,
+
+    -- Podstawowe metryki
+    total_participants INTEGER NOT NULL DEFAULT 0,
+    attended_participants INTEGER NOT NULL DEFAULT 0,
     confirmed_participants INTEGER DEFAULT 0,
-    attended_participants INTEGER DEFAULT 0,
-    attendance_rate DECIMAL(5,2) DEFAULT 0.00,
-    confirmation_rate DECIMAL(5,2) DEFAULT 0.00,
-    avg_response_time_hours DECIMAL(8,2) DEFAULT 0.00,
-    no_show_count INTEGER DEFAULT 0,
-    engagement_score DECIMAL(5,2) DEFAULT 0.00,
-    task_completion_rate DECIMAL(5,2) DEFAULT 0.00,
+    declined_participants INTEGER DEFAULT 0,
+    pending_participants INTEGER DEFAULT 0,
+
+    -- Frekwencja
+    attendance_rate DECIMAL(5,2),
+    confirmation_rate DECIMAL(5,2),
+
+    -- Czasy odpowiedzi
+    avg_response_time_minutes DECIMAL(10,2),
+    min_response_time_minutes DECIMAL(10,2),
+    max_response_time_minutes DECIMAL(10,2),
+
+    -- Czas trwania
+    avg_join_delay_minutes DECIMAL(10,2),
+    avg_participation_duration_minutes DECIMAL(10,2),
+    total_meeting_duration_minutes INTEGER,
+
+    -- Statystyki uczestnictwa
+    max_concurrent_participants INTEGER,
+    current_participants INTEGER DEFAULT 0,
+    peak_participants_today INTEGER DEFAULT 0,
+
+    -- Feedback
+    average_rating DECIMAL(3,2),
     feedback_count INTEGER DEFAULT 0,
-    avg_feedback_rating DECIMAL(3,2) DEFAULT 0.00,
-    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    positive_feedback_count INTEGER DEFAULT 0,
+    negative_feedback_count INTEGER DEFAULT 0,
+
+    -- Koszty
+    total_cost DECIMAL(15,2),
+    cost_per_participant DECIMAL(10,2),
+
+    -- Statusy
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    is_finalized BOOLEAN NOT NULL DEFAULT FALSE,
+    data_quality_score DECIMAL(3,2),
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    generated_at TIMESTAMP NOT NULL,
+    last_calculated_at TIMESTAMP,
+    valid_until TIMESTAMP,
+
+    -- JSON metryki
+    additional_metrics JSONB,
+
+    -- Wersja
+    version INTEGER DEFAULT 0,
+
+    -- Klucze obce
+    CONSTRAINT fk_meeting_statistics_meeting
+        FOREIGN KEY (meeting_id)
+        REFERENCES meetings(id) ON DELETE CASCADE,
+
+    -- Constraints
+    CONSTRAINT chk_attendance_rate_range
+        CHECK (attendance_rate >= 0 AND attendance_rate <= 100),
+    CONSTRAINT chk_confirmation_rate_range
+        CHECK (confirmation_rate >= 0 AND confirmation_rate <= 100),
+    CONSTRAINT chk_average_rating_range
+        CHECK (average_rating >= 0 AND average_rating <= 5)
 );
 
-CREATE INDEX idx_meeting_stats_meeting ON meeting_statistics(meeting_id);
+-- Indeksy dla wydajności
+CREATE INDEX idx_meeting_statistics_meeting_id ON meeting_statistics(meeting_id);
+CREATE INDEX idx_meeting_statistics_status ON meeting_statistics(status);
+CREATE INDEX idx_meeting_statistics_generated_at ON meeting_statistics(generated_at DESC);
+CREATE INDEX idx_meeting_statistics_organizer ON meeting_statistics(meeting_id)
+    INCLUDE (attendance_rate, total_participants, generated_at);
+
+-- Trigger do aktualizacji updated_at
+CREATE OR REPLACE FUNCTION update_meeting_statistics_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_meeting_statistics_updated_at
+BEFORE UPDATE ON meeting_statistics
+FOR EACH ROW
+EXECUTE FUNCTION update_meeting_statistics_updated_at();
+
 
 ALTER TABLE feedbacks ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT NOW();
 

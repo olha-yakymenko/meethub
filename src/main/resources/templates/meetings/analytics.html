@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Lista spotkań - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+        <div>
+            <h1 class="h3">
+                <i class="bi bi-graph-up text-primary me-2"></i>
+                Analiza statystyk spotkania
+            </h1>
+            <p class="text-muted mb-0" th:text="${meeting?.title}"></p>
+            <small class="text-muted">
+                Spotkanie ID: <span th:text="${meeting?.id}"></span> |
+                Wygenerowano:
+                <span th:if="${meetingStatistics?.generatedAt}"
+                      th:text="${#temporals.format(meetingStatistics.generatedAt, 'dd.MM.yyyy HH:mm')}">
+                    </span>
+                <span th:unless="${meetingStatistics?.generatedAt}">-</span>
+            </small>
+        </div>
+
+        <div>
+            <a th:href="@{/meetings/{id}(id=${meeting.id})}"
+               class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-1"></i>Powrót do spotkania
+            </a>
+
+            <form th:action="@{/meetings/{meetingId}/analytics/generate(meetingId=${meeting.id})}"
+                  method="post" class="d-inline">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Odśwież statystyki
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Główne KPI -->
+    <div th:if="${meetingStatistics != null}" class="row">
+        <!-- Frekwencja -->
+        <div class="col-md-3 mb-4">
+            <div class="card stat-card border-success h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-success mb-2"
+                         th:text="${meetingStatistics.attendanceRate != null ?
+                                      #numbers.formatDecimal(meetingStatistics.attendanceRate, 1, 1) : '0'}">
+                    </div>
+                    <div class="text-muted mb-3">Frekwencja</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-people me-1"></i>
+                        <span th:text="${meetingStatistics.attendedParticipants ?: 0}"></span>/
+                        <span th:text="${meetingStatistics.totalParticipants ?: 0}"></span>
+                        uczestników
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Średnia ocena -->
+        <div class="col-md-3 mb-4">
+            <div class="card stat-card border-warning h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-warning mb-2"
+                         th:text="${meetingStatistics.averageRating != null ?
+                                      #numbers.formatDecimal(meetingStatistics.averageRating, 1, 1) : '0'}">
+                    </div>
+                    <div class="text-muted mb-3">Średnia ocena</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-star me-1"></i>
+                        na podstawie
+                        <span th:text="${meetingStatistics.feedbackCount ?: 0}"></span> ocen
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Potwierdzenia -->
+        <div class="col-md-3 mb-4">
+            <div class="card stat-card border-info h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-info mb-2"
+                         th:text="${meetingStatistics.confirmationRate != null ?
+                                      #numbers.formatDecimal(meetingStatistics.confirmationRate, 1, 1) : '0'}">
+                    </div>
+                    <div class="text-muted mb-3">Potwierdzenia</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-check-circle me-1"></i>
+                        <span th:text="${meetingStatistics.confirmedParticipants ?: 0}"></span> potwierdzonych
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-3 mb-4">
+            <div class="card stat-card border-secondary h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                            <span class="badge fs-5 p-3"
+                                  th:class="${meetingStatistics.status == 'FINAL' ? 'bg-success' :
+                                            meetingStatistics.status == 'PRELIMINARY' ? 'bg-warning' :
+                                            meetingStatistics.status == 'DRAFT' ? 'bg-secondary' : 'bg-light text-dark'}">
+                                <span th:text="${meetingStatistics.status ?: 'BRAK'}"></span>
+                            </span>
+                    </div>
+                    <div class="text-muted mb-2">Status statystyk</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <span th:if="${meetingStatistics.finalized}">Ostateczne</span>
+                        <span th:unless="${meetingStatistics.finalized}">Robocze</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Szczegółowe statystyki -->
+    <div th:if="${meetingStatistics != null}" class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Szczegółowe metryki
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Rozkład uczestników -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="border-bottom pb-2">Rozkład uczestników</h6>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Potwierdzeni</span>
+                                    <span class="fw-bold text-success"
+                                          th:text="${meetingStatistics.confirmedParticipants ?: 0}"></span>
+                                </div>
+                                <div class="progress progress-thin">
+                                    <div class="progress-bar bg-success"
+                                         th:style="'width: ' +
+                                                      ${meetingStatistics.totalParticipants > 0 ?
+                                                       (meetingStatistics.confirmedParticipants * 100 / meetingStatistics.totalParticipants) : 0} + '%;'">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Odrzuceni</span>
+                                    <span class="fw-bold text-danger"
+                                          th:text="${meetingStatistics.declinedParticipants ?: 0}"></span>
+                                </div>
+                                <div class="progress progress-thin">
+                                    <div class="progress-bar bg-danger"
+                                         th:style="'width: ' +
+                                                      ${meetingStatistics.totalParticipants > 0 ?
+                                                       (meetingStatistics.declinedParticipants * 100 / meetingStatistics.totalParticipants) : 0} + '%;'">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Oczekujący</span>
+                                    <span class="fw-bold text-warning"
+                                          th:text="${meetingStatistics.pendingParticipants ?: 0}"></span>
+                                </div>
+                                <div class="progress progress-thin">
+                                    <div class="progress-bar bg-warning"
+                                         th:style="'width: ' +
+                                                      ${meetingStatistics.totalParticipants > 0 ?
+                                                       (meetingStatistics.pendingParticipants * 100 / meetingStatistics.totalParticipants) : 0} + '%;'">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inne metryki -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="border-bottom pb-2">Inne metryki</h6>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <div class="text-muted small">Śr. czas odpowiedzi</div>
+                                    <div class="fw-bold fs-5"
+                                         th:text="${meetingStatistics.avgResponseTimeMinutes != null ?
+                                                      (#numbers.formatDecimal(meetingStatistics.avgResponseTimeMinutes, 1, 1) + ' min') : 'Brak danych'}">
+                                    </div>
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <div class="text-muted small">Liczba ocen</div>
+                                    <div class="fw-bold fs-5"
+                                         th:text="${meetingStatistics.feedbackCount ?: 0}">
+                                    </div>
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <div class="text-muted small">Ostatnia aktualizacja</div>
+                                    <div class="fw-bold"
+                                         th:if="${meetingStatistics.updatedAt}"
+                                         th:text="${#temporals.format(meetingStatistics.updatedAt, 'dd.MM.yyyy HH:mm')}">
+                                    </div>
+                                    <div class="fw-bold text-muted" th:unless="${meetingStatistics.updatedAt}">
+                                        -
+                                    </div>
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <div class="text-muted small">Wygenerowano</div>
+                                    <div class="fw-bold"
+                                         th:if="${meetingStatistics.generatedAt}"
+                                         th:text="${#temporals.format(meetingStatistics.generatedAt, 'dd.MM.yyyy HH:mm')}">
+                                    </div>
+                                    <div class="fw-bold text-muted" th:unless="${meetingStatistics.generatedAt}">
+                                        -
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Brak statystyk -->
+    <div th:if="${meetingStatistics == null}" class="text-center py-5">
+        <i class="bi bi-graph-up display-1 text-muted mb-4"></i>
+        <h3 class="text-muted">Brak statystyk</h3>
+        <p class="text-muted mb-4">Wygeneruj statystyki, aby zobaczyć analizę spotkania.</p>
+        <form th:action="@{/meetings/{meetingId}/analytics/generate(meetingId=${meeting.id})}"
+              method="post" class="d-inline">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-lightning me-2"></i>Wygeneruj statystyki
+            </button>
+        </form>
+    </div>
+
+    <!-- Przyciski akcji na dole -->
+    <div class="d-flex justify-content-between mt-4">
+        <div>
+            <a th:href="@{/meetings/{id}(id=${meeting.id})}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Powrót do spotkania
+            </a>
+        </div>
+
+        <div th:if="${meetingStatistics != null}">
+            <a th:href="@{/meetings/{meetingId}/analytics/export/csv(meetingId=${meeting.id})}"
+               class="btn btn-outline-success me-2">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Eksportuj CSV
+            </a>
+
+            <a th:href="@{/meetings/{meetingId}/analytics/export/pdf(meetingId=${meeting.id})}"
+               class="btn btn-outline-danger">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Eksportuj PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<th:block th:insert="~{fragments/scripts}"></th:block>
+</body>
+</html>

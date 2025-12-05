@@ -6,6 +6,7 @@ import com.meethub.domain.model.entity.MeetingParticipant;
 import com.meethub.domain.model.entity.MeetingStatistics;
 import com.meethub.domain.model.request.ReportFilter;
 import com.meethub.domain.model.response.ApiResponse;
+import com.meethub.domain.model.response.MeetingStatisticsResponse;
 import com.meethub.domain.model.response.OrganizerReport;
 import com.meethub.domain.model.response.VotingResponse;
 import com.meethub.domain.service.MeetingAnalyticsService;
@@ -43,11 +44,51 @@ public class AnalyticsController {
 
     @PostMapping("/meetings/{meetingId}/statistics")
     @Operation(summary = "Generate meeting statistics")
-    public ResponseEntity<ApiResponse<com.meethub.domain.model.entity.MeetingStatistics>> generateMeetingStatistics(
+    public ResponseEntity<ApiResponse<MeetingStatisticsResponse>> generateMeetingStatistics(
             @PathVariable Long meetingId) {
 
         var stats = analyticsService.generateMeetingStatistics(meetingId);
-        return ResponseEntity.ok(ApiResponse.success("Statistics generated", stats));
+        var response = convertToResponse(stats);
+        return ResponseEntity.ok(ApiResponse.success("Statistics generated", response));
+    }
+
+    @GetMapping("/meetings/{meetingId}/report")
+    @Operation(summary = "Get meeting report")
+    public ResponseEntity<ApiResponse<MeetingStatisticsResponse>> getMeetingReport(
+            @PathVariable Long meetingId) {
+
+        var stats = analyticsService.generateMeetingStatistics(meetingId);
+        var response = convertToResponse(stats);
+        return ResponseEntity.ok(ApiResponse.success("Meeting report generated", response));
+    }
+
+
+    private MeetingStatisticsResponse convertToResponse(com.meethub.domain.model.entity.MeetingStatistics stats) {
+        if (stats == null) {
+            return null;
+        }
+
+        return MeetingStatisticsResponse.builder()
+                .id(stats.getId())
+                .meetingId(stats.getMeeting() != null ? stats.getMeeting().getId() : null)
+                .meetingTitle(stats.getMeeting() != null ? stats.getMeeting().getTitle() : null)
+                .totalParticipants(stats.getTotalParticipants())
+                .attendedParticipants(stats.getAttendedParticipants())
+                .confirmedParticipants(stats.getConfirmedParticipants())
+                .declinedParticipants(stats.getDeclinedParticipants())
+                .pendingParticipants(stats.getPendingParticipants())
+                .attendanceRate(stats.getAttendanceRate())
+                .confirmationRate(stats.getConfirmationRate())
+                .avgResponseTimeMinutes(stats.getAvgResponseTimeMinutes())
+                .averageRating(stats.getAverageRating())
+                .feedbackCount(stats.getFeedbackCount())
+                .status(stats.getStatus() != null ? stats.getStatus().name() : null)
+                .finalized(stats.getFinalized())
+                .generatedAt(stats.getGeneratedAt())
+                .createdAt(stats.getCreatedAt())
+                .updatedAt(stats.getUpdatedAt())
+                .additionalMetrics(stats.getAdditionalMetrics())
+                .build();
     }
 
     @GetMapping("/meetings/{meetingId}/export/csv")
@@ -130,14 +171,6 @@ public class AnalyticsController {
                 .body(new ByteArrayResource(pdf));
     }
 
-    @GetMapping("/meetings/{meetingId}/report")
-    @Operation(summary = "Get meeting report")
-    public ResponseEntity<ApiResponse<com.meethub.domain.model.entity.MeetingStatistics>> getMeetingReport(
-            @PathVariable Long meetingId) {
-
-        var stats = analyticsService.generateMeetingStatistics(meetingId);
-        return ResponseEntity.ok(ApiResponse.success("Meeting report generated", stats));
-    }
 
     // ========== RAPORTY ORGANIZATORA ==========
 

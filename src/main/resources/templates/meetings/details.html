@@ -61,7 +61,7 @@
                             <span class="visually-hidden">Ładowanie...</span>
                         </div>
                         <p class="text-muted">Ładowanie statystyk...</p>
-                        <form th:action="@{/api/analytics/meetings/{meetingId}/statistics(meetingId=${meeting.id})}"
+                        <form th:action="@{/api/v1/analytics/meetings/{meetingId}/statistics(meetingId=${meeting.id})}"
                               method="post" class="d-inline">
                             <button type="submit" class="btn btn-primary btn-sm">
                                 <i class="bi bi-arrow-clockwise me-1"></i>Wygeneruj statystyki
@@ -76,13 +76,15 @@
                             <div class="card h-100 border-success">
                                 <div class="card-body text-center">
                                     <div class="display-6 fw-bold text-success"
-                                         th:text="${#numbers.formatDecimal(meetingStatistics.attendanceRate, 1, 1)} + '%'">0%</div>
+                                         th:text="${meetingStatistics.attendanceRate != null ? (#numbers.formatDecimal(meetingStatistics.attendanceRate, 1, 1) + '%') : '0%'}">
+                                        0%
+                                    </div>
                                     <div class="text-muted">Frekwencja</div>
                                     <div class="mt-2">
                                         <small class="text-muted">
                                             <i class="bi bi-people me-1"></i>
-                                            <span th:text="${meetingStatistics.attendedParticipants}"></span>/
-                                            <span th:text="${meetingStatistics.totalParticipants}"></span>
+                                            <span th:text="${meetingStatistics.attendedParticipants != null ? meetingStatistics.attendedParticipants : 0}"></span>/
+                                            <span th:text="${meetingStatistics.totalParticipants != null ? meetingStatistics.totalParticipants : 0}"></span>
                                             uczestników
                                         </small>
                                     </div>
@@ -93,13 +95,17 @@
                         <div class="col-md-6 mb-3">
                             <div class="card h-100 border-warning">
                                 <div class="card-body text-center">
+                                    <!-- ZMIANA: engagementScore może nie istnieć w DTO, użyj averageRating -->
                                     <div class="display-6 fw-bold text-warning"
-                                         th:text="${#numbers.formatDecimal(meetingStatistics.engagementScore, 1, 1)}">0</div>
-                                    <div class="text-muted">Zaangażowanie</div>
+                                         th:text="${meetingStatistics.averageRating != null ? (#numbers.formatDecimal(meetingStatistics.averageRating, 1, 1)) : '0'}">
+                                        0
+                                    </div>
+                                    <div class="text-muted">Średnia ocena</div>
                                     <div class="mt-2">
                                         <small class="text-muted">
-                                            <i class="bi bi-lightning me-1"></i>
-                                            <span th:text="${#numbers.formatDecimal(meetingStatistics.taskCompletionRate, 1, 1)}"></span>% zadań
+                                            <i class="bi bi-star me-1"></i>
+                                            na podstawie
+                                            <span th:text="${meetingStatistics.feedbackCount != null ? meetingStatistics.feedbackCount : 0}"></span> ocen
                                         </small>
                                     </div>
                                 </div>
@@ -114,11 +120,13 @@
                                     <div class="d-flex justify-content-between">
                                         <span>Potwierdzenia:</span>
                                         <strong class="text-info"
-                                                th:text="${#numbers.formatDecimal(meetingStatistics.confirmationRate, 1, 1)} + '%'">0%</strong>
+                                                th:text="${meetingStatistics.confirmationRate != null ? (#numbers.formatDecimal(meetingStatistics.confirmationRate, 1, 1) + '%') : '0%'}">
+                                            0%
+                                        </strong>
                                     </div>
                                     <div class="progress" style="height: 6px;">
                                         <div class="progress-bar bg-info"
-                                             th:style="'width: ' + ${meetingStatistics.confirmationRate} + '%;'"></div>
+                                             th:style="'width: ' + ${meetingStatistics.confirmationRate != null ? meetingStatistics.confirmationRate : 0} + '%;'"></div>
                                     </div>
                                 </div>
 
@@ -126,24 +134,73 @@
                                     <div class="d-flex justify-content-between">
                                         <span>Feedback:</span>
                                         <strong class="text-primary"
-                                                th:text="${meetingStatistics.feedbackCount} + ' ocen'">0</strong>
+                                                th:text="${(meetingStatistics.feedbackCount != null ? meetingStatistics.feedbackCount : 0) + ' ocen'}">
+                                            0 ocen
+                                        </strong>
                                     </div>
                                     <div class="progress" style="height: 6px;">
                                         <div class="progress-bar bg-primary"
-                                             th:style="'width: ' + ${(meetingStatistics.avgFeedbackRating != null) ? meetingStatistics.avgFeedbackRating * 20 : 0} + '%;'"></div>
+                                             th:style="'width: ' + ${meetingStatistics.averageRating != null ? (meetingStatistics.averageRating.doubleValue() * 20) : 0} + '%;'"></div>
                                     </div>
                                     <small class="text-muted"
-                                           th:if="${meetingStatistics.avgFeedbackRating != null}"
-                                           th:text="'Śr. ocena: ' + ${#numbers.formatDecimal(meetingStatistics.avgFeedbackRating, 1, 1)} + '/5'"></small>
+                                           th:if="${meetingStatistics.averageRating != null}"
+                                           th:text="'Śr. ocena: ' + ${#numbers.formatDecimal(meetingStatistics.averageRating, 1, 1)} + '/5'">
+                                    </small>
                                 </div>
 
                                 <div class="col-md-4 mb-3">
                                     <div class="d-flex justify-content-between">
                                         <span>Śr. czas odpowiedzi:</span>
                                         <strong class="text-secondary"
-                                                th:text="${#numbers.formatDecimal(meetingStatistics.avgResponseTimeHours, 1, 1)} + ' godz'">0</strong>
+                                                th:text="${meetingStatistics.avgResponseTimeMinutes != null ? (#numbers.formatDecimal(meetingStatistics.avgResponseTimeMinutes, 1, 1) + ' min') : 'Brak danych'}">
+                                            0 min
+                                        </strong>
                                     </div>
                                     <small class="text-muted">Od zaproszenia do potwierdzenia</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dodatkowe statystyki -->
+                        <div class="col-12 mt-2">
+                            <div class="row">
+                                <div class="col-md-3 mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Potwierdzeni:</span>
+                                        <span class="fw-bold text-success"
+                                              th:text="${meetingStatistics.confirmedParticipants != null ? meetingStatistics.confirmedParticipants : 0}">
+                                0
+                            </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Odrzuceni:</span>
+                                        <span class="fw-bold text-danger"
+                                              th:text="${meetingStatistics.declinedParticipants != null ? meetingStatistics.declinedParticipants : 0}">
+                                0
+                            </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Oczekujący:</span>
+                                        <span class="fw-bold text-warning"
+                                              th:text="${meetingStatistics.pendingParticipants != null ? meetingStatistics.pendingParticipants : 0}">
+                                0
+                            </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Status:</span>
+                                        <span class="badge"
+                                              th:class="${meetingStatistics.status == 'FINAL' ? 'bg-success' :
+                                            meetingStatistics.status == 'PRELIMINARY' ? 'bg-warning' :
+                                            'bg-secondary'}"
+                                              th:text="${meetingStatistics.status != null ? meetingStatistics.status : 'BRAK'}">
+                            </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -152,19 +209,20 @@
                         <div class="col-12 mt-3">
                             <div class="d-flex flex-wrap gap-2">
                                 <!-- Pobierz raport CSV -->
-                                <a th:href="@{/api/analytics/meetings/{meetingId}/export/csv(meetingId=${meeting.id})}"
+                                <a th:href="@{/meetings/{meetingId}/analytics/export/csv(meetingId=${meeting.id})}"
                                    class="btn btn-outline-success">
                                     <i class="bi bi-file-earmark-spreadsheet me-1"></i>Pobierz CSV
                                 </a>
 
+
                                 <!-- Pobierz raport PDF -->
-                                <a th:href="@{/api/analytics/meetings/{meetingId}/export/pdf(meetingId=${meeting.id})}"
+                                <a th:href="@{/meetings/{meetingId}/analytics/export/pdf(meetingId=${meeting.id})}"
                                    class="btn btn-outline-danger">
                                     <i class="bi bi-file-earmark-pdf me-1"></i>Pobierz PDF
                                 </a>
 
                                 <!-- Odśwież statystyki -->
-                                <form th:action="@{/api/analytics/meetings/{meetingId}/statistics(meetingId=${meeting.id})}"
+                                <form th:action="@{/meetings/{meetingId}/analytics/generate(meetingId=${meeting.id})}"
                                       method="post" class="d-inline">
                                     <button type="submit" class="btn btn-outline-primary">
                                         <i class="bi bi-arrow-clockwise me-1"></i>Odśwież
@@ -172,7 +230,7 @@
                                 </form>
 
                                 <!-- Pełny raport -->
-                                <a th:href="@{/analytics/meetings/{meetingId}/report(meetingId=${meeting.id})}"
+                                <a th:href="@{/meetings/{meetingId}/analytics(meetingId=${meeting.id})}"
                                    class="btn btn-primary">
                                     <i class="bi bi-graph-up me-1"></i>Pełny raport
                                 </a>
@@ -180,7 +238,7 @@
                         </div>
                     </div>
 
-                    <!-- Brak statystyk (spotkanie się jeszcze nie odbyło) -->
+                    <!-- Informacja o braku statystyk -->
                     <div th:if="${meeting?.endDate != null and meeting?.endDate.isAfter(T(java.time.LocalDateTime).now())}"
                          class="alert alert-info mt-3">
                         <i class="bi bi-info-circle me-2"></i>

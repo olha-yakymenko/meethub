@@ -1067,6 +1067,7 @@ import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.MeetingParticipant;
 import com.meethub.domain.model.entity.MeetingStatistics;
 import com.meethub.domain.model.request.CreateMeetingRequest;
+import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.request.UserRegistrationRequest;
 import com.meethub.domain.model.response.*;
 import com.meethub.domain.service.*;
@@ -1107,6 +1108,7 @@ public class WebController {
     private final UserService userService;
     private final MeetingParticipantService meetingParticipantService;
     private final MeetingVotingService meetingVotingService;
+
 
     private final FeedbackService feedbackService;
     private final MeetingResourceService resourceService;
@@ -1789,6 +1791,164 @@ public class WebController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+
+
+
+        @GetMapping("/meetings/{id}/edit")
+        public String showEditMeetingForm(@PathVariable Long id,
+                                          @AuthenticationPrincipal CustomUserDetails userDetails,
+                                          Model model) {
+            if (userDetails == null) {
+                return "redirect:/login";
+            }
+
+            try {
+                MeetingResponse meeting = meetingService.getMeetingById(id);
+                Long userId = userDetails.getId();
+
+                // Sprawdź czy użytkownik jest organizatorem
+                if (!meeting.getOrganizer().getId().equals(userId)) {
+                    return "redirect:/meetings/" + id + "?error=Nie masz uprawnień do edycji tego spotkania";
+                }
+
+                UpdateMeetingRequest updateRequest = UpdateMeetingRequest.builder()
+                        .title(meeting.getTitle())
+                        .description(meeting.getDescription())
+                        .agenda(meeting.getAgenda())
+                        .type(meeting.getType())
+                        .visibility(meeting.getVisibility())
+                        .startDate(meeting.getStartDate())
+                        .endDate(meeting.getEndDate())
+                        .maxParticipants(meeting.getMaxParticipants())
+                        .tags(meeting.getTags())
+                        .build();
+
+                model.addAttribute("updateMeetingRequest", updateRequest);
+                model.addAttribute("meetingId", id);
+                return "meetings/edit";
+
+            } catch (Exception e) {
+                return "redirect:/meetings?error=Spotkanie nie zostało znalezione";
+            }
+        }
+
+        @PostMapping("/meetings/{id}/edit")
+        public String updateMeeting(
+                @PathVariable Long id,
+                @Valid @ModelAttribute("updateMeetingRequest") UpdateMeetingRequest request,
+                BindingResult result,
+                @AuthenticationPrincipal CustomUserDetails userDetails,
+                Model model,
+                RedirectAttributes redirectAttributes) {
+
+            if (userDetails == null) {
+                return "redirect:/login";
+            }
+
+            if (result.hasErrors()) {
+                model.addAttribute("meetingId", id);
+                return "meetings/edit";
+            }
+
+            try {
+                MeetingResponse meeting = meetingService.updateMeeting(id, request, userDetails.getId());
+                redirectAttributes.addFlashAttribute("message",
+                        "Spotkanie '" + meeting.getTitle() + "' zostało zaktualizowane pomyślnie!");
+                return "redirect:/meetings/" + meeting.getId();
+
+            } catch (Exception e) {
+                model.addAttribute("error", "Błąd podczas aktualizacji spotkania: " + e.getMessage());
+                model.addAttribute("meetingId", id);
+                return "meetings/edit";
+            }
+        }
+
+        @PostMapping("/meetings/{id}/delete")
+        public String deleteMeeting(
+                @PathVariable Long id,
+                @AuthenticationPrincipal CustomUserDetails userDetails,
+                RedirectAttributes redirectAttributes) {
+
+            if (userDetails == null) {
+                return "redirect:/login";
+            }
+
+            try {
+                meetingService.deleteMeeting(id, userDetails.getId());
+                redirectAttributes.addFlashAttribute("message", "Spotkanie zostało usunięte pomyślnie!");
+                return "redirect:/meetings";
+
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("error", "Błąd podczas usuwania spotkania: " + e.getMessage());
+                return "redirect:/meetings/" + id;
+            }
+        }
+
+        @GetMapping("/meetings/{id}/duplicate")
+        public String duplicateMeeting(
+                @PathVariable Long id,
+                @AuthenticationPrincipal CustomUserDetails userDetails,
+                RedirectAttributes redirectAttributes) {
+
+            if (userDetails == null) {
+                return "redirect:/login";
+            }
+
+            try {
+                MeetingResponse duplicatedMeeting = meetingService.duplicateMeeting(id, userDetails.getId());
+                redirectAttributes.addFlashAttribute("message",
+                        "Spotkanie zostało skopiowane pomyślnie!");
+                return "redirect:/meetings/" + duplicatedMeeting.getId();
+
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("error", "Błąd podczas kopiowania spotkania: " + e.getMessage());
+                return "redirect:/meetings/" + id;
+            }
+        }
+
+        @PostMapping("/meetings/{id}/join")
+        public String joinMeeting(
+                @PathVariable Long id,
+                @AuthenticationPrincipal CustomUserDetails userDetails,
+                RedirectAttributes redirectAttributes) {
+
+            if (userDetails == null) {
+                return "redirect:/login";
+            }
+
+            try {
+                meetingParticipantService.joinMeeting(userDetails.getId(), id);
+                redirectAttributes.addFlashAttribute("message", "Dołączyłeś do spotkania pomyślnie!");
+                return "redirect:/meetings/" + id;
+
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("error", "Błąd podczas dołączania do spotkania: " + e.getMessage());
+                return "redirect:/meetings/" + id;
+            }
+        }
+
+        @PostMapping("/meetings/{id}/leave")
+        public String leaveMeeting(
+                @PathVariable Long id,
+                @AuthenticationPrincipal CustomUserDetails userDetails,
+                RedirectAttributes redirectAttributes) {
+
+            if (userDetails == null) {
+                return "redirect:/login";
+            }
+
+            try {
+                meetingParticipantService.leaveMeeting(userDetails.getId(), id);
+                redirectAttributes.addFlashAttribute("message", "Opuszczono spotkanie pomyślnie!");
+                return "redirect:/meetings/" + id;
+
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("error", "Błąd podczas opuszczania spotkania: " + e.getMessage());
+                return "redirect:/meetings/" + id;
+            }
+        }
+
 
 
 }
