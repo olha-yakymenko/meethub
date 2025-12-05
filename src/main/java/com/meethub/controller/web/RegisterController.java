@@ -1,0 +1,65 @@
+package com.meethub.controller.web;
+
+import com.meethub.domain.model.request.UserRegistrationRequest;
+import com.meethub.domain.model.response.UserResponse;
+import com.meethub.domain.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Slf4j // ✅ DODAJ to
+@Controller
+@RequiredArgsConstructor
+public class RegisterController {
+
+    private final AuthService authService;
+
+    @GetMapping("/register")
+    public String showRegistrationForm(Model model) {
+        log.info("🌐 GET /register - showing registration form");
+        model.addAttribute("registrationRequest", new UserRegistrationRequest());
+        return "auth/register";
+    }
+
+    @PostMapping("/register")
+    public String registerUser(
+            @Valid @ModelAttribute("registrationRequest") UserRegistrationRequest request,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        log.info("📝 POST /register - processing registration for: {}", request.getEmail());
+        log.debug("Registration data: FirstName={}, LastName={}, Phone={}",
+                request.getFirstName(), request.getLastName(), request.getPhoneNumber());
+
+        if (bindingResult.hasErrors()) {
+            log.warn("❌ Validation errors: {}", bindingResult.getAllErrors());
+            return "auth/register";
+        }
+
+        try {
+            log.info("👤 Attempting to register user: {}", request.getEmail());
+            UserResponse user = authService.register(request);
+            log.info("✅ User registered successfully: {} (ID: {})",
+                    user.getEmail(), user.getId());
+
+            redirectAttributes.addFlashAttribute("message",
+                    "Rejestracja udana! Możesz się teraz zalogować.");
+
+            log.info("🔄 Redirecting to /login");
+            return "redirect:/login";
+
+        } catch (Exception e) {
+            log.error("💥 Registration failed for: {}", request.getEmail(), e);
+            model.addAttribute("error", e.getMessage());
+            return "auth/register";
+        }
+    }
+}

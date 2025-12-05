@@ -19,7 +19,83 @@ import java.util.Optional;
 @Repository
 public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpecificationExecutor<Meeting> {
 
-    // ✅ DODAJ TE METODY:
+    // ✅ DODAJ BRAKUJĄCE METODY:
+
+    /**
+     * Znajdź spotkania o określonym statusie
+     */
+    List<Meeting> findByStatus(MeetingStatus status);
+
+    /**
+     * Znajdź spotkania o określonym statusie z paginacją
+     */
+    Page<Meeting> findByStatus(MeetingStatus status, Pageable pageable);
+
+    /**
+     * Znajdź zakończone spotkania (status = COMPLETED)
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.status = 'COMPLETED'")
+    List<Meeting> findCompletedMeetings();
+
+    /**
+     * Znajdź zakończone spotkania z paginacją
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.status = 'COMPLETED'")
+    Page<Meeting> findCompletedMeetings(Pageable pageable);
+
+    /**
+     * Znajdź zakończone spotkania, które zakończyły się przed określoną datą
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.status = 'COMPLETED' AND m.endDate <= :endDate")
+    List<Meeting> findCompletedMeetingsBefore(@Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Znajdź zakończone spotkania z zakresu dat
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.status = 'COMPLETED' AND m.endDate BETWEEN :startDate AND :endDate")
+    List<Meeting> findCompletedMeetingsInDateRange(@Param("startDate") LocalDateTime startDate,
+                                                   @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Znajdź zakończone spotkania dla określonego organizatora
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.organizer.id = :organizerId AND m.status = 'COMPLETED'")
+    List<Meeting> findCompletedMeetingsByOrganizer(@Param("organizerId") Long organizerId);
+
+    /**
+     * Znajdź zakończone spotkania, które nie mają statystyk
+     * (użyteczne do refreshAllStatistics)
+     */
+    @Query(value = """
+        SELECT m.* FROM meetings m 
+        LEFT JOIN meeting_statistics ms ON m.id = ms.meeting_id 
+        WHERE m.status = 'COMPLETED' 
+        AND ms.id IS NULL
+        """
+            , nativeQuery = true)
+    List<Meeting> findCompletedMeetingsWithoutStatistics();
+
+    /**
+     * Znajdź zakończone spotkania ze starszymi statystykami
+     * (statystyki starsze niż określona data)
+     */
+    @Query(value = """
+        SELECT m.* FROM meetings m 
+        JOIN meeting_statistics ms ON m.id = ms.meeting_id 
+        WHERE m.status = 'COMPLETED' 
+        AND ms.updated_at < :olderThan
+        """
+            , nativeQuery = true)
+    List<Meeting> findCompletedMeetingsWithOutdatedStatistics(@Param("olderThan") LocalDateTime olderThan);
+
+    /**
+     * Znajdź spotkania z określonym statusem dla organizatora
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.organizer.id = :organizerId AND m.status = :status")
+    List<Meeting> findByOrganizerIdAndStatus(@Param("organizerId") Long organizerId,
+                                             @Param("status") String status);
+
+    // ✅ ISTNIEJĄCE METODY (pozostałe bez zmian):
     Page<Meeting> findByOrganizerId(Long organizerId, Pageable pageable);
 
     List<Meeting> findByOrganizerId(Long organizerId);
@@ -30,7 +106,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
 
     Page<Meeting> findByOrganizerIdAndStatus(Long organizerId, MeetingStatus status, Pageable pageable);
 
-    // ✅ ISTNIEJĄCE METODY:
     List<Meeting> findByOrganizerIdAndStatusIn(Long organizerId, List<MeetingStatus> statuses);
 
     Page<Meeting> findByVisibilityAndStartDateAfter(MeetingVisibility visibility, LocalDateTime startDate, Pageable pageable);
@@ -47,7 +122,8 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
         JOIN meeting_participants mp ON m.id = mp.meeting_id 
         WHERE mp.user_id = :userId AND mp.status = 'CONFIRMED'
         AND m.start_date BETWEEN :startDate AND :endDate
-        """, nativeQuery = true)
+        """
+            , nativeQuery = true)
     List<Meeting> findConfirmedMeetingsForUserInPeriod(@Param("userId") Long userId,
                                                        @Param("startDate") LocalDateTime startDate,
                                                        @Param("endDate") LocalDateTime endDate);
@@ -56,7 +132,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
 
     long countByOrganizerIdAndStatus(Long organizerId, MeetingStatus status);
 
-    // ✅ DODATKOWE PRZYDATNE METODY:
     @Query("SELECT m FROM Meeting m WHERE m.organizer.id = :organizerId AND m.startDate BETWEEN :startDate AND :endDate")
     List<Meeting> findByOrganizerIdAndDateRange(@Param("organizerId") Long organizerId,
                                                 @Param("startDate") LocalDateTime startDate,
@@ -66,30 +141,21 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
     List<Meeting> findByOrganizerIdAndStatusOrderByStartDateAsc(@Param("organizerId") Long organizerId,
                                                                 @Param("status") MeetingStatus status);
 
-//    @Query("SELECT COUNT(m) FROM Meeting m WHERE m.organizer.id = :organizerId AND m.startDate > :date")
-//    long countUpcomingMeetingsByOrganizer(@Param("organizerId") Long organizerId,
-//                                          @Param("date") LocalDateTime date);
-
     @Query("SELECT m FROM Meeting m WHERE m.organizer.id = :organizerId AND LOWER(m.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Meeting> findByOrganizerIdAndTitleContaining(@Param("organizerId") Long organizerId,
-                                       @Param("keyword") String keyword);
+                                                      @Param("keyword") String keyword);
 
     long countByOrganizerId(Long organizerId);
 
     @Query("SELECT COUNT(m) FROM Meeting m WHERE m.organizer.id = :organizerId AND m.startDate > :now")
     long countUpcomingMeetingsByOrganizerId(@Param("organizerId") Long organizerId, @Param("now") LocalDateTime now);
 
-
-    // Metody dla powiadomień
     @Query("SELECT COUNT(m) FROM Meeting m JOIN m.participants mp WHERE mp.user.id = :userId AND m.startDate > CURRENT_TIMESTAMP")
     Long countUpcomingMeetingsByUserId(@Param("userId") Long userId);
-
 
     @Query("SELECT COUNT(m) FROM Meeting m JOIN m.participants mp WHERE mp.user.id = :userId AND m.startDate > :now")
     Long countUpcomingMeetingsByUserIdAndDate(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 
-
-    // Nadchodzące spotkania użytkownika
     @Query("SELECT m FROM Meeting m " +
             "JOIN m.participants mp " +
             "JOIN mp.user u " +
@@ -107,19 +173,16 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
                                 @Param("status") MeetingStatus status,
                                 Pageable pageable);
 
-
     default List<Meeting> findUpcomingPublicMeetings() {
         return findUpcomingPublicMeetings(LocalDateTime.now());
     }
 
-    // Spotkania wymagające przypomnień
     @Query("SELECT m FROM Meeting m WHERE m.startDate BETWEEN :start AND :end AND m.status = 'CONFIRMED'")
     List<Meeting> findMeetingsStartingBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query("SELECT COUNT(m) FROM Meeting m WHERE m.status = 'CONFIRMED'")
     Long countConfirmedMeetings();
 
-    // Spotkania z określonym tagiem
     @Query("SELECT m FROM Meeting m JOIN m.tags t WHERE t = :tag")
     List<Meeting> findByTag(@Param("tag") String tag);
 }

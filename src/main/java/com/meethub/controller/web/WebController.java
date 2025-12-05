@@ -1088,12 +1088,15 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class WebController {
@@ -1195,6 +1198,17 @@ public class WebController {
             @RequestParam(required = false) String status,
             Model model) {
 
+
+        log.info("🔍 meetings() called - userDetails: {}", userDetails);
+        log.info("🔍 userDetails class: {}", userDetails != null ? userDetails.getClass() : "null");
+
+        if (userDetails != null) {
+            log.info("👤 User authenticated - ID: {}, Email: {}",
+                    userDetails.getId(), userDetails.getUsername());
+        } else {
+            log.info("👤 User not authenticated (null userDetails)");
+        }
+
         try {
             Pageable pageable = PageRequest.of(page, size);
             Page<MeetingResponse> meetingsPage;
@@ -1266,56 +1280,56 @@ public class WebController {
         model.addAttribute("user", userDetails);
         return "dashboard";
     }
-
-    @GetMapping("/login")
-    public String login(
-            @RequestParam(value = "error", required = false) String error,
-            @RequestParam(value = "logout", required = false) String logout,
-            Model model) {
-
-        if (error != null) {
-            model.addAttribute("error", "Nieprawidłowy email lub hasło");
-        }
-        if (logout != null) {
-            model.addAttribute("message", "Zostałeś pomyślnie wylogowany");
-        }
-
-        return "auth/login";
-    }
-
-    @GetMapping("/register")
-    public String showRegistrationForm(Model model) {
-        model.addAttribute("registrationRequest", new UserRegistrationRequest());
-        return "auth/register";
-    }
-
-    @PostMapping("/register")
-    public String registerUser(
-            @Valid @ModelAttribute("registrationRequest") UserRegistrationRequest request,
-            BindingResult result,
-            Model model,
-            RedirectAttributes redirectAttributes) {
-
-        if (result.hasErrors()) {
-            return "auth/register";
-        }
-
-        if (!request.getPassword().equals(request.getConfirmPassword())) {
-            model.addAttribute("error", "Hasła nie są identyczne");
-            return "auth/register";
-        }
-
-        try {
-            UserResponse user = authService.register(request);
-            redirectAttributes.addFlashAttribute("message",
-                    "Rejestracja zakończona sukcesem! Możesz się teraz zalogować.");
-            return "redirect:/login";
-
-        } catch (Exception e) {
-            model.addAttribute("error", "Błąd rejestracji: " + e.getMessage());
-            return "auth/register";
-        }
-    }
+//
+//    @GetMapping("/login")
+//    public String login(
+//            @RequestParam(value = "error", required = false) String error,
+//            @RequestParam(value = "logout", required = false) String logout,
+//            Model model) {
+//
+//        if (error != null) {
+//            model.addAttribute("error", "Nieprawidłowy email lub hasło");
+//        }
+//        if (logout != null) {
+//            model.addAttribute("message", "Zostałeś pomyślnie wylogowany");
+//        }
+//
+//        return "auth/login";
+//    }
+//
+//    @GetMapping("/register")
+//    public String showRegistrationForm(Model model) {
+//        model.addAttribute("registrationRequest", new UserRegistrationRequest());
+//        return "auth/register";
+//    }
+//
+//    @PostMapping("/register")
+//    public String registerUser(
+//            @Valid @ModelAttribute("registrationRequest") UserRegistrationRequest request,
+//            BindingResult result,
+//            Model model,
+//            RedirectAttributes redirectAttributes) {
+//
+//        if (result.hasErrors()) {
+//            return "auth/register";
+//        }
+//
+//        if (!request.getPassword().equals(request.getConfirmPassword())) {
+//            model.addAttribute("error", "Hasła nie są identyczne");
+//            return "auth/register";
+//        }
+//
+//        try {
+//            UserResponse user = authService.register(request);
+//            redirectAttributes.addFlashAttribute("message",
+//                    "Rejestracja zakończona sukcesem! Możesz się teraz zalogować.");
+//            return "redirect:/login";
+//
+//        } catch (Exception e) {
+//            model.addAttribute("error", "Błąd rejestracji: " + e.getMessage());
+//            return "auth/register";
+//        }
+//    }
 
 
 //    @GetMapping("/meetings/{id}")

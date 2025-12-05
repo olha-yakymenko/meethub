@@ -151,8 +151,7 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     // ✅ POPRAWIONE: Ta metoda jest już OK
     @Query(value = "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (mp.response_date - mp.created_at)) / 3600.0), 0.0) " +
             "FROM meeting_participants mp " +
-            "WHERE mp.meeting_id = :meetingId AND mp.response_date IS NOT NULL",
-            nativeQuery = true)
+            "WHERE mp.meeting_id = :meetingId AND mp.response_date IS NOT NULL", nativeQuery = true)
     Double findAverageResponseTimeHours(@Param("meetingId") Long meetingId);
 
     // ✅ POPRAWIONE: Użyj responseDate zamiast responseAt

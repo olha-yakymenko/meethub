@@ -770,12 +770,10 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         }
 
         ReportSummary summary = calculateOrganizerSummary(meetings);
-        List<MonthlyTrend> trends = calculateMonthlyTrends(organizerId);
 
         return OrganizerReport.builder()
                 .organizerId(organizerId)
                 .summary(summary)
-                .monthlyTrends(trends)
                 .generatedAt(LocalDateTime.now())
                 .build();
     }
@@ -865,27 +863,94 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     @Override
     @Transactional
     public void refreshAllStatistics() {
-        log.info("Refreshing statistics for all meetings...");
+        log.info("Starting refresh of statistics for all meetings...");
 
-        List<Meeting> meetings = meetingRepository.findAll();
-        int updated = 0;
+        try {
+            // 1. Pobierz TYLKO zakończone spotkania
+            List<Meeting> completedMeetings = meetingRepository.findByStatus(MeetingStatus.valueOf("COMPLETED"));
 
-        for (Meeting meeting : meetings) {
-            try {
-                generateMeetingStatistics(meeting.getId());
-                updated++;
-            } catch (Exception e) {
-                log.error("Error refreshing statistics for meeting {}: {}",
-                        meeting.getId(), e.getMessage());
+            if (completedMeetings.isEmpty()) {
+                log.info("No completed meetings found. Refresh completed.");
+                return;
             }
+
+            log.info("Found {} completed meetings to process", completedMeetings.size());
+
+            int successfullyRefreshed = 0;
+            int failed = 0;
+
+            // 2. Przetwarzaj każde spotkanie
+            for (Meeting meeting : completedMeetings) {
+                try {
+                    log.debug("Processing meeting ID: {}, Title: {}",
+                            meeting.getId(), meeting.getTitle());
+
+                    // 3. Sprawdź czy istnieją już statystyki
+                    Optional<MeetingStatistics> existingStats =
+                            statisticsRepository.findByMeetingId(meeting.getId());
+
+                    if (existingStats.isPresent()) {
+                        // 4. Jeśli istnieją, sprawdź czy są aktualne (generowane w ciągu ostatniej godziny)
+                        MeetingStatistics stats = existingStats.get();
+                        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+
+                        if (stats.getUpdatedAt().isAfter(oneHourAgo)) {
+                            log.debug("Skipping meeting {} - statistics are up-to-date (updated at {})",
+                                    meeting.getId(), stats.getUpdatedAt());
+                            continue;
+                        }
+                    }
+
+                    // 5. Generuj statystyki
+                    generateMeetingStatistics(meeting.getId());
+                    successfullyRefreshed++;
+
+                    log.debug("Successfully refreshed statistics for meeting {}", meeting.getId());
+
+                } catch (ResourceNotFoundException e) {
+                    log.error("Meeting {} not found: {}", meeting.getId(), e.getMessage());
+                    failed++;
+                } catch (BusinessException e) {
+                    // Specjalne przypadki - np. brak uczestników
+                    log.warn("Business exception for meeting {}: {}", meeting.getId(), e.getMessage());
+                    failed++;
+                } catch (Exception e) {
+                    log.error("Unexpected error for meeting {}: {}", meeting.getId(), e.getMessage(), e);
+                    failed++;
+                }
+            }
+
+            // 6. Podsumowanie
+            log.info("Statistics refresh completed. Successfully refreshed: {}, Failed: {}, Total: {}",
+                    successfullyRefreshed, failed, completedMeetings.size());
+
+        } catch (Exception e) {
+            log.error("Fatal error during statistics refresh: {}", e.getMessage(), e);
+            throw new BusinessException("Failed to refresh statistics: " + e.getMessage());
+        }
+    }
+
+    private void validateMeetingForStatistics(Meeting meeting) {
+        if (meeting.getStatus() != MeetingStatus.COMPLETED) {
+            throw new BusinessException(
+                    "Meeting statistics are only available for completed meetings. " +
+                            "Meeting ID: " + meeting.getId() + ", Status: " + meeting.getStatus()
+            );
         }
 
-        log.info("Statistics refreshed for {}/{} meetings", updated, meetings.size());
+        // Możesz dodać dodatkowe walidacje
+        if (meeting.getEndDate() == null) {
+            throw new BusinessException("Meeting end date is not set");
+        }
+
+        if (meeting.getEndDate().isAfter(LocalDateTime.now())) {
+            throw new BusinessException("Meeting has not ended yet");
+        }
     }
 
     // ========== METODY POMOCNICZE DO OBLICZEŃ ==========
 
-    private BigDecimal calculateEngagementScore(Long meetingId, List<MeetingParticipant> participants) {
+    BigDecimal calculateEngagementScore(Long meetingId, List<MeetingParticipant> participants) {
         if (participants.isEmpty()) {
             return BigDecimal.ZERO;
         }
@@ -954,7 +1019,7 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal calculateTaskCompletionRate(List<Task> tasks) {
+    BigDecimal calculateTaskCompletionRate(List<Task> tasks) {
         if (tasks == null || tasks.isEmpty()) {
             return BigDecimal.ZERO;
         }
@@ -985,7 +1050,7 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         return totalCompletion.divide(BigDecimal.valueOf(tasksWithAssignments), 2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal calculateAverageRating(Long meetingId) {
+    BigDecimal calculateAverageRating(Long meetingId) {
         Double avgRating = feedbackRepository.findAverageRatingByMeetingId(meetingId);
         if (avgRating == null) {
             return BigDecimal.ZERO;
@@ -1043,8 +1108,8 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                 .collect(Collectors.toList());
     }
 
-    private ReportSummary calculateOrganizerSummary(List<Meeting> meetings) {
-        if (meetings.isEmpty()) {
+    ReportSummary calculateOrganizerSummary(List<Meeting> meetings) {
+        if (meetings == null || meetings.isEmpty()) {
             return ReportSummary.empty();
         }
 
@@ -1052,19 +1117,32 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         BigDecimal totalAttendance = BigDecimal.ZERO;
         BigDecimal totalEngagement = BigDecimal.ZERO;
         int meetingsWithStats = 0;
+        int meetingsWithParticipants = 0;
 
         for (Meeting meeting : meetings) {
             Optional<MeetingStatistics> stats = statisticsRepository.findByMeetingId(meeting.getId());
+
             if (stats.isPresent()) {
                 meetingsWithStats++;
-                totalParticipants += stats.get().getTotalParticipants();
+                MeetingStatistics statistics = stats.get();
 
-                if (stats.get().getAttendanceRate() != null) {
-                    totalAttendance = totalAttendance.add(stats.get().getAttendanceRate());
+                // Dodaj uczestników
+                Integer meetingParticipants = statistics.getTotalParticipants();
+                if (meetingParticipants != null && meetingParticipants > 0) {
+                    totalParticipants += meetingParticipants;
+                    meetingsWithParticipants++;
                 }
 
-                if (stats.get().getEngagementScore() != null) {
-                    totalEngagement = totalEngagement.add(stats.get().getEngagementScore());
+                // Dodaj frekwencję
+                BigDecimal attendanceRate = statistics.getAttendanceRate();
+                if (attendanceRate != null && attendanceRate.compareTo(BigDecimal.ZERO) >= 0) {
+                    totalAttendance = totalAttendance.add(attendanceRate);
+                }
+
+                // Dodaj zaangażowanie
+                BigDecimal engagementScore = statistics.getEngagementScore();
+                if (engagementScore != null && engagementScore.compareTo(BigDecimal.ZERO) >= 0) {
+                    totalEngagement = totalEngagement.add(engagementScore);
                 }
             }
         }
@@ -1073,69 +1151,24 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
             return ReportSummary.empty();
         }
 
-        BigDecimal avgAttendance = totalAttendance
-                .divide(BigDecimal.valueOf(meetingsWithStats), 2, RoundingMode.HALF_UP);
+        // Oblicz średnie
+        BigDecimal avgAttendance = meetingsWithStats > 0 ?
+                totalAttendance.divide(BigDecimal.valueOf(meetingsWithStats), 2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
 
-        BigDecimal avgEngagement = totalEngagement
-                .divide(BigDecimal.valueOf(meetingsWithStats), 2, RoundingMode.HALF_UP);
+        BigDecimal avgEngagement = meetingsWithStats > 0 ?
+                totalEngagement.divide(BigDecimal.valueOf(meetingsWithStats), 2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
 
         return ReportSummary.builder()
                 .totalMeetings(meetings.size())
                 .totalParticipants(totalParticipants)
-                .avgAttendanceRate(avgAttendance.doubleValue())
-                .avgEngagementScore(avgEngagement.doubleValue())
+                .avgAttendanceRate(avgAttendance)        // BigDecimal - NIE doubleValue()!
+                .avgEngagementScore(avgEngagement)       // BigDecimal - NIE doubleValue()!
                 .build();
     }
 
-    private List<MonthlyTrend> calculateMonthlyTrends(Long organizerId) {
-        List<MonthlyTrend> trends = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
 
-        // Ostatnie 6 miesięcy
-        for (int i = 5; i >= 0; i--) {
-            LocalDateTime monthStart = now.minusMonths(i)
-                    .withDayOfMonth(1)
-                    .withHour(0)
-                    .withMinute(0)
-                    .withSecond(0);
-            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
-
-            List<Meeting> monthlyMeetings = meetingRepository.findByOrganizerIdAndDateRange(
-                    organizerId, monthStart, monthEnd);
-
-            if (!monthlyMeetings.isEmpty()) {
-                BigDecimal totalAttendance = BigDecimal.ZERO;
-                int meetingsWithStats = 0;
-
-                for (Meeting meeting : monthlyMeetings) {
-                    Optional<MeetingStatistics> stats = statisticsRepository.findByMeetingId(meeting.getId());
-                    if (stats.isPresent() && stats.get().getAttendanceRate() != null) {
-                        meetingsWithStats++;
-                        totalAttendance = totalAttendance.add(stats.get().getAttendanceRate());
-                    }
-                }
-
-                double avgAttendance = 0.0;
-                if (meetingsWithStats > 0) {
-                    BigDecimal avgAttendanceBigDecimal = totalAttendance
-                            .divide(BigDecimal.valueOf(meetingsWithStats), 2, RoundingMode.HALF_UP);
-                    avgAttendance = avgAttendanceBigDecimal.doubleValue();
-                }
-
-                String monthName = monthStart.getMonth()
-                        .getDisplayName(TextStyle.FULL, Locale.forLanguageTag("pl"))
-                        + " " + monthStart.getYear();
-
-                trends.add(MonthlyTrend.builder()
-                        .monthName(monthName)
-                        .meetingsCount(monthlyMeetings.size())
-                        .avgAttendance(avgAttendance)
-                        .build());
-            }
-        }
-
-        return trends;
-    }
 
     // ========== METODY DO GENEROWANIA CSV ==========
 
@@ -1363,7 +1396,7 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
     // ========== METODY POMOCNICZE ==========
 
-    private String calculateGrade(MeetingStatistics stats) {
+    String calculateGrade(MeetingStatistics stats) {
         BigDecimal attendance = stats.getAttendanceRate();
         BigDecimal engagement = stats.getEngagementScore();
 

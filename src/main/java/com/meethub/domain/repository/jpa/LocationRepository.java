@@ -69,7 +69,8 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
             ))
         )
     ) < :radius
-    """, nativeQuery = true)
+    """,
+    nativeQuery = true)
     List<Location> findNearbyLocations(@Param("lat") BigDecimal latitude,
                                        @Param("lng") BigDecimal longitude,
                                        @Param("radius") Double radiusKm);

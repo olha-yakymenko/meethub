@@ -59,11 +59,11 @@ public class ParticipantController {
             model.addAttribute("meetingId", meetingId);
             model.addAttribute("isOrganizer", participantService.isOrganizer(meetingId, userDetails.getId()));
 
-            return "participants/list";
+            return "meetings/participants/list";
         } catch (Exception e) {
             log.error("Błąd podczas ładowania uczestników dla meetingId: {}", meetingId, e);
             model.addAttribute("error", "Błąd podczas ładowania listy uczestników");
-            return "participants/list";
+            return "meetings/participants/list";
         }
     }
 
@@ -81,7 +81,7 @@ public class ParticipantController {
             model.addAttribute("meetingId", meetingId);
             model.addAttribute("inviteRequest", new InviteParticipantsRequest());
 
-            return "participants/invite";
+            return "meetings/participants/invite";
         } catch (Exception e) {
             log.error("Błąd podczas ładowania formularza zaproszeń", e);
             return "redirect:/meetings/" + meetingId + "/participants?error=Nie można załadować formularza";
@@ -194,7 +194,7 @@ public class ParticipantController {
             model.addAttribute("participantStatuses", statuses);
             model.addAttribute("permissionLevels", levels);
 
-            return "participants/edit";
+            return "meetings/participants/edit";
         } catch (Exception e) {
             log.error("Błąd podczas ładowania formularza edycji", e);
             return "redirect:/meetings/" + meetingId + "/participants?error=Nie można załadować formularza";
@@ -268,7 +268,7 @@ public class ParticipantController {
         } catch (Exception e) {
             log.error("Błąd podczas potwierdzania udziału z tokenem: {}", token, e);
             model.addAttribute("error", "Błąd podczas potwierdzania: " + e.getMessage());
-            return "participants/confirmation-error";
+            return "meetings/participants/confirmation-error";
         }
     }
 
@@ -280,11 +280,11 @@ public class ParticipantController {
             ParticipantResponse participant = participantService.declineParticipation(token, comment);
             model.addAttribute("success", "Odrzucono zaproszenie na spotkanie");
             model.addAttribute("participant", participant);
-            return "participants/confirmation-success";
+            return "meetings/participants/confirmation-success";
         } catch (Exception e) {
             log.error("Błąd podczas odrzucania zaproszenia z tokenem: {}", token, e);
             model.addAttribute("error", "Błąd podczas odrzucania: " + e.getMessage());
-            return "participants/confirmation-error";
+            return "meetings/participants/confirmation-error";
         }
     }
 
@@ -296,11 +296,11 @@ public class ParticipantController {
             ParticipantResponse participant = participantService.setTentative(token, comment);
             model.addAttribute("success", "Ustawiono status 'Tentative' dla spotkania");
             model.addAttribute("participant", participant);
-            return "participants/confirmation-success";
+            return "meetings/participants/confirmation-success";
         } catch (Exception e) {
             log.error("Błąd podczas ustawiania statusu tentative z tokenem: {}", token, e);
             model.addAttribute("error", "Błąd podczas ustawiania statusu: " + e.getMessage());
-            return "participants/confirmation-error";
+            return "meetings/participants/confirmation-error";
         }
     }
 
@@ -456,6 +456,6 @@ public class ParticipantController {
         model.addAttribute("stats", stats);
         model.addAttribute("meetingId", meetingId);
 
-        return "participants/stats";
+        return "meetings/participants/stats";
     }
 }
