@@ -1,10 +1,188 @@
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://www.thymeleaf.org"-->
+<!--      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"-->
+<!--      lang="pl"-->
+<!--      th:replace="~{layout}">-->
+<!--<head>-->
+<!--    <title>Edytuj spotkanie - MeetHub</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<div th:fragment="content">-->
+<!--    <div class="row justify-content-center">-->
+<!--        <div class="col-md-10">-->
+<!--            <div class="card">-->
+<!--                <div class="card-header">-->
+<!--                    <h4 class="card-title mb-0">-->
+<!--                        <i class="bi bi-plus-circle me-2"></i>Utwórz nowe spotkanie-->
+<!--                    </h4>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    &lt;!&ndash; Komunikat błędu &ndash;&gt;-->
+<!--                    <div th:if="${error}" class="alert alert-danger">-->
+<!--                        <i class="bi bi-exclamation-triangle me-2"></i>-->
+<!--                        <span th:text="${error}"></span>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Formularz &ndash;&gt;-->
+<!--                    <form th:action="@{/meetings/create}" th:object="${createMeetingRequest}" method="post">-->
+
+<!--                        &lt;!&ndash; Tytuł &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="title" class="form-label">Tytuł spotkania *</label>-->
+<!--                            <input type="text" class="form-control" id="title"-->
+<!--                                   th:field="*{title}"-->
+<!--                                   placeholder="Nazwa spotkania" required>-->
+<!--                            <div th:if="${#fields.hasErrors('title')}" class="text-danger small">-->
+<!--                                <span th:errors="*{title}"></span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Opis &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="description" class="form-label">Opis</label>-->
+<!--                            <textarea class="form-control" id="description"-->
+<!--                                      th:field="*{description}"-->
+<!--                                      rows="3"-->
+<!--                                      placeholder="Opis spotkania..."></textarea>-->
+<!--                            <div th:if="${#fields.hasErrors('description')}" class="text-danger small">-->
+<!--                                <span th:errors="*{description}"></span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Agenda &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="agenda" class="form-label">Agenda</label>-->
+<!--                            <textarea class="form-control" id="agenda"-->
+<!--                                      th:field="*{agenda}"-->
+<!--                                      rows="3"-->
+<!--                                      placeholder="Plan spotkania..."></textarea>-->
+<!--                        </div>-->
+
+<!--                        <div class="row">-->
+<!--                            &lt;!&ndash; Typ spotkania &ndash;&gt;-->
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label for="type" class="form-label">Typ spotkania *</label>-->
+<!--                                <select class="form-select" id="type" th:field="*{type}" required>-->
+<!--                                    <option value="">Wybierz typ...</option>-->
+<!--                                    <option value="ONLINE">Online</option>-->
+<!--                                    <option value="IN_PERSON">Osobiście</option>-->
+<!--                                    <option value="HYBRID">Hybrydowe</option>-->
+<!--                                </select>-->
+<!--                            </div>-->
+
+<!--                            &lt;!&ndash; Widoczność &ndash;&gt;-->
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label for="visibility" class="form-label">Widoczność *</label>-->
+<!--                                <select class="form-select" id="visibility" th:field="*{visibility}" required>-->
+<!--                                    <option value="">Wybierz widoczność...</option>-->
+<!--                                    <option value="PUBLIC">Publiczne</option>-->
+<!--                                    <option value="PRIVATE">Prywatne</option>-->
+<!--                                    <option value="INVITE_ONLY">Tylko zaproszeni</option>-->
+<!--                                </select>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        <div class="row">-->
+<!--                            &lt;!&ndash; Data rozpoczęcia &ndash;&gt;-->
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label for="startDate" class="form-label">Data rozpoczęcia *</label>-->
+<!--                                <input type="datetime-local" class="form-control" id="startDate"-->
+<!--                                       th:field="*{startDate}" required>-->
+<!--                                <div th:if="${#fields.hasErrors('startDate')}" class="text-danger small">-->
+<!--                                    <span th:errors="*{startDate}"></span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+
+<!--                            &lt;!&ndash; Data zakończenia &ndash;&gt;-->
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label for="endDate" class="form-label">Data zakończenia *</label>-->
+<!--                                <input type="datetime-local" class="form-control" id="endDate"-->
+<!--                                       th:field="*{endDate}" required>-->
+<!--                                <div th:if="${#fields.hasErrors('endDate')}" class="text-danger small">-->
+<!--                                    <span th:errors="*{endDate}"></span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Maksymalna liczba uczestników &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="maxParticipants" class="form-label">Maksymalna liczba uczestników</label>-->
+<!--                            <input type="number" class="form-control" id="maxParticipants"-->
+<!--                                   th:field="*{maxParticipants}"-->
+<!--                                   min="1" max="1000"-->
+<!--                                   placeholder="Np. 50">-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Tagi &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="tags" class="form-label">Tagi (oddzielone przecinkami)</label>-->
+<!--                            <input type="text" class="form-control" id="tags"-->
+<!--                                   th:field="*{tags}"-->
+<!--                                   placeholder="business, networking, programowanie">-->
+<!--                            <div class="form-text">Wpisz tagi oddzielone przecinkami</div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Przyciski &ndash;&gt;-->
+<!--                        <div class="d-flex gap-2">-->
+<!--                            <button type="submit" class="btn btn-primary">-->
+<!--                                <i class="bi bi-check-circle me-2"></i>Utwórz spotkanie-->
+<!--                            </button>-->
+<!--                            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">-->
+<!--                                <i class="bi bi-x-circle me-2"></i>Anuluj-->
+<!--                            </a>-->
+<!--                        </div>-->
+<!--                    </form>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>-->
+
+<!--<script>-->
+<!--    // Walidacja dat-->
+<!--    document.addEventListener('DOMContentLoaded', function() {-->
+<!--        const startDate = document.getElementById('startDate');-->
+<!--        const endDate = document.getElementById('endDate');-->
+
+<!--        function validateDates() {-->
+<!--            if (startDate.value && endDate.value) {-->
+<!--                const start = new Date(startDate.value);-->
+<!--                const end = new Date(endDate.value);-->
+
+<!--                if (end <= start) {-->
+<!--                    endDate.setCustomValidity('Data zakończenia musi być późniejsza niż data rozpoczęcia');-->
+<!--                } else {-->
+<!--                    endDate.setCustomValidity('');-->
+<!--                }-->
+<!--            }-->
+<!--        }-->
+
+<!--        startDate.addEventListener('change', validateDates);-->
+<!--        endDate.addEventListener('change', validateDates);-->
+<!--    });-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
       lang="pl"
       th:replace="~{layout}">
 <head>
-    <title>Edytuj spotkanie - MeetHub</title>
+    <title>Utwórz spotkanie - MeetHub</title>
 </head>
 <body>
 <div th:fragment="content">
@@ -21,6 +199,12 @@
                     <div th:if="${error}" class="alert alert-danger">
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <span th:text="${error}"></span>
+                    </div>
+
+                    <!-- Komunikat sukcesu -->
+                    <div th:if="${message}" class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${message}"></span>
                     </div>
 
                     <!-- Formularz -->
@@ -62,12 +246,15 @@
                             <!-- Typ spotkania -->
                             <div class="col-md-6 mb-3">
                                 <label for="type" class="form-label">Typ spotkania *</label>
-                                <select class="form-select" id="type" th:field="*{type}" required>
+                                <select class="form-select" id="type" th:field="*{type}" required onchange="toggleLocationField()">
                                     <option value="">Wybierz typ...</option>
                                     <option value="ONLINE">Online</option>
                                     <option value="IN_PERSON">Osobiście</option>
                                     <option value="HYBRID">Hybrydowe</option>
                                 </select>
+                                <div th:if="${#fields.hasErrors('type')}" class="text-danger small">
+                                    <span th:errors="*{type}"></span>
+                                </div>
                             </div>
 
                             <!-- Widoczność -->
@@ -79,6 +266,9 @@
                                     <option value="PRIVATE">Prywatne</option>
                                     <option value="INVITE_ONLY">Tylko zaproszeni</option>
                                 </select>
+                                <div th:if="${#fields.hasErrors('visibility')}" class="text-danger small">
+                                    <span th:errors="*{visibility}"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -104,6 +294,33 @@
                             </div>
                         </div>
 
+                        <!-- ✅ DODANE: Lokalizacja -->
+                        <div class="mb-3" id="locationFieldGroup" >
+                            <label for="locationId" class="form-label">
+                                <span id="locationLabel">Lokalizacja</span>
+                            </label>
+                            <select class="form-select" id="locationId" th:field="*{locationId}">
+                                <option value="">Wybierz lokalizację...</option>
+                                <option th:each="location : ${locations}"
+                                        th:value="${location.id}"
+                                        th:text="${location.name} + (${location.city} != null and ${location.city} != '' ? ' (' + ${location.city} + ')' : '')"                                </option>
+                            </select>
+                            <div th:if="${#fields.hasErrors('locationId')}" class="text-danger small">
+                                <span th:errors="*{locationId}"></span>
+                            </div>
+                            <div class="form-text mt-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="locationHelpText">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <span>Wybierz lokalizację dla spotkania</span>
+                                    </span>
+                                    <a th:href="@{/locations/create}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-plus"></i> Nowa lokalizacja
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Maksymalna liczba uczestników -->
                         <div class="mb-3">
                             <label for="maxParticipants" class="form-label">Maksymalna liczba uczestników</label>
@@ -111,6 +328,9 @@
                                    th:field="*{maxParticipants}"
                                    min="1" max="1000"
                                    placeholder="Np. 50">
+                            <div th:if="${#fields.hasErrors('maxParticipants')}" class="text-danger small">
+                                <span th:errors="*{maxParticipants}"></span>
+                            </div>
                         </div>
 
                         <!-- Tagi -->
@@ -123,8 +343,8 @@
                         </div>
 
                         <!-- Przyciski -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary px-4">
                                 <i class="bi bi-check-circle me-2"></i>Utwórz spotkanie
                             </button>
                             <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
@@ -161,7 +381,108 @@
 
         startDate.addEventListener('change', validateDates);
         endDate.addEventListener('change', validateDates);
+
+        // Inicjalizacja pola lokalizacji
+        toggleLocationField();
     });
+
+    // Funkcja do pokazywania/ukrywania pola lokalizacji
+    function toggleLocationField() {
+        const typeSelect = document.getElementById('type');
+        const locationFieldGroup = document.getElementById('locationFieldGroup');
+        const locationSelect = document.getElementById('locationId');
+        const locationLabel = document.getElementById('locationLabel');
+        const locationHelpText = document.getElementById('locationHelpText');
+        const selectedType = typeSelect.value;
+
+        if (selectedType === 'IN_PERSON' || selectedType === 'HYBRID') {
+            // Pokazuj pole lokalizacji dla spotkań osobiście/hybrydowych
+            locationFieldGroup.style.display = 'block';
+            locationSelect.required = true;
+            locationLabel.innerHTML = 'Lokalizacja *';
+            locationHelpText.innerHTML = `
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Wymagane</strong> dla spotkań osobiście i hybrydowych
+            `;
+            locationSelect.closest('.mb-3').classList.add('required-field');
+        } else if (selectedType === 'ONLINE') {
+            // Pokazuj pole lokalizacji jako opcjonalne dla spotkań online
+            locationFieldGroup.style.display = 'block';
+            locationSelect.required = false;
+            locationLabel.innerHTML = 'Lokalizacja (opcjonalnie)';
+            locationHelpText.innerHTML = `
+                <i class="bi bi-info-circle me-1"></i>
+                Opcjonalne dla spotkań online (np. sala konferencyjna)
+            `;
+            locationSelect.closest('.mb-3').classList.remove('required-field');
+        } else {
+            // Ukryj pole lokalizacji
+            locationFieldGroup.style.display = 'none';
+            locationSelect.value = '';
+            locationSelect.required = false;
+        }
+
+        // Walidacja wymagalności
+        validateForm();
+    }
+
+    // Walidacja formularza
+    function validateForm() {
+        const typeSelect = document.getElementById('type');
+        const locationSelect = document.getElementById('locationId');
+        const selectedType = typeSelect.value;
+
+        if ((selectedType === 'IN_PERSON' || selectedType === 'HYBRID') &&
+            (!locationSelect.value || locationSelect.value === '')) {
+            locationSelect.setCustomValidity('Proszę wybrać lokalizację');
+        } else {
+            locationSelect.setCustomValidity('');
+        }
+    }
+
+    // Obsługa zmiany w selectcie lokalizacji
+    document.getElementById('locationId').addEventListener('change', validateForm);
+
+    // Stylowanie wymaganych pól
+    const style = document.createElement('style');
+    style.textContent = `
+        .required-field label::after {
+            content: " *";
+            color: #dc3545;
+        }
+        select:invalid {
+            border-color: #dc3545;
+        }
+        select:valid {
+            border-color: #198754;
+        }
+    `;
+    document.head.appendChild(style);
 </script>
+
+<style>
+    /* Dodatkowe style dla lepszej UX */
+    #locationFieldGroup {
+        transition: all 0.3s ease;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+
+    #locationFieldGroup:hover {
+        background-color: #f0f2f5;
+    }
+
+    .form-select option:first-child {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    .btn-outline-primary:hover {
+        transform: translateY(-1px);
+        transition: transform 0.2s;
+    }
+</style>
 </body>
 </html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Szablony spotkań - MeetHub</title>
+    <style>
+        .template-card {
+            border: 2px dashed #6f42c1;
+            transition: all 0.3s;
+        }
+        .template-card:hover {
+            border-color: #5a32a3;
+            background-color: #f8f9ff;
+        }
+        .badge-purple {
+            background-color: #6f42c1 !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">
+                <i class="bi bi-file-earmark me-2"></i>Moje szablony
+            </h1>
+            <p class="text-muted">Utwórz spotkanie z gotowego szablonu</p>
+        </div>
+        <a th:href="@{/meetings/create}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nowe spotkanie
+        </a>
+    </div>
+
+    <!-- Lista szablonów -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-collection me-2"></i>Moje szablony
+                <span class="badge bg-secondary ms-2" th:text="${templates != null ? templates.size() : 0}">0</span>
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <!-- Pusta lista -->
+            <div th:if="${templates == null or templates.empty}" class="text-center py-5">
+                <i class="bi bi-file-earmark-plus display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Brak szablonów</h4>
+                <p class="text-muted">Zapisz spotkanie jako szablon, aby go tutaj użyć</p>
+                <div class="mt-4">
+                    <a th:href="@{/meetings/create}" class="btn btn-primary me-2">
+                        <i class="bi bi-plus-circle me-2"></i>Utwórz pierwszy szablon
+                    </a>
+                    <a th:href="@{/meetings}" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar3 me-2"></i>Przejdź do spotkań
+                    </a>
+                </div>
+            </div>
+
+            <!-- Lista szablonów -->
+            <div class="row" th:unless="${templates == null or templates.empty}">
+                <!-- BEZPIECZNE: Sprawdzamy czy template nie jest null -->
+                <div th:each="template : ${templates}"
+                     th:if="${template != null}"
+                     class="col-md-4 mb-4">
+
+                    <div class="card h-100 template-card">
+                        <div class="card-body">
+                            <!-- Nagłówek -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title" th:text="${template.title}"></h5>
+                                <span class="badge badge-purple">Szablon</span>
+                            </div>
+
+                            <!-- Opis -->
+                            <p class="card-text text-muted small mb-3"
+                               th:text="${template.description != null ? template.description : 'Brak opisu'}">
+                            </p>
+
+                            <!-- Podstawowe informacje -->
+                            <div class="small text-muted mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>
+                                        <i class="bi bi-calendar3 me-1"></i>
+                                        <span th:text="${template.type != null ? template.type : 'Brak typu'}"></span>
+                                    </span>
+                                    <span class="badge"
+                                          th:class="${template.visibility?.name() == 'PUBLIC' ? 'bg-info' :
+          (template.visibility?.name() == 'PRIVATE' ? 'bg-warning' : 'bg-secondary')}"
+                                          th:text="${template.visibility != null ? template.visibility : 'Brak'}">
+                                    </span>
+                                </div>
+
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>
+                                        <i class="bi bi-clock me-1"></i>
+
+                                        <span th:unless="${template.startDate != null and template.endDate != null}">
+                                            Brak czasu
+                                        </span>
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-people me-1"></i>
+                                        <span th:text="${template.maxParticipants != null ? template.maxParticipants : '∞'}"></span> osób
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Akcje -->
+                            <div class="mt-3 pt-3 border-top">
+                                <div class="d-flex gap-1">
+                                    <!-- BEZPIECZNE: Sprawdzamy czy id nie jest null -->
+                                    <a th:if="${template.id != null}"
+                                       th:href="@{/meetings/create-from-template/{id}(id=${template.id})}"
+                                       class="btn btn-sm btn-primary flex-grow-1">
+                                        <i class="bi bi-plus-circle me-1"></i>Użyj szablonu
+                                    </a>
+
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <!-- Edytuj -->
+                                            <li th:if="${template.id != null}">
+                                                <a class="dropdown-item"
+                                                   th:href="@{/meetings/{id}/edit(id=${template.id})}">
+                                                    <i class="bi bi-pencil me-2"></i>Edytuj
+                                                </a>
+                                            </li>
+
+                                            <!-- Duplikuj -->
+                                            <li th:if="${template.id != null}">
+                                                <form th:action="@{/meetings/{id}/duplicate(id=${template.id})}"
+                                                      method="post" class="d-inline">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-copy me-2"></i>Duplikuj
+                                                    </button>
+                                                </form>
+                                            </li>
+
+                                            <li><hr class="dropdown-divider"></li>
+
+                                            <!-- Usuń -->
+                                            <li th:if="${template.id != null}">
+                                                <form th:action="@{/meetings/{id}/delete(id=${template.id})}"
+                                                      method="post"
+                                                      onsubmit="return confirm('Czy na pewno chcesz usunąć ten szablon?')"
+                                                      class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i class="bi bi-trash me-2"></i>Usuń
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicjalizacja tooltipów
+        var tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltips.map(function(el) {
+            return new bootstrap.Tooltip(el);
+        });
+    });
+</script>
+</body>
+</html>

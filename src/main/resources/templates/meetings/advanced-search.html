@@ -1,0 +1,898 @@
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://www.thymeleaf.org"-->
+<!--      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"-->
+<!--      lang="pl"-->
+<!--      th:replace="~{layout}">-->
+<!--<head>-->
+<!--    <title>Zaawansowane wyszukiwanie - MeetHub</title>-->
+<!--    <style>-->
+<!--        .advanced-search-card {-->
+<!--            border-left: 4px solid #0d6efd;-->
+<!--        }-->
+<!--        .filter-section {-->
+<!--            background: #f8f9fa;-->
+<!--            border-radius: 8px;-->
+<!--            padding: 20px;-->
+<!--            margin-bottom: 25px;-->
+<!--        }-->
+<!--        .filter-header {-->
+<!--            border-bottom: 2px solid #dee2e6;-->
+<!--            padding-bottom: 10px;-->
+<!--            margin-bottom: 20px;-->
+<!--        }-->
+<!--        .date-range-picker .form-control {-->
+<!--            font-size: 0.9rem;-->
+<!--        }-->
+<!--        .participant-slider {-->
+<!--            width: 100%;-->
+<!--        }-->
+<!--        .slider-value {-->
+<!--            display: inline-block;-->
+<!--            min-width: 40px;-->
+<!--            text-align: center;-->
+<!--            font-weight: bold;-->
+<!--        }-->
+<!--        .meeting-type-badge {-->
+<!--            cursor: pointer;-->
+<!--            transition: all 0.2s;-->
+<!--        }-->
+<!--        .meeting-type-badge:hover {-->
+<!--            transform: scale(1.05);-->
+<!--        }-->
+<!--        .meeting-type-badge.selected {-->
+<!--            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);-->
+<!--        }-->
+<!--        .search-results-preview {-->
+<!--            max-height: 400px;-->
+<!--            overflow-y: auto;-->
+<!--            border: 1px solid #dee2e6;-->
+<!--            border-radius: 8px;-->
+<!--        }-->
+<!--        .save-search-btn {-->
+<!--            position: relative;-->
+<!--            overflow: hidden;-->
+<!--        }-->
+<!--        .save-search-btn .spinner-border {-->
+<!--            position: absolute;-->
+<!--            top: 50%;-->
+<!--            left: 50%;-->
+<!--            transform: translate(-50%, -50%);-->
+<!--        }-->
+<!--        /* Dodatkowe style dla wyników */-->
+<!--        .status-confirmed { background-color: #198754 !important; }-->
+<!--        .status-planned { background-color: #ffc107 !important; color: #000 !important; }-->
+<!--        .status-completed { background-color: #6c757d !important; }-->
+<!--        .status-cancelled { background-color: #dc3545 !important; }-->
+<!--        .results-card {-->
+<!--            transition: all 0.3s ease;-->
+<!--        }-->
+<!--        .results-card:hover {-->
+<!--            transform: translateY(-5px);-->
+<!--            box-shadow: 0 5px 15px rgba(0,0,0,0.1);-->
+<!--        }-->
+<!--    </style>-->
+<!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">-->
+<!--</head>-->
+<!--<body>-->
+<!--<div th:fragment="content">-->
+<!--    &lt;!&ndash; Nagłówek &ndash;&gt;-->
+<!--    <div class="d-flex justify-content-between align-items-center mb-4">-->
+<!--        <div>-->
+<!--            <nav aria-label="breadcrumb">-->
+<!--                <ol class="breadcrumb">-->
+<!--                    <li class="breadcrumb-item"><a th:href="@{/meetings}">Spotkania</a></li>-->
+<!--                    <li class="breadcrumb-item active" aria-current="page">Zaawansowane wyszukiwanie</li>-->
+<!--                </ol>-->
+<!--            </nav>-->
+<!--            <h1 class="display-6 mb-2">-->
+<!--                <i class="bi bi-search me-2"></i>Zaawansowane wyszukiwanie-->
+<!--            </h1>-->
+<!--            <p class="text-muted mb-0">Znajdź spotkania według zaawansowanych kryteriów</p>-->
+<!--        </div>-->
+<!--        <div class="d-flex gap-2">-->
+<!--            <a th:href="@{/meetings}" class="btn btn-outline-secondary">-->
+<!--                <i class="bi bi-arrow-left me-2"></i>Powrót do listy-->
+<!--            </a>-->
+<!--            <a th:href="@{/meetings/create}" class="btn btn-primary">-->
+<!--                <i class="bi bi-plus-circle me-2"></i>Nowe spotkanie-->
+<!--            </a>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <div class="row">-->
+<!--        &lt;!&ndash; Lewa kolumna - Formularz wyszukiwania &ndash;&gt;-->
+<!--        <div class="col-lg-8">-->
+<!--            <div class="card advanced-search-card mb-4">-->
+<!--                <div class="card-header">-->
+<!--                    <h5 class="card-title mb-0">-->
+<!--                        <i class="bi bi-sliders me-2"></i>Kryteria wyszukiwania-->
+<!--                    </h5>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <form th:action="@{/meetings/advanced}" method="get" id="advancedSearchForm">-->
+
+<!--                        &lt;!&ndash; Sekcja 1: Tekst i tagi &ndash;&gt;-->
+<!--                        <div class="filter-section">-->
+<!--                            <h6 class="filter-header">-->
+<!--                                <i class="bi bi-text-left me-2"></i>Tekst i tagi-->
+<!--                            </h6>-->
+<!--                            <div class="row g-3">-->
+<!--                                <div class="col-md-6">-->
+<!--                                    <label class="form-label">Słowa kluczowe</label>-->
+<!--                                    <input type="text" name="search" class="form-control"-->
+<!--                                           th:value="${searchParam}"-->
+<!--                                           placeholder="Nazwa, opis, agenda...">-->
+<!--                                    <small class="text-muted">Wyszukaj w tytule, opisie i agendzie</small>-->
+<!--                                </div>-->
+<!--                                <div class="col-md-6">-->
+<!--                                    <label class="form-label">Tagi</label>-->
+<!--                                    <input type="text" name="tags" class="form-control"-->
+<!--                                           th:value="${tags != null ? #strings.join(tags, ',') : ''}"-->
+<!--                                           placeholder="np. projekt, spotkanie, prezentacja">-->
+<!--                                    <small class="text-muted">Oddziel tagi przecinkami</small>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Sekcja 2: Daty &ndash;&gt;-->
+<!--                        <div class="filter-section">-->
+<!--                            <h6 class="filter-header">-->
+<!--                                <i class="bi bi-calendar-range me-2"></i>Filtry podstawowe-->
+<!--                            </h6>-->
+<!--                            <div class="row g-3">-->
+<!--                                <div class="col-md-6">-->
+<!--                                    <label class="form-label">Typ spotkania</label>-->
+<!--                                    <select name="type" class="form-select">-->
+<!--                                        <option value="">Wszystkie typy</option>-->
+<!--                                        <option th:value="'VIRTUAL'" th:selected="${typeParam == 'VIRTUAL'}">Online</option>-->
+<!--                                        <option th:value="'PHYSICAL'" th:selected="${typeParam == 'PHYSICAL'}">Osobiście</option>-->
+<!--                                        <option th:value="'HYBRID'" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>-->
+<!--                                    </select>-->
+<!--                                </div>-->
+<!--                                <div class="col-md-6">-->
+<!--                                    <label class="form-label">Status spotkania</label>-->
+<!--                                    <select name="status" class="form-select">-->
+<!--                                        <option value="">Wszystkie statusy</option>-->
+<!--                                        <option th:value="'PLANNED'" th:selected="${statusParam == 'PLANNED'}">Planowane</option>-->
+<!--                                        <option th:value="'CONFIRMED'" th:selected="${statusParam == 'CONFIRMED'}">Potwierdzone</option>-->
+<!--                                        <option th:value="'COMPLETED'" th:selected="${statusParam == 'COMPLETED'}">Zakończone</option>-->
+<!--                                        <option th:value="'CANCELLED'" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>-->
+<!--                                    </select>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Sekcja 3: Zaawansowane &ndash;&gt;-->
+<!--                        <div class="filter-section">-->
+<!--                            <h6 class="filter-header">-->
+<!--                                <i class="bi bi-gear me-2"></i>Zaawansowane-->
+<!--                            </h6>-->
+<!--                            <div class="row g-3">-->
+<!--                                <div class="col-md-6">-->
+<!--                                    <label class="form-label">Kategorie</label>-->
+<!--                                    <select name="categoryIds" class="form-select" multiple>-->
+<!--                                        <option th:each="category : ${userCategories}"-->
+<!--                                                th:value="${category.id}"-->
+<!--                                                th:text="${category.name}"-->
+<!--                                                th:selected="${categoryIds != null and categoryIds.contains(category.id)}">-->
+<!--                                        </option>-->
+<!--                                    </select>-->
+<!--                                    <small class="text-muted">Przytrzymaj Ctrl/Cmd do wielokrotnego wyboru</small>-->
+<!--                                </div>-->
+<!--                                <div class="col-md-6">-->
+<!--                                    <label class="form-label">Sortowanie</label>-->
+<!--                                    <select name="sortBy" class="form-select">-->
+<!--                                        <option value="">Data (najnowsze)</option>-->
+<!--                                        <option value="title" th:selected="${sortBy == 'title'}">Tytuł A-Z</option>-->
+<!--                                        <option value="created" th:selected="${sortBy == 'created'}">Data utworzenia</option>-->
+<!--                                        <option value="participants" th:selected="${sortBy == 'participants'}">Liczba uczestników</option>-->
+<!--                                    </select>-->
+<!--                                    <select name="sortOrder" class="form-select mt-2">-->
+<!--                                        <option value="desc" th:selected="${sortOrder == 'desc'}">Malejąco</option>-->
+<!--                                        <option value="asc" th:selected="${sortOrder == 'asc'}">Rosnąco</option>-->
+<!--                                    </select>-->
+<!--                                </div>-->
+<!--                                <div class="col-md-12">-->
+<!--                                    <div class="form-check form-check-inline">-->
+<!--                                        <input class="form-check-input" type="checkbox" name="recurring" value="true"-->
+<!--                                               id="recurringCheck" th:checked="${recurring == true}">-->
+<!--                                        <label class="form-check-label" for="recurringCheck">-->
+<!--                                            Tylko spotkania cykliczne-->
+<!--                                        </label>-->
+<!--                                    </div>-->
+<!--                                    <div class="form-check form-check-inline">-->
+<!--                                        <input class="form-check-input" type="checkbox" name="template" value="true"-->
+<!--                                               id="templatesCheck" th:checked="${template == true}">-->
+<!--                                        <label class="form-check-label" for="templatesCheck">-->
+<!--                                            Tylko szablony spotkań-->
+<!--                                        </label>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Przyciski akcji &ndash;&gt;-->
+<!--                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">-->
+<!--                            <div>-->
+<!--                                <button type="reset" class="btn btn-outline-secondary">-->
+<!--                                    <i class="bi bi-x-circle me-2"></i>Wyczyść formularz-->
+<!--                                </button>-->
+<!--                            </div>-->
+<!--                            <div>-->
+<!--                                <button type="submit" class="btn btn-primary">-->
+<!--                                    <i class="bi bi-search me-2"></i>Wyszukaj-->
+<!--                                    <span class="spinner-border spinner-border-sm d-none" id="searchSpinner"></span>-->
+<!--                                </button>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </form>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; Wyniki wyszukiwania &ndash;&gt;-->
+<!--            <div class="card">-->
+<!--                <div class="card-header d-flex justify-content-between align-items-center">-->
+<!--                    <h5 class="card-title mb-0">-->
+<!--                        <i class="bi bi-list-check me-2"></i>Wyniki wyszukiwania-->
+<!--                        <span class="badge bg-primary ms-2" th:text="${totalItems}">0</span>-->
+<!--                    </h5>-->
+<!--                    <div th:if="${searchParam != null or typeParam != null or statusParam != null}"-->
+<!--                         class="text-muted small">-->
+<!--                        Aktywne filtry-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+
+<!--                    &lt;!&ndash; Aktywne filtry &ndash;&gt;-->
+<!--                    <div th:if="${searchParam != null or typeParam != null or statusParam != null}"-->
+<!--                         class="mb-4">-->
+<!--                        <div class="d-flex flex-wrap gap-2">-->
+<!--                            <span th:if="${searchParam}" class="badge bg-info">-->
+<!--                                Słowa: <span th:text="${searchParam}"></span>-->
+<!--                            </span>-->
+<!--                            <span th:if="${typeParam}" class="badge bg-primary">-->
+<!--                                Typ: <span th:text="${typeParam}"></span>-->
+<!--                            </span>-->
+<!--                            <span th:if="${statusParam}" class="badge bg-warning">-->
+<!--                                Status: <span th:text="${statusParam}"></span>-->
+<!--                            </span>-->
+<!--                            <span th:if="${recurring != null and recurring}" class="badge bg-success">-->
+<!--                                Tylko cykliczne-->
+<!--                            </span>-->
+<!--                            <span th:if="${template != null and template}" class="badge bg-secondary">-->
+<!--                                Tylko szablony-->
+<!--                            </span>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Lista spotkań &ndash;&gt;-->
+<!--                    <div th:if="${!meetings.isEmpty()}" class="row">-->
+<!--                        <div th:each="meeting : ${meetings}" class="col-md-6 mb-3">-->
+<!--                            <div class="card results-card h-100">-->
+<!--                                <div class="card-body">-->
+<!--                                    &lt;!&ndash; Typ spotkania &ndash;&gt;-->
+<!--                                    <div class="mb-2">-->
+<!--                                        <span th:switch="${meeting.type.name()}">-->
+<!--                                            <span th:case="'VIRTUAL'" class="badge bg-info">-->
+<!--                                                <i class="bi bi-camera-video me-1"></i>Online-->
+<!--                                            </span>-->
+<!--                                            <span th:case="'PHYSICAL'" class="badge bg-primary">-->
+<!--                                                <i class="bi bi-geo-alt me-1"></i>Osobiście-->
+<!--                                            </span>-->
+<!--                                            <span th:case="'HYBRID'" class="badge bg-warning">-->
+<!--                                                <i class="bi bi-laptop me-1"></i>Hybrydowe-->
+<!--                                            </span>-->
+<!--                                        </span>-->
+<!--                                    </div>-->
+
+<!--                                    &lt;!&ndash; Tytuł &ndash;&gt;-->
+<!--                                    <h6 class="card-title mb-2" th:text="${meeting.title}"></h6>-->
+
+<!--                                    &lt;!&ndash; Status i data &ndash;&gt;-->
+<!--                                    <div class="d-flex justify-content-between align-items-center mb-3">-->
+<!--                                        &lt;!&ndash; Status spotkania &ndash;&gt;-->
+<!--                                        <span th:switch="${meeting.status.name()}" class="badge">-->
+<!--                                            <span th:case="'CONFIRMED'" class="status-confirmed">Potwierdzone</span>-->
+<!--                                            <span th:case="'PLANNED'" class="status-planned">Planowane</span>-->
+<!--                                            <span th:case="'COMPLETED'" class="status-completed">Zakończone</span>-->
+<!--                                            <span th:case="'CANCELLED'" class="status-cancelled">Anulowane</span>-->
+<!--                                        </span>-->
+
+<!--                                        &lt;!&ndash; Data &ndash;&gt;-->
+<!--                                        <small class="text-muted"-->
+<!--                                               th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}">-->
+<!--                                        </small>-->
+<!--                                    </div>-->
+
+<!--                                    &lt;!&ndash; Organizator i uczestnicy &ndash;&gt;-->
+<!--                                    <div class="small text-muted">-->
+<!--                                        <div class="d-flex justify-content-between">-->
+<!--                                            <span>-->
+<!--                                                <i class="bi bi-people me-1"></i>-->
+<!--                                                <span th:text="${meeting.confirmedParticipantsCount != null ? meeting.confirmedParticipantsCount : 0}"></span> uczestników-->
+<!--                                            </span>-->
+<!--                                            <span th:if="${meeting.organizer != null}">-->
+<!--                                                <i class="bi bi-person me-1"></i>-->
+<!--                                                <span th:text="${meeting.organizer.firstName}"></span>-->
+<!--                                            </span>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+
+<!--                                <div class="card-footer bg-transparent border-top-0 pt-0">-->
+<!--                                    <div class="d-flex justify-content-between">-->
+<!--                                        <a th:href="@{/meetings/{id}(id=${meeting.id})}"-->
+<!--                                           class="btn btn-sm btn-outline-primary">-->
+<!--                                            <i class="bi bi-eye me-1"></i>Szczegóły-->
+<!--                                        </a>-->
+
+<!--                                        &lt;!&ndash; Akcje &ndash;&gt;-->
+<!--                                        <div th:if="${meeting.canJoin != null and meeting.canJoin}" class="ms-2">-->
+<!--                                            <a th:href="@{/meetings/{id}/join(id=${meeting.id})}"-->
+<!--                                               class="btn btn-sm btn-success">-->
+<!--                                                <i class="bi bi-plus-circle me-1"></i>Dołącz-->
+<!--                                            </a>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Brak wyników &ndash;&gt;-->
+<!--                    <div th:if="${meetings.isEmpty()}" class="text-center py-5">-->
+<!--                        <i class="bi bi-search display-4 text-muted mb-3"></i>-->
+<!--                        <h5>Nie znaleziono spotkań</h5>-->
+<!--                        <p class="text-muted">Spróbuj zmienić kryteria wyszukiwania</p>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Paginacja &ndash;&gt;-->
+<!--                    <div th:if="${totalPages > 1}" class="mt-4">-->
+<!--                        <nav aria-label="Page navigation">-->
+<!--                            <ul class="pagination justify-content-center">-->
+<!--                                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">-->
+<!--                                    <a class="page-link"-->
+<!--                                       th:href="@{/meetings/advanced(-->
+<!--                                            page=${currentPage - 1},-->
+<!--                                            size=${size},-->
+<!--                                            search=${searchParam},-->
+<!--                                            type=${typeParam},-->
+<!--                                            status=${statusParam},-->
+<!--                                            categoryIds=${categoryIds != null ? #strings.join(categoryIds, ',') : ''},-->
+<!--                                            tags=${tags != null ? #strings.join(tags, ',') : ''},-->
+<!--                                            recurring=${recurring},-->
+<!--                                            template=${template},-->
+<!--                                            sortBy=${sortBy},-->
+<!--                                            sortOrder=${sortOrder}-->
+<!--                                       )}">-->
+<!--                                        &laquo; Poprzednia-->
+<!--                                    </a>-->
+<!--                                </li>-->
+
+<!--                                <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"-->
+<!--                                    th:classappend="${currentPage == page} ? 'active' : ''"-->
+<!--                                    class="page-item">-->
+<!--                                    <a class="page-link"-->
+<!--                                       th:href="@{/meetings/advanced(-->
+<!--                                            page=${page},-->
+<!--                                            size=${size},-->
+<!--                                            search=${searchParam},-->
+<!--                                            type=${typeParam},-->
+<!--                                            status=${statusParam},-->
+<!--                                            categoryIds=${categoryIds != null ? #strings.join(categoryIds, ',') : ''},-->
+<!--                                            tags=${tags != null ? #strings.join(tags, ',') : ''},-->
+<!--                                            recurring=${recurring},-->
+<!--                                            template=${template},-->
+<!--                                            sortBy=${sortBy},-->
+<!--                                            sortOrder=${sortOrder}-->
+<!--                                       )}"-->
+<!--                                       th:text="${page + 1}">1</a>-->
+<!--                                </li>-->
+
+<!--                                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">-->
+<!--                                    <a class="page-link"-->
+<!--                                       th:href="@{/meetings/advanced(-->
+<!--                                            page=${currentPage + 1},-->
+<!--                                            size=${size},-->
+<!--                                            search=${searchParam},-->
+<!--                                            type=${typeParam},-->
+<!--                                            status=${statusParam},-->
+<!--                                            categoryIds=${categoryIds != null ? #strings.join(categoryIds, ',') : ''},-->
+<!--                                            tags=${tags != null ? #strings.join(tags, ',') : ''},-->
+<!--                                            recurring=${recurring},-->
+<!--                                            template=${template},-->
+<!--                                            sortBy=${sortBy},-->
+<!--                                            sortOrder=${sortOrder}-->
+<!--                                       )}">-->
+<!--                                        Następna &raquo;-->
+<!--                                    </a>-->
+<!--                                </li>-->
+<!--                            </ul>-->
+<!--                        </nav>-->
+
+<!--                        <div class="text-center mt-2">-->
+<!--                            <small class="text-muted">-->
+<!--                                Strona <span th:text="${currentPage + 1}"></span> z <span th:text="${totalPages}"></span>-->
+<!--                                • Wszystkich wyników: <span th:text="${totalItems}"></span>-->
+<!--                            </small>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; Prawa kolumna - Informacje &ndash;&gt;-->
+<!--        <div class="col-lg-4">-->
+<!--            &lt;!&ndash; Informacje o wyszukiwaniu &ndash;&gt;-->
+<!--            <div class="card mb-4">-->
+<!--                <div class="card-header">-->
+<!--                    <h6 class="card-title mb-0">-->
+<!--                        <i class="bi bi-info-circle me-2"></i>Informacje-->
+<!--                    </h6>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <p class="small text-muted">-->
+<!--                        <i class="bi bi-lightbulb me-2"></i>-->
+<!--                        Użyj formularza po lewej stronie, aby filtrować spotkania według różnych kryteriów.-->
+<!--                    </p>-->
+<!--                    <div class="mt-3">-->
+<!--                        <h6 class="small">Przydatne skróty:</h6>-->
+<!--                        <ul class="small text-muted mb-0">-->
+<!--                            <li><strong>Ctrl + F5</strong> - wyczyść wszystkie filtry</li>-->
+<!--                            <li><strong>Enter</strong> - zastosuj filtry</li>-->
+<!--                            <li><strong>Esc</strong> - zamknij podpowiedzi</li>-->
+<!--                        </ul>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; Szybkie linki &ndash;&gt;-->
+<!--            <div class="card mb-4">-->
+<!--                <div class="card-header">-->
+<!--                    <h6 class="card-title mb-0">-->
+<!--                        <i class="bi bi-lightning me-2"></i>Szybkie wyszukiwania-->
+<!--                    </h6>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <div class="d-grid gap-2">-->
+<!--                        <a th:href="@{/meetings/advanced(search='spotkanie', type='VIRTUAL', status='CONFIRMED')}"-->
+<!--                           class="btn btn-outline-primary btn-sm text-start">-->
+<!--                            <i class="bi bi-camera-video me-2"></i>Spotkania online-->
+<!--                        </a>-->
+<!--                        <a th:href="@{/meetings/advanced(status='PLANNED')}"-->
+<!--                           class="btn btn-outline-success btn-sm text-start">-->
+<!--                            <i class="bi bi-calendar-check me-2"></i>Planowane spotkania-->
+<!--                        </a>-->
+<!--                        <a th:href="@{/meetings/advanced(recurring=true)}"-->
+<!--                           class="btn btn-outline-warning btn-sm text-start">-->
+<!--                            <i class="bi bi-arrow-repeat me-2"></i>Cykliczne spotkania-->
+<!--                        </a>-->
+<!--                        <a th:href="@{/meetings}"-->
+<!--                           class="btn btn-outline-secondary btn-sm text-start">-->
+<!--                            <i class="bi bi-list me-2"></i>Wszystkie spotkania-->
+<!--                        </a>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; Statystyki &ndash;&gt;-->
+<!--            <div class="card">-->
+<!--                <div class="card-header">-->
+<!--                    <h6 class="card-title mb-0">-->
+<!--                        <i class="bi bi-bar-chart me-2"></i>Statystyki-->
+<!--                    </h6>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <div class="text-center">-->
+<!--                        <div class="display-6" th:text="${totalItems}">0</div>-->
+<!--                        <p class="text-muted small mb-0">znalezionych spotkań</p>-->
+<!--                    </div>-->
+<!--                    <div class="mt-3">-->
+<!--                        <div class="progress mb-2" style="height: 5px;">-->
+<!--                            <div class="progress-bar bg-success" style="width: 60%;"></div>-->
+<!--                        </div>-->
+<!--                        <small class="text-muted">60% spotkań to spotkania potwierdzone</small>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>-->
+<!--<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>-->
+<!--<script>-->
+<!--    document.addEventListener('DOMContentLoaded', function() {-->
+<!--        // Reset formularza-->
+<!--        document.querySelector('button[type="reset"]').addEventListener('click', function() {-->
+<!--            window.location.href = '/meetings/advanced';-->
+<!--        });-->
+
+<!--        // Obsługa checkboxów - zamiana wartości-->
+<!--        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {-->
+<!--            checkbox.addEventListener('change', function() {-->
+<!--                if (!this.checked) {-->
+<!--                    this.removeAttribute('value');-->
+<!--                } else {-->
+<!--                    this.setAttribute('value', 'true');-->
+<!--                }-->
+<!--            });-->
+<!--        });-->
+
+<!--        // Pokazuj/ukryj spinner podczas wyszukiwania-->
+<!--        const searchForm = document.getElementById('advancedSearchForm');-->
+<!--        const searchSpinner = document.getElementById('searchSpinner');-->
+
+<!--        searchForm.addEventListener('submit', function() {-->
+<!--            searchSpinner.classList.remove('d-none');-->
+<!--        });-->
+
+<!--        // Autouzupełnianie dla tagów-->
+<!--        const tagsInput = document.querySelector('input[name="tags"]');-->
+<!--        if (tagsInput) {-->
+<!--            tagsInput.addEventListener('keydown', function(e) {-->
+<!--                if (e.key === 'Enter' && e.target.value.trim()) {-->
+<!--                    e.preventDefault();-->
+<!--                    // Możesz dodać logikę autouzupełniania tagów-->
+<!--                }-->
+<!--            });-->
+<!--        }-->
+<!--    });-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Zaawansowane wyszukiwanie - MeetHub</title>
+    <style>
+        .status-confirmed { background-color: #198754 !important; }
+        .status-planned { background-color: #ffc107 !important; color: #000 !important; }
+        .status-completed { background-color: #6c757d !important; }
+        .status-cancelled { background-color: #dc3545 !important; }
+        .filter-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .filter-header {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="container-fluid">
+        <!-- Nagłówek -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a th:href="@{/meetings}">Spotkania</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Zaawansowane wyszukiwanie</li>
+                    </ol>
+                </nav>
+                <h1 class="display-6 mb-2">
+                    <i class="bi bi-search me-2"></i>Zaawansowane wyszukiwanie
+                </h1>
+                <p class="text-muted mb-0">Znajdź spotkania według różnych kryteriów</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a th:href="@{/meetings}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Powrót
+                </a>
+            </div>
+        </div>
+
+        <!-- Formularz wyszukiwania -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-sliders me-2"></i>Filtry wyszukiwania
+                </h5>
+            </div>
+            <div class="card-body">
+                <form th:action="@{/meetings/advanced}" method="get">
+
+                    <!-- Podstawowe filtry -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Słowa kluczowe</label>
+                            <input type="text" name="search" class="form-control"
+                                   th:value="${searchParam != null ? searchParam : ''}"
+                                   placeholder="Szukaj w tytule, opisie...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Typ spotkania</label>
+                            <select name="type" class="form-select">
+                                <option value="">Wszystkie</option>
+                                <option value="VIRTUAL" th:selected="${typeParam == 'VIRTUAL'}">Online</option>
+                                <option value="PHYSICAL" th:selected="${typeParam == 'PHYSICAL'}">Osobiście</option>
+                                <option value="HYBRID" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">Wszystkie</option>
+                                <option value="PLANNED" th:selected="${statusParam == 'PLANNED'}">Planowane</option>
+                                <option value="CONFIRMED" th:selected="${statusParam == 'CONFIRMED'}">Potwierdzone</option>
+                                <option value="COMPLETED" th:selected="${statusParam == 'COMPLETED'}">Zakończone</option>
+                                <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dodatkowe filtry -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Kategorie</label>
+                            <select name="categoryIds" class="form-select" multiple size="3">
+                                <option th:each="category : ${userCategories}"
+                                        th:value="${category.id}"
+                                        th:text="${category.name}">
+                                </option>
+                            </select>
+                            <small class="text-muted">Przytrzymaj Ctrl do wielokrotnego wyboru</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tagi</label>
+                            <input type="text" name="tags" class="form-control"
+                                   placeholder="np. projekt, spotkanie, prezentacja">
+                            <small class="text-muted">Oddziel przecinkami</small>
+                        </div>
+                    </div>
+
+                    <!-- Checkboxy i sortowanie -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="recurring" value="true"
+                                       id="recurringCheck" th:checked="${recurring == true}">
+                                <label class="form-check-label" for="recurringCheck">
+                                    Tylko cykliczne spotkania
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="template" value="true"
+                                       id="templateCheck" th:checked="${template == true}">
+                                <label class="form-check-label" for="templateCheck">
+                                    Tylko szablony
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Sortuj według</label>
+                                    <select name="sortBy" class="form-select">
+                                        <option value="">Data (domyślnie)</option>
+                                        <option value="title" th:selected="${sortBy == 'title'}">Tytuł</option>
+                                        <option value="created" th:selected="${sortBy == 'created'}">Data utworzenia</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Kolejność</label>
+                                    <select name="sortOrder" class="form-select">
+                                        <option value="desc" th:selected="${sortOrder == 'desc'}">Malejąco</option>
+                                        <option value="asc" th:selected="${sortOrder == 'asc'}">Rosnąco</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Przyciski -->
+                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                        <button type="reset" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Wyczyść
+                        </button>
+                        <div>
+                            <a th:href="@{/meetings/advanced}" class="btn btn-outline-primary me-2">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Resetuj
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-2"></i>Wyszukaj
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Wyniki -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-check me-2"></i>Wyniki
+                    <span class="badge bg-primary ms-2" th:text="${totalItems}">0</span>
+                </h5>
+                <div class="text-muted small">
+                    Strona <span th:text="${currentPage + 1}"></span>/<span th:text="${totalPages}"></span>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Informacja o aktywnych filtrach -->
+                <div th:if="${searchParam != null or typeParam != null or statusParam != null}"
+                     class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-funnel me-2"></i>
+                            <strong>Aktywne filtry:</strong>
+                            <span th:if="${searchParam}" class="ms-2 badge bg-info" th:text="'Słowa: ' + ${searchParam}"></span>
+                            <span th:if="${typeParam}" class="ms-2 badge bg-primary" th:text="'Typ: ' + ${typeParam}"></span>
+                            <span th:if="${statusParam}" class="ms-2 badge bg-warning" th:text="'Status: ' + ${statusParam}"></span>
+                            <span th:if="${recurring != null and recurring}" class="ms-2 badge bg-success">Cykliczne</span>
+                            <span th:if="${template != null and template}" class="ms-2 badge bg-secondary">Szablony</span>
+                        </div>
+                        <a th:href="@{/meetings/advanced}" class="btn-close"></a>
+                    </div>
+                </div>
+
+                <!-- Lista spotkań -->
+                <div th:if="${!meetings.isEmpty()}">
+                    <div class="row">
+                        <div th:each="meeting : ${meetings}" class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <!-- Typ spotkania -->
+                                    <div class="mb-2">
+                                        <span th:if="${meeting.type.name() == 'VIRTUAL'}" class="badge bg-info">
+                                            <i class="bi bi-camera-video me-1"></i>Online
+                                        </span>
+                                        <span th:if="${meeting.type.name() == 'PHYSICAL'}" class="badge bg-primary">
+                                            <i class="bi bi-geo-alt me-1"></i>Osobiście
+                                        </span>
+                                        <span th:if="${meeting.type.name() == 'HYBRID'}" class="badge bg-warning">
+                                            <i class="bi bi-laptop me-1"></i>Hybrydowe
+                                        </span>
+                                    </div>
+
+                                    <!-- Tytuł -->
+                                    <h6 class="card-title" th:text="${meeting.title}"></h6>
+
+                                    <!-- Status i data -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span th:switch="${meeting.status.name()}" class="badge">
+                                            <span th:case="'CONFIRMED'" class="status-confirmed">Potwierdzone</span>
+                                            <span th:case="'PLANNED'" class="status-planned">Planowane</span>
+                                            <span th:case="'COMPLETED'" class="status-completed">Zakończone</span>
+                                            <span th:case="'CANCELLED'" class="status-cancelled">Anulowane</span>
+                                            <span th:case="*" th:text="${meeting.status}"></span>
+                                        </span>
+                                        <small class="text-muted"
+                                               th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}">
+                                        </small>
+                                    </div>
+
+                                    <!-- Organizator -->
+                                    <div class="small text-muted mb-2">
+                                        <i class="bi bi-person me-1"></i>
+                                        <span th:if="${meeting.organizer != null}"
+                                              th:text="${meeting.organizer.firstName} + ' ' + ${meeting.organizer.lastName}">
+                                        </span>
+                                    </div>
+
+                                    <!-- Uczestnicy -->
+                                    <div class="small text-muted">
+                                        <i class="bi bi-people me-1"></i>
+                                        <span th:text="${meeting.confirmedParticipantsCount != null ? meeting.confirmedParticipantsCount : 0}"></span> uczestników
+                                    </div>
+                                </div>
+
+                                <div class="card-footer bg-transparent">
+                                    <a th:href="@{/meetings/{id}(id=${meeting.id})}"
+                                       class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="bi bi-eye me-1"></i>Szczegóły
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brak wyników -->
+                <div th:if="${meetings.isEmpty()}" class="text-center py-5">
+                    <i class="bi bi-search display-4 text-muted mb-3"></i>
+                    <h5>Nie znaleziono spotkań</h5>
+                    <p class="text-muted">Spróbuj zmienić kryteria wyszukiwania</p>
+                </div>
+            </div>
+
+            <!-- Paginacja -->
+            <div th:if="${totalPages > 1}" class="card-footer">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                            <a class="page-link" th:href="@{/meetings/advanced(
+                                page=${currentPage - 1},
+                                size=${size},
+                                search=${searchParam},
+                                type=${typeParam},
+                                status=${statusParam},
+                                categoryIds=${categoryIds != null ? #strings.join(categoryIds, ',') : ''},
+                                tags=${tags != null ? #strings.join(tags, ',') : ''},
+                                recurring=${recurring},
+                                template=${template},
+                                sortBy=${sortBy},
+                                sortOrder=${sortOrder}
+                            )}">
+                                &laquo; Poprzednia
+                            </a>
+                        </li>
+
+                        <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"
+                            th:classappend="${currentPage == page} ? 'active' : ''"
+                            class="page-item">
+                            <a class="page-link" th:href="@{/meetings/advanced(
+                                page=${page},
+                                size=${size},
+                                search=${searchParam},
+                                type=${typeParam},
+                                status=${statusParam},
+                                categoryIds=${categoryIds != null ? #strings.join(categoryIds, ',') : ''},
+                                tags=${tags != null ? #strings.join(tags, ',') : ''},
+                                recurring=${recurring},
+                                template=${template},
+                                sortBy=${sortBy},
+                                sortOrder=${sortOrder}
+                            )}" th:text="${page + 1}">
+                            </a>
+                        </li>
+
+                        <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                            <a class="page-link" th:href="@{/meetings/advanced(
+                                page=${currentPage + 1},
+                                size=${size},
+                                search=${searchParam},
+                                type=${typeParam},
+                                status=${statusParam},
+                                categoryIds=${categoryIds != null ? #strings.join(categoryIds, ',') : ''},
+                                tags=${tags != null ? #strings.join(tags, ',') : ''},
+                                recurring=${recurring},
+                                template=${template},
+                                sortBy=${sortBy},
+                                sortOrder=${sortOrder}
+                            )}">
+                                Następna &raquo;
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Prosta obsługa formularza
+    document.addEventListener('DOMContentLoaded', function() {
+        // Reset przycisku - przeładuj stronę
+        document.querySelector('button[type="reset"]').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/meetings/advanced';
+        });
+
+        // Autouzupełnianie dla tagów (opcjonalne)
+        const tagsInput = document.querySelector('input[name="tags"]');
+        if (tagsInput) {
+            // Możesz dodać logikę autouzupełniania
+        }
+    });
+</script>
+</body>
+</html>

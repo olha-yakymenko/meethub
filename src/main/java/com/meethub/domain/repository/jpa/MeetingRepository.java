@@ -6,6 +6,7 @@ import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,7 @@ import java.util.Optional;
 public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpecificationExecutor<Meeting> {
 
     // ✅ DODAJ BRAKUJĄCE METODY:
+    Page<Meeting> findAll(Specification<Meeting> spec, Pageable pageable);
 
     /**
      * Znajdź spotkania o określonym statusie
@@ -185,4 +187,45 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
 
     @Query("SELECT m FROM Meeting m JOIN m.tags t WHERE t = :tag")
     List<Meeting> findByTag(@Param("tag") String tag);
+
+
+    /**
+     * Znajdź szablony użytkownika
+     */
+    List<Meeting> findByOrganizerIdAndTemplateTrue(Long organizerId);
+
+    /**
+     * Znajdź szablon po ID
+     */
+    Optional<Meeting> findByIdAndTemplateTrue(Long id);
+
+    /**
+     * Znajdź powtarzające się spotkania z datą zakończenia po danej dacie
+     */
+    List<Meeting> findByRecurringTrueAndRecurrenceEndDateAfter(LocalDateTime date);
+
+    /**
+     * Znajdź wszystkie wystąpienia serii
+     */
+    List<Meeting> findByOriginalMeetingId(Long originalMeetingId);
+
+    /**
+     * Znajdź spotkania według kategorii
+     */
+    @Query("SELECT m FROM Meeting m JOIN m.categories c WHERE c.id = :categoryId")
+    Page<Meeting> findByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
+
+    /**
+     * Znajdź spotkania według tagu
+     */
+    @Query("SELECT m FROM Meeting m WHERE :tag MEMBER OF m.tags")
+    Page<Meeting> findByTag(@Param("tag") String tag, Pageable pageable);
+
+    /**
+     * Znajdź spotkania użytkownika według statusu
+     */
+    @Query("SELECT m FROM Meeting m WHERE m.status = :status AND m.organizer.id = :organizerId")
+    Page<Meeting> findByStatusAndOrganizer(@Param("status") String status,
+                                           @Param("organizerId") Long organizerId,
+                                           Pageable pageable);
 }

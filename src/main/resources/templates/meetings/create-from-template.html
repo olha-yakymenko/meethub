@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Utwórz z szablonu - MeetHub</title>
+    <style>
+        .template-preview {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #6f42c1;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .info-item i {
+            width: 24px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">
+                <i class="bi bi-file-earmark-plus me-2"></i>Utwórz spotkanie z szablonu
+            </h1>
+            <p class="text-muted">Wybierz datę dla nowego spotkania</p>
+        </div>
+        <a th:href="@{/meetings/templates}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Powrót
+        </a>
+    </div>
+
+    <!-- Informacje o szablonie -->
+    <div class="template-preview" th:if="${template != null}">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h3 th:text="${template.title}">Tytuł szablonu</h3>
+                <p class="text-muted mb-0" th:text="${template.description ?: 'Brak opisu'}"></p>
+            </div>
+            <span class="badge bg-purple">Szablon</span>
+        </div>
+
+        <!-- Szczegóły szablonu -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="info-item">
+                    <i class="bi bi-calendar3"></i>
+                    <span class="ms-2">
+                        Typ: <strong th:text="${template.type}">ONLINE</strong>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <i class="bi bi-clock"></i>
+                    <span class="ms-2">
+                        Czas trwania:
+                        <span th:if="${template.startDate != null and template.endDate != null}">
+                            <strong th:text="${#temporals.between(template.startDate, template.endDate).toMinutes()}"></strong> min
+                        </span>
+                        <span th:unless="${template.startDate != null and template.endDate != null}">
+                            <strong>Nieokreślony</strong>
+                        </span>
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <i class="bi bi-people"></i>
+                    <span class="ms-2">
+                        Maks. uczestników:
+                        <strong th:text="${template.maxParticipants != null ? template.maxParticipants : '∞'}"></strong>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <i class="bi bi-eye"></i>
+                    <span class="ms-2">
+                        Widoczność:
+                        <strong th:text="${template.visibility}">PRIVATE</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formularz wyboru daty -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-calendar-plus me-2"></i>Wybierz datę i godzinę
+            </h5>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/meetings/create-from-template/{id}(id=${template.id})}"
+                  method="post"
+                  th:object="${template}">
+
+                <!-- Data rozpoczęcia -->
+                <div class="mb-3">
+                    <label for="startDate" class="form-label">
+                        <i class="bi bi-calendar-check me-1"></i>Data i godzina rozpoczęcia
+                    </label>
+                    <input type="datetime-local"
+                           class="form-control"
+                           id="startDate"
+                           name="startDate"
+                           th:value="${#temporals.format(#temporals.createNow().plusDays(1), 'yyyy-MM-dd\'T\'10:00')}"
+                           required>
+                    <div class="form-text">
+                        Wybierz datę i godzinę, kiedy ma się rozpocząć nowe spotkanie.
+                    </div>
+                </div>
+
+                <!-- Szybkie opcje -->
+                <div class="mb-4">
+                    <label class="form-label">Szybkie opcje:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="setDateTime('today', 10)">
+                            <i class="bi bi-calendar-day me-1"></i>Dzisiaj 10:00
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="setDateTime('tomorrow', 9)">
+                            <i class="bi bi-calendar-plus me-1"></i>Jutro 9:00
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="setDateTime('tomorrow', 14)">
+                            <i class="bi bi-calendar-plus me-1"></i>Jutro 14:00
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="setDateTime('nextWeek', 10)">
+                            <i class="bi bi-calendar-week me-1"></i>Za tydzień 10:00
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Przyciski -->
+                <div class="d-flex justify-content-between">
+                    <a th:href="@{/meetings/templates}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Anuluj
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Utwórz spotkanie
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Podgląd czasu trwania -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-clock-history me-2"></i>Podgląd czasu trwania
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Na podstawie szablonu, spotkanie będzie trwało
+                <strong th:if="${template.startDate != null and template.endDate != null}">
+                    <span th:text="${#temporals.between(template.startDate, template.endDate).toMinutes()}"></span> minut
+                </strong>
+                <strong th:unless="${template.startDate != null and template.endDate != null}">
+                    (czas nieokreślony)
+                </strong>
+                . Data zakończenia zostanie obliczona automatycznie.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ustawianie szybkich dat
+    function setDateTime(dayType, hour) {
+        const now = new Date();
+        let date = new Date();
+
+        switch(dayType) {
+            case 'today':
+                date = new Date();
+                break;
+            case 'tomorrow':
+                date.setDate(now.getDate() + 1);
+                break;
+            case 'nextWeek':
+                date.setDate(now.getDate() + 7);
+                break;
+        }
+
+        // Formatowanie do yyyy-MM-ddThh:mm
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const time = String(hour).padStart(2, '0') + ':00';
+
+        const dateTimeString = `${year}-${month}-${day}T${time}`;
+        document.getElementById('startDate').value = dateTimeString;
+    }
+
+    // Ustaw domyślną datę (jutro 10:00)
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!document.getElementById('startDate').value) {
+            setDateTime('tomorrow', 10);
+        }
+    });
+</script>
+</body>
+</html>

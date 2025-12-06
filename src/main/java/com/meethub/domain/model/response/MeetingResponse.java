@@ -1,490 +1,19 @@
-////package com.meethub.domain.model.response;
-////
-////import com.meethub.domain.model.enums.MeetingStatus;
-////import com.meethub.domain.model.enums.MeetingType;
-////import com.meethub.domain.model.enums.MeetingVisibility;
-////import lombok.Data;
-////
-////import java.time.LocalDateTime;
-////import java.util.Set;
-////
-////@Data
-////public class MeetingResponse {
-////    private Long id;
-////    private String title;
-////    private String description;
-////
-////    public Long getId() {
-////        return id;
-////    }
-////
-////    public String getTitle() {
-////        return title;
-////    }
-////
-////    public String getDescription() {
-////        return description;
-////    }
-////
-////    public MeetingType getType() {
-////        return type;
-////    }
-////
-////    public MeetingStatus getStatus() {
-////        return status;
-////    }
-////
-////    public String getAgenda() {
-////        return agenda;
-////    }
-////
-////    public MeetingVisibility getVisibility() {
-////        return visibility;
-////    }
-////
-////    public LocalDateTime getStartDate() {
-////        return startDate;
-////    }
-////
-////    public LocalDateTime getEndDate() {
-////        return endDate;
-////    }
-////
-////    public Integer getMaxParticipants() {
-////        return maxParticipants;
-////    }
-////
-////    public UserResponse getOrganizer() {
-////        return organizer;
-////    }
-////
-////    public LocationResponse getLocation() {
-////        return location;
-////    }
-////
-////    public Set<String> getTags() {
-////        return tags;
-////    }
-////
-////    public LocalDateTime getCreatedAt() {
-////        return createdAt;
-////    }
-////
-////    public LocalDateTime getUpdatedAt() {
-////        return updatedAt;
-////    }
-////
-////    public Integer getConfirmedParticipantsCount() {
-////        return confirmedParticipantsCount;
-////    }
-////
-////    public Integer getWaitingListCount() {
-////        return waitingListCount;
-////    }
-////
-////    public Integer getAvailableSpots() {
-////        return availableSpots;
-////    }
-////
-////    private String agenda;
-////    private MeetingType type;
-////    private MeetingStatus status;
-////    private MeetingVisibility visibility;
-////    private LocalDateTime startDate;
-////    private LocalDateTime endDate;
-////    private Integer maxParticipants;
-////    private UserResponse organizer;
-////    private LocationResponse location;
-////    private Set<String> tags;
-////    private LocalDateTime createdAt;
-////    private LocalDateTime updatedAt;
-////
-////    private Integer confirmedParticipantsCount;
-////    private Integer waitingListCount;
-////    private Integer availableSpots;
-////
-////    // Metoda pomocnicza
-////    public boolean hasAvailableSpots() {
-////        return availableSpots == null || availableSpots > 0;
-////    }
-////}
-//
-//
-//
-//
-//
-//
-//
-//
-//package com.meethub.domain.model.response;
-//
-//import com.meethub.domain.model.enums.MeetingStatus;
-//import com.meethub.domain.model.enums.MeetingType;
-//import com.meethub.domain.model.enums.MeetingVisibility;
-//import com.meethub.domain.model.enums.ParticipationStatus;
-//import lombok.Data;
-//
-//import java.time.LocalDateTime;
-//import java.util.Set;
-//
-//@Data
-//public class MeetingResponse {
-//    private Long id;
-//    private String title;
-//    private String description;
-//    private String agenda;
-//    private MeetingType type;
-//    private MeetingStatus status;
-//    private MeetingVisibility visibility;
-//    private LocalDateTime startDate;
-//    private LocalDateTime endDate;
-//    private Integer maxParticipants;
-//    private UserResponse organizer;
-//    private LocationResponse location;
-//    private Set<String> tags;
-//    private LocalDateTime createdAt;
-//    private LocalDateTime updatedAt;
-//
-//    private Integer confirmedParticipantsCount;
-//    private Integer waitingListCount;
-//    private Integer availableSpots;
-//
-//    // ✅ DODANE POLA TRANSIENT DLA UCZESTNICTWA UŻYTKOWNIKA
-//    private boolean userIsParticipant = false;
-//    private boolean userIsOrganizer = false;
-//    private ParticipationStatus userParticipationStatus;
-//
-//    // ✅ DODATKOWE POLA TRANSIENT DLA UI
-//    private boolean canJoin = false;
-//    private boolean canLeave = false;
-//    private boolean canEdit = false;
-//    private boolean canDelete = false;
-//
-//    // Gettery - jeśli Lombok nie generuje poprawnie dla pól boolean
-//    public boolean isUserIsParticipant() {
-//        return userIsParticipant;
-//    }
-//
-//    public boolean isUserIsOrganizer() {
-//        return userIsOrganizer;
-//    }
-//
-//    public boolean isCanJoin() {
-//        return canJoin;
-//    }
-//
-//    public boolean isCanLeave() {
-//        return canLeave;
-//    }
-//
-//    public boolean isCanEdit() {
-//        return canEdit;
-//    }
-//
-//    public boolean isCanDelete() {
-//        return canDelete;
-//    }
-//
-//    // ✅ Settery dla pól transient
-//    public void setUserIsParticipant(boolean userIsParticipant) {
-//        this.userIsParticipant = userIsParticipant;
-//    }
-//
-//    public void setUserIsOrganizer(boolean userIsOrganizer) {
-//        this.userIsOrganizer = userIsOrganizer;
-//    }
-//
-//    public void setUserParticipationStatus(ParticipationStatus userParticipationStatus) {
-//        this.userParticipationStatus = userParticipationStatus;
-//    }
-//
-//    public void setCanJoin(boolean canJoin) {
-//        this.canJoin = canJoin;
-//    }
-//
-//    public void setCanLeave(boolean canLeave) {
-//        this.canLeave = canLeave;
-//    }
-//
-//    public void setCanEdit(boolean canEdit) {
-//        this.canEdit = canEdit;
-//    }
-//
-//    public void setCanDelete(boolean canDelete) {
-//        this.canDelete = canDelete;
-//    }
-//
-//    // ✅ Metoda pomocnicza do sprawdzania dostępności miejsc
-//    public boolean hasAvailableSpots() {
-//        return availableSpots == null || availableSpots > 0;
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie jest publiczne
-//    public boolean isPublic() {
-//        return visibility != null && visibility.equals(MeetingVisibility.PUBLIC);
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie jest prywatne
-//    public boolean isPrivate() {
-//        return visibility != null && visibility.equals(MeetingVisibility.PRIVATE);
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie nadchodzące
-//    public boolean isUpcoming() {
-//        return startDate != null && startDate.isAfter(LocalDateTime.now());
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie w trakcie
-//    public boolean isOngoing() {
-//        LocalDateTime now = LocalDateTime.now();
-//        return startDate != null && endDate != null &&
-//                startDate.isBefore(now) && endDate.isAfter(now);
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie zakończone
-//    public boolean isCompleted() {
-//        return endDate != null && endDate.isBefore(LocalDateTime.now()) ||
-//                (status != null && status.equals(MeetingStatus.COMPLETED));
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie anulowane
-//    public boolean isCancelled() {
-//        return status != null && status.equals(MeetingStatus.CANCELLED);
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie wirtualne
-//    public boolean isOnline() {
-//        return type != null && type.equals(MeetingType.ONLINE);
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie fizyczne
-//    public boolean isPhysical() {
-//        return type != null && type.equals(MeetingType.PHYSICAL);
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy spotkanie hybrydowe
-//    public boolean isHybrid() {
-//        return type != null && type.equals(MeetingType.HYBRID);
-//    }
-//
-//    // ✅ Metoda pomocnicza - formatowana data rozpoczęcia
-//    public String getFormattedStartDate() {
-//        if (startDate == null) return "";
-//        // Możesz użyć DateTimeFormatter jeśli potrzebujesz
-//        return startDate.toString(); // Lub inny format
-//    }
-//
-//    // ✅ Metoda pomocnicza - formatowana data zakończenia
-//    public String getFormattedEndDate() {
-//        if (endDate == null) return "";
-//        return endDate.toString(); // Lub inny format
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy użytkownik może dołączyć
-//    public boolean canUserJoin(Long userId) {
-//        if (userId == null) return false;
-//        if (isCancelled()) return false;
-//        if (!hasAvailableSpots()) return false;
-//        if (isCompleted()) return false;
-//
-//        // Sprawdź czy już jest uczestnikiem
-//        if (userIsParticipant) return false;
-//
-//        // Sprawdź czy jest organizatorem
-//        if (userIsOrganizer) return false;
-//
-//        // Dla publicznych - zawsze może dołączyć
-//        if (isPublic()) return true;
-//
-//        // Dla prywatnych - tylko jeśli jest zaproszony (ale to już inna logika)
-//        return false;
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy użytkownik może opuścić
-//    public boolean canUserLeave(Long userId) {
-//        if (userId == null) return false;
-//        if (isCancelled()) return false;
-//        if (isCompleted()) return false;
-//
-//        return userIsParticipant && !userIsOrganizer;
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy użytkownik może edytować
-//    public boolean canUserEdit(Long userId) {
-//        if (userId == null) return false;
-//        if (isCompleted()) return false;
-//        if (isCancelled()) return false;
-//
-//        return userIsOrganizer ||
-//                (organizer != null && organizer.getId() != null && organizer.getId().equals(userId));
-//    }
-//
-//    // ✅ Metoda pomocnicza - czy użytkownik może usuwać
-//    public boolean canUserDelete(Long userId) {
-//        if (userId == null) return false;
-//
-//        return userIsOrganizer ||
-//                (organizer != null && organizer.getId() != null && organizer.getId().equals(userId));
-//    }
-//
-//    // ✅ Builder pattern dla łatwego tworzenia (opcjonalnie)
-//    public static MeetingResponseBuilder builder() {
-//        return new MeetingResponseBuilder();
-//    }
-//
-//    public static class MeetingResponseBuilder {
-//        private MeetingResponse meetingResponse = new MeetingResponse();
-//
-//        public MeetingResponseBuilder id(Long id) {
-//            meetingResponse.id = id;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder title(String title) {
-//            meetingResponse.title = title;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder description(String description) {
-//            meetingResponse.description = description;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder agenda(String agenda) {
-//            meetingResponse.agenda = agenda;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder type(MeetingType type) {
-//            meetingResponse.type = type;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder status(MeetingStatus status) {
-//            meetingResponse.status = status;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder visibility(MeetingVisibility visibility) {
-//            meetingResponse.visibility = visibility;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder startDate(LocalDateTime startDate) {
-//            meetingResponse.startDate = startDate;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder endDate(LocalDateTime endDate) {
-//            meetingResponse.endDate = endDate;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder maxParticipants(Integer maxParticipants) {
-//            meetingResponse.maxParticipants = maxParticipants;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder organizer(UserResponse organizer) {
-//            meetingResponse.organizer = organizer;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder location(LocationResponse location) {
-//            meetingResponse.location = location;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder tags(Set<String> tags) {
-//            meetingResponse.tags = tags;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder createdAt(LocalDateTime createdAt) {
-//            meetingResponse.createdAt = createdAt;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder updatedAt(LocalDateTime updatedAt) {
-//            meetingResponse.updatedAt = updatedAt;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder confirmedParticipantsCount(Integer confirmedParticipantsCount) {
-//            meetingResponse.confirmedParticipantsCount = confirmedParticipantsCount;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder waitingListCount(Integer waitingListCount) {
-//            meetingResponse.waitingListCount = waitingListCount;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder availableSpots(Integer availableSpots) {
-//            meetingResponse.availableSpots = availableSpots;
-//            return this;
-//        }
-//
-//        // Buildery dla pól transient
-//        public MeetingResponseBuilder userIsParticipant(boolean userIsParticipant) {
-//            meetingResponse.userIsParticipant = userIsParticipant;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder userIsOrganizer(boolean userIsOrganizer) {
-//            meetingResponse.userIsOrganizer = userIsOrganizer;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder userParticipationStatus(ParticipationStatus userParticipationStatus) {
-//            meetingResponse.userParticipationStatus = userParticipationStatus;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder canJoin(boolean canJoin) {
-//            meetingResponse.canJoin = canJoin;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder canLeave(boolean canLeave) {
-//            meetingResponse.canLeave = canLeave;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder canEdit(boolean canEdit) {
-//            meetingResponse.canEdit = canEdit;
-//            return this;
-//        }
-//
-//        public MeetingResponseBuilder canDelete(boolean canDelete) {
-//            meetingResponse.canDelete = canDelete;
-//            return this;
-//        }
-//
-//        public MeetingResponse build() {
-//            return meetingResponse;
-//        }
-//    }
-//}
-
-
-
-
-
-
-
 package com.meethub.domain.model.response;
 
 import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.enums.ParticipationStatus;
+import lombok.Builder;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Data
+//@SuperBuilder(toBuilder = true)
 public class MeetingResponse {
     private Long id;
     private String title;
@@ -525,86 +54,133 @@ public class MeetingResponse {
     private boolean userIsWaiting = false;
     private boolean userIsViewer = false;
     private boolean userIsUnrelated = false;
-    private String userRole = "VIEWER"; // "ORGANIZER", "CONFIRMED_PARTICIPANT", "VIEWER", itd.
+    private String userRole = "VIEWER";
 
-    // ✅ GETTERY I SETTERY DLA NOWYCH PÓŁ
-    public boolean isUserIsConfirmed() { return userIsConfirmed; }
-    public void setUserIsConfirmed(boolean userIsConfirmed) { this.userIsConfirmed = userIsConfirmed; }
+    // ✅ DODANE POLA DLA NOWYCH FUNKCJI
+    private boolean recurring = false;
+    private String recurrencePattern;
+    private LocalDateTime recurrenceEndDate;
+    private List<String> recurrenceExceptions;
 
-    public boolean isUserIsPending() { return userIsPending; }
-    public void setUserIsPending(boolean userIsPending) { this.userIsPending = userIsPending; }
+    private Set<CategoryResponse> categories;
+    private boolean isTemplate = false;
+    private Long originalMeetingId;
 
-    public boolean isUserIsInvited() { return userIsInvited; }
-    public void setUserIsInvited(boolean userIsInvited) { this.userIsInvited = userIsInvited; }
+    private List<StatusChangeResponse> statusHistory;
 
-    public boolean isUserIsDeclined() { return userIsDeclined; }
-    public void setUserIsDeclined(boolean userIsDeclined) { this.userIsDeclined = userIsDeclined; }
-
-    public boolean isUserIsWaiting() { return userIsWaiting; }
-    public void setUserIsWaiting(boolean userIsWaiting) { this.userIsWaiting = userIsWaiting; }
-
-    public boolean isUserIsViewer() { return userIsViewer; }
-    public void setUserIsViewer(boolean userIsViewer) { this.userIsViewer = userIsViewer; }
-
-    public boolean isUserIsUnrelated() { return userIsUnrelated; }
-    public void setUserIsUnrelated(boolean userIsUnrelated) { this.userIsUnrelated = userIsUnrelated; }
-
-    public String getUserRole() { return userRole; }
-    public void setUserRole(String userRole) { this.userRole = userRole; }
-
-    // ✅ METODY POMOCNICZE DLA UI
-    public boolean canUserJoinPublic() {
-        return userIsViewer && visibility == MeetingVisibility.PUBLIC;
+    // ✅ Konstruktor bezargumentowy
+    public MeetingResponse() {
     }
 
-    public boolean canUserRequestPrivate() {
-        return userIsViewer && visibility == MeetingVisibility.PRIVATE;
+    // ✅ Konstruktor z wszystkimi polami
+    public MeetingResponse(
+            Long id, String title, String description, String agenda,
+            MeetingType type, MeetingStatus status, MeetingVisibility visibility,
+            LocalDateTime startDate, LocalDateTime endDate, Integer maxParticipants,
+            UserResponse organizer, LocationResponse location, Set<String> tags,
+            LocalDateTime createdAt, LocalDateTime updatedAt,
+            Integer confirmedParticipantsCount, Integer waitingListCount,
+            Integer availableSpots,
+            boolean userIsParticipant, boolean userIsOrganizer,
+            ParticipationStatus userParticipationStatus,
+            boolean canJoin, boolean canLeave, boolean canEdit, boolean canDelete,
+            boolean userIsConfirmed, boolean userIsPending, boolean userIsInvited,
+            boolean userIsDeclined, boolean userIsWaiting, boolean userIsViewer,
+            boolean userIsUnrelated, String userRole,
+            boolean recurring, String recurrencePattern, LocalDateTime recurrenceEndDate,
+            List<String> recurrenceExceptions, Set<CategoryResponse> categories,
+            boolean isTemplate, Long originalMeetingId, List<StatusChangeResponse> statusHistory) {
+
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.agenda = agenda;
+        this.type = type;
+        this.status = status;
+        this.visibility = visibility;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.maxParticipants = maxParticipants;
+        this.organizer = organizer;
+        this.location = location;
+        this.tags = tags;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.confirmedParticipantsCount = confirmedParticipantsCount;
+        this.waitingListCount = waitingListCount;
+        this.availableSpots = availableSpots;
+        this.userIsParticipant = userIsParticipant;
+        this.userIsOrganizer = userIsOrganizer;
+        this.userParticipationStatus = userParticipationStatus;
+        this.canJoin = canJoin;
+        this.canLeave = canLeave;
+        this.canEdit = canEdit;
+        this.canDelete = canDelete;
+        this.userIsConfirmed = userIsConfirmed;
+        this.userIsPending = userIsPending;
+        this.userIsInvited = userIsInvited;
+        this.userIsDeclined = userIsDeclined;
+        this.userIsWaiting = userIsWaiting;
+        this.userIsViewer = userIsViewer;
+        this.userIsUnrelated = userIsUnrelated;
+        this.userRole = userRole;
+        this.recurring = recurring;
+        this.recurrencePattern = recurrencePattern;
+        this.recurrenceEndDate = recurrenceEndDate;
+        this.recurrenceExceptions = recurrenceExceptions;
+        this.categories = categories;
+        this.isTemplate = isTemplate;
+        this.originalMeetingId = originalMeetingId;
+        this.statusHistory = statusHistory;
     }
 
-    public boolean isInviteOnly() {
-        return visibility == MeetingVisibility.INVITE_ONLY;
+    // ✅ GETTERY I SETTERY (Lombok powinien wygenerować, ale tu dla pewności)
+
+    // ✅ METODY POMOCNICZE DLA NOWYCH FUNKCJI
+    public boolean hasRecurrenceEnded() {
+        if (!recurring || recurrenceEndDate == null) return false;
+        return recurrenceEndDate.isBefore(LocalDateTime.now());
     }
 
-    public boolean showJoinButton() {
-        return canUserJoinPublic() || canUserRequestPrivate();
+    public boolean isSeries() {
+        return recurring && recurrencePattern != null;
     }
 
-    public boolean showLeaveButton() {
-        return userIsConfirmed && !userIsOrganizer;
-    }
+    public String getRecurrenceDisplayName() {
+        if (!recurring || recurrencePattern == null) return "Brak";
 
-    public boolean showAcceptDeclineButtons() {
-        return userIsInvited;
-    }
+        String[] parts = recurrencePattern.split(":");
+        String frequency = parts[0];
 
-    public boolean showWaitingBadge() {
-        return userIsPending || userIsWaiting;
-    }
-
-    public String getUserRoleBadgeColor() {
-        switch (userRole) {
-            case "ORGANIZER": return "danger";
-            case "CONFIRMED_PARTICIPANT": return "success";
-            case "PENDING": return "warning";
-            case "INVITED": return "primary";
-            case "VIEWER": return "info";
-            case "DECLINED": return "secondary";
-            case "WAITING_LIST": return "dark";
-            default: return "light";
+        switch (frequency) {
+            case "DAILY": return "Codziennie";
+            case "WEEKLY":
+                int weeks = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+                return weeks == 1 ? "Co tydzień" : "Co " + weeks + " tygodnie";
+            case "MONTHLY":
+                int months = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+                if (parts.length > 2) {
+                    int day = Integer.parseInt(parts[2]);
+                    return months == 1 ? "Co miesiąc (dzień " + day + ")" : "Co " + months + " miesięcy (dzień " + day + ")";
+                }
+                return months == 1 ? "Co miesiąc" : "Co " + months + " miesięcy";
+            case "YEARLY":
+                int years = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+                return years == 1 ? "Co rok" : "Co " + years + " lat";
+            default: return "Niestandardowe";
         }
     }
 
-    public String getUserRoleDisplayName() {
-        switch (userRole) {
-            case "ORGANIZER": return "Organizator";
-            case "CONFIRMED_PARTICIPANT": return "Uczestnik";
-            case "PENDING": return "Oczekujący";
-            case "INVITED": return "Zaproszony";
-            case "VIEWER": return "Obserwator";
-            case "DECLINED": return "Odmówił";
-            case "WAITING_LIST": return "Lista oczekujących";
-            default: return "Obserwator";
-        }
+    public boolean hasCategories() {
+        return categories != null && !categories.isEmpty();
+    }
+
+    public boolean isCopy() {
+        return originalMeetingId != null;
+    }
+
+    public boolean hasStatusHistory() {
+        return statusHistory != null && !statusHistory.isEmpty();
     }
 
     // ✅ Reszta istniejących metod...
@@ -651,65 +227,302 @@ public class MeetingResponse {
         return type != null && type.equals(MeetingType.HYBRID);
     }
 
-    // ✅ Builder pattern - rozszerz o nowe pola
+    // ✅ Metody dla UI
+    public String getUserRoleBadgeColor() {
+        switch (userRole) {
+            case "ORGANIZER": return "danger";
+            case "CONFIRMED_PARTICIPANT": return "success";
+            case "PENDING": return "warning";
+            case "INVITED": return "primary";
+            case "VIEWER": return "info";
+            case "DECLINED": return "secondary";
+            case "WAITING_LIST": return "dark";
+            default: return "light";
+        }
+    }
+
+    public String getUserRoleDisplayName() {
+        switch (userRole) {
+            case "ORGANIZER": return "Organizator";
+            case "CONFIRMED_PARTICIPANT": return "Uczestnik";
+            case "PENDING": return "Oczekujący";
+            case "INVITED": return "Zaproszony";
+            case "VIEWER": return "Obserwator";
+            case "DECLINED": return "Odmówił";
+            case "WAITING_LIST": return "Lista oczekujących";
+            default: return "Obserwator";
+        }
+    }
+
+    // ✅ STATYCZNY BUILDER METODA
     public static MeetingResponseBuilder builder() {
         return new MeetingResponseBuilder();
     }
 
+    // ✅ PUBLICZNA KLASA BUILDERA
     public static class MeetingResponseBuilder {
-        private MeetingResponse meetingResponse = new MeetingResponse();
+        private Long id;
+        private String title;
+        private String description;
+        private String agenda;
+        private MeetingType type;
+        private MeetingStatus status;
+        private MeetingVisibility visibility;
+        private LocalDateTime startDate;
+        private LocalDateTime endDate;
+        private Integer maxParticipants;
+        private UserResponse organizer;
+        private LocationResponse location;
+        private Set<String> tags;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private Integer confirmedParticipantsCount;
+        private Integer waitingListCount;
+        private Integer availableSpots;
+        private boolean userIsParticipant = false;
+        private boolean userIsOrganizer = false;
+        private ParticipationStatus userParticipationStatus;
+        private boolean canJoin = false;
+        private boolean canLeave = false;
+        private boolean canEdit = false;
+        private boolean canDelete = false;
+        private boolean userIsConfirmed = false;
+        private boolean userIsPending = false;
+        private boolean userIsInvited = false;
+        private boolean userIsDeclined = false;
+        private boolean userIsWaiting = false;
+        private boolean userIsViewer = false;
+        private boolean userIsUnrelated = false;
+        private String userRole = "VIEWER";
+        private boolean recurring = false;
+        private String recurrencePattern;
+        private LocalDateTime recurrenceEndDate;
+        private List<String> recurrenceExceptions;
+        private Set<CategoryResponse> categories;
+        private boolean isTemplate = false;
+        private Long originalMeetingId;
+        private List<StatusChangeResponse> statusHistory;
 
-        // ... istniejące buildery ...
         public MeetingResponseBuilder id(Long id) {
-            meetingResponse.id = id;
+            this.id = id;
             return this;
         }
 
-        // ... inne buildery ...
 
-        // ✅ Buildery dla nowych pól
+
+        public MeetingResponseBuilder title(String title) {
+            this.title = title;
+            return this;
+        }
+
+        public MeetingResponseBuilder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public MeetingResponseBuilder agenda(String agenda) {
+            this.agenda = agenda;
+            return this;
+        }
+
+        public MeetingResponseBuilder type(MeetingType type) {
+            this.type = type;
+            return this;
+        }
+
+        public MeetingResponseBuilder status(MeetingStatus status) {
+            this.status = status;
+            return this;
+        }
+
+        public MeetingResponseBuilder visibility(MeetingVisibility visibility) {
+            this.visibility = visibility;
+            return this;
+        }
+
+        public MeetingResponseBuilder startDate(LocalDateTime startDate) {
+            this.startDate = startDate;
+            return this;
+        }
+
+        public MeetingResponseBuilder endDate(LocalDateTime endDate) {
+            this.endDate = endDate;
+            return this;
+        }
+
+        public MeetingResponseBuilder maxParticipants(Integer maxParticipants) {
+            this.maxParticipants = maxParticipants;
+            return this;
+        }
+
+        public MeetingResponseBuilder organizer(UserResponse organizer) {
+            this.organizer = organizer;
+            return this;
+        }
+
+        public MeetingResponseBuilder location(LocationResponse location) {
+            this.location = location;
+            return this;
+        }
+
+        public MeetingResponseBuilder tags(Set<String> tags) {
+            this.tags = tags;
+            return this;
+        }
+
+        public MeetingResponseBuilder createdAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public MeetingResponseBuilder updatedAt(LocalDateTime updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public MeetingResponseBuilder confirmedParticipantsCount(Integer confirmedParticipantsCount) {
+            this.confirmedParticipantsCount = confirmedParticipantsCount;
+            return this;
+        }
+
+        public MeetingResponseBuilder waitingListCount(Integer waitingListCount) {
+            this.waitingListCount = waitingListCount;
+            return this;
+        }
+
+        public MeetingResponseBuilder availableSpots(Integer availableSpots) {
+            this.availableSpots = availableSpots;
+            return this;
+        }
+
+        public MeetingResponseBuilder userIsParticipant(boolean userIsParticipant) {
+            this.userIsParticipant = userIsParticipant;
+            return this;
+        }
+
+        public MeetingResponseBuilder userIsOrganizer(boolean userIsOrganizer) {
+            this.userIsOrganizer = userIsOrganizer;
+            return this;
+        }
+
+        public MeetingResponseBuilder userParticipationStatus(ParticipationStatus userParticipationStatus) {
+            this.userParticipationStatus = userParticipationStatus;
+            return this;
+        }
+
+        public MeetingResponseBuilder canJoin(boolean canJoin) {
+            this.canJoin = canJoin;
+            return this;
+        }
+
+        public MeetingResponseBuilder canLeave(boolean canLeave) {
+            this.canLeave = canLeave;
+            return this;
+        }
+
+        public MeetingResponseBuilder canEdit(boolean canEdit) {
+            this.canEdit = canEdit;
+            return this;
+        }
+
+        public MeetingResponseBuilder canDelete(boolean canDelete) {
+            this.canDelete = canDelete;
+            return this;
+        }
+
         public MeetingResponseBuilder userIsConfirmed(boolean userIsConfirmed) {
-            meetingResponse.userIsConfirmed = userIsConfirmed;
+            this.userIsConfirmed = userIsConfirmed;
             return this;
         }
 
         public MeetingResponseBuilder userIsPending(boolean userIsPending) {
-            meetingResponse.userIsPending = userIsPending;
+            this.userIsPending = userIsPending;
             return this;
         }
 
         public MeetingResponseBuilder userIsInvited(boolean userIsInvited) {
-            meetingResponse.userIsInvited = userIsInvited;
+            this.userIsInvited = userIsInvited;
             return this;
         }
 
         public MeetingResponseBuilder userIsDeclined(boolean userIsDeclined) {
-            meetingResponse.userIsDeclined = userIsDeclined;
+            this.userIsDeclined = userIsDeclined;
             return this;
         }
 
         public MeetingResponseBuilder userIsWaiting(boolean userIsWaiting) {
-            meetingResponse.userIsWaiting = userIsWaiting;
+            this.userIsWaiting = userIsWaiting;
             return this;
         }
 
         public MeetingResponseBuilder userIsViewer(boolean userIsViewer) {
-            meetingResponse.userIsViewer = userIsViewer;
+            this.userIsViewer = userIsViewer;
             return this;
         }
 
         public MeetingResponseBuilder userIsUnrelated(boolean userIsUnrelated) {
-            meetingResponse.userIsUnrelated = userIsUnrelated;
+            this.userIsUnrelated = userIsUnrelated;
             return this;
         }
 
         public MeetingResponseBuilder userRole(String userRole) {
-            meetingResponse.userRole = userRole;
+            this.userRole = userRole;
+            return this;
+        }
+
+        public MeetingResponseBuilder recurring(boolean recurring) {
+            this.recurring = recurring;
+            return this;
+        }
+
+        public MeetingResponseBuilder recurrencePattern(String recurrencePattern) {
+            this.recurrencePattern = recurrencePattern;
+            return this;
+        }
+
+        public MeetingResponseBuilder recurrenceEndDate(LocalDateTime recurrenceEndDate) {
+            this.recurrenceEndDate = recurrenceEndDate;
+            return this;
+        }
+
+        public MeetingResponseBuilder recurrenceExceptions(List<String> recurrenceExceptions) {
+            this.recurrenceExceptions = recurrenceExceptions;
+            return this;
+        }
+
+        public MeetingResponseBuilder categories(Set<CategoryResponse> categories) {
+            this.categories = categories;
+            return this;
+        }
+
+        public MeetingResponseBuilder isTemplate(boolean isTemplate) {
+            this.isTemplate = isTemplate;
+            return this;
+        }
+
+        public MeetingResponseBuilder originalMeetingId(Long originalMeetingId) {
+            this.originalMeetingId = originalMeetingId;
+            return this;
+        }
+
+        public MeetingResponseBuilder statusHistory(List<StatusChangeResponse> statusHistory) {
+            this.statusHistory = statusHistory;
             return this;
         }
 
         public MeetingResponse build() {
-            return meetingResponse;
+            return new MeetingResponse(
+                    id, title, description, agenda, type, status, visibility,
+                    startDate, endDate, maxParticipants, organizer, location, tags,
+                    createdAt, updatedAt, confirmedParticipantsCount, waitingListCount,
+                    availableSpots, userIsParticipant, userIsOrganizer, userParticipationStatus,
+                    canJoin, canLeave, canEdit, canDelete, userIsConfirmed, userIsPending,
+                    userIsInvited, userIsDeclined, userIsWaiting, userIsViewer, userIsUnrelated,
+                    userRole, recurring, recurrencePattern, recurrenceEndDate, recurrenceExceptions,
+                    categories, isTemplate, originalMeetingId, statusHistory
+            );
         }
     }
+
+
 }

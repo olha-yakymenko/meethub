@@ -8,9 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name = "meetings", indexes = {
@@ -90,6 +88,67 @@ public class Meeting {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+
+
+    @Column(name = "is_recurring")
+    private boolean recurring = false;
+
+    @Column(name = "recurrence_pattern", length = 100)
+    private String recurrencePattern; // np: "WEEKLY:2" (co 2 tygodnie), "MONTHLY:1:15" (co miesiąc, 15-go)
+
+    @Column(name = "recurrence_end_date")
+    private LocalDateTime recurrenceEndDate;
+
+    @Column(name = "recurrence_exceptions", columnDefinition = "TEXT")
+    private String recurrenceExceptionsJson; // JSON z datami wyjątków ["2024-01-15", "2024-02-20"]
+
+    // 2. Dla kategorii i tagów (już masz tags, dodaj tylko categories)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "meeting_categories",
+            joinColumns = @JoinColumn(name = "meeting_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories = new HashSet<>();
+
+    // 3. Dla statusów (już masz status, dodaj tylko historię zmian)
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL)
+    @OrderBy("changedAt DESC")
+    private List<MeetingStatusChange> statusChanges = new ArrayList<>();
+
+    // 4. Dla szablonów/duplikowania
+    @Column(name = "is_template")
+    private boolean template = false;
+
+    @Column(name = "original_meeting_id")
+    private Long originalMeetingId;
+
+
+    public boolean isRecurring() { return recurring; }
+    public void setRecurring(boolean recurring) { this.recurring = recurring; }
+
+    public String getRecurrencePattern() { return recurrencePattern; }
+    public void setRecurrencePattern(String recurrencePattern) { this.recurrencePattern = recurrencePattern; }
+
+    public LocalDateTime getRecurrenceEndDate() { return recurrenceEndDate; }
+    public void setRecurrenceEndDate(LocalDateTime recurrenceEndDate) { this.recurrenceEndDate = recurrenceEndDate; }
+
+    public String getRecurrenceExceptionsJson() { return recurrenceExceptionsJson; }
+    public void setRecurrenceExceptionsJson(String recurrenceExceptionsJson) { this.recurrenceExceptionsJson = recurrenceExceptionsJson; }
+
+    public Set<Category> getCategories() { return categories; }
+    public void setCategories(Set<Category> categories) { this.categories = categories; }
+
+    public List<MeetingStatusChange> getStatusChanges() { return statusChanges; }
+    public void setStatusChanges(List<MeetingStatusChange> statusChanges) { this.statusChanges = statusChanges; }
+
+    public boolean isTemplate() { return template; }
+    public void setTemplate(boolean template) { this.template = template; }
+
+    public Long getOriginalMeetingId() { return originalMeetingId; }
+    public void setOriginalMeetingId(Long originalMeetingId) { this.originalMeetingId = originalMeetingId; }
+
 
     // GETTERS
     public Long getId() { return id; }

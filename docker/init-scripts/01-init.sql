@@ -1727,3 +1727,376 @@ INSERT INTO meethub_schema.email_templates (
     true, 1, 'EMAIL',
     '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}}'
 );
+
+
+
+-- ✅ DODAJ TE KOLUMNY DO TABELI meetings
+ALTER TABLE meethub_schema.meetings
+ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS recurrence_pattern VARCHAR(100),
+ADD COLUMN IF NOT EXISTS recurrence_end_date TIMESTAMP,
+ADD COLUMN IF NOT EXISTS recurrence_exceptions_json TEXT,
+ADD COLUMN IF NOT EXISTS is_template BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS original_meeting_id BIGINT,
+ADD COLUMN IF NOT EXISTS workflow_stage VARCHAR(50) DEFAULT 'DRAFT';
+
+-- ✅ DODAJ REFERENCJĘ DO ORYGINALNEGO SPOTKANIA
+ALTER TABLE meethub_schema.meetings
+ADD CONSTRAINT fk_meeting_original
+    FOREIGN KEY (original_meeting_id)
+    REFERENCES meethub_schema.meetings(id)
+    ON DELETE SET NULL;
+
+-- ✅ DODAJ INDEKSY DLA WYDAJNOŚCI
+CREATE INDEX IF NOT EXISTS idx_meetings_recurring
+    ON meethub_schema.meetings(is_recurring, recurrence_end_date);
+
+CREATE INDEX IF NOT EXISTS idx_meetings_template
+    ON meethub_schema.meetings(is_template, organizer_id);
+
+CREATE INDEX IF NOT EXISTS idx_meetings_original
+    ON meethub_schema.meetings(original_meeting_id);
+
+
+
+-- ✅ STWÓRZ TABELĘ CATEGORIES
+CREATE TABLE IF NOT EXISTS meethub_schema.categories (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    color_code VARCHAR(7) DEFAULT '#3498db',
+    created_by BIGINT NOT NULL REFERENCES meethub_schema.users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ✅ STWÓRZ TABELĘ MANY-TO-MANY meetings_categories
+CREATE TABLE IF NOT EXISTS meethub_schema.meeting_categories (
+    meeting_id BIGINT NOT NULL REFERENCES meethub_schema.meetings(id) ON DELETE CASCADE,
+    category_id BIGINT NOT NULL REFERENCES meethub_schema.categories(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (meeting_id, category_id)
+);
+
+-- ✅ DODAJ INDEKSY DLA CATEGORIES
+CREATE INDEX IF NOT EXISTS idx_categories_created_by
+    ON meethub_schema.categories(created_by);
+
+CREATE INDEX IF NOT EXISTS idx_categories_name
+    ON meethub_schema.categories(name);
+
+CREATE INDEX IF NOT EXISTS idx_meeting_categories_meeting
+    ON meethub_schema.meeting_categories(meeting_id);
+
+CREATE INDEX IF NOT EXISTS idx_meeting_categories_category
+    ON meethub_schema.meeting_categories(category_id);
+
+
+-- ✅ STWÓRZ TABELĘ HISTORII ZMIAN STATUSU
+CREATE TABLE IF NOT EXISTS meethub_schema.meeting_status_changes (
+    id BIGSERIAL PRIMARY KEY,
+    meeting_id BIGINT NOT NULL REFERENCES meethub_schema.meetings(id) ON DELETE CASCADE,
+    old_status VARCHAR(50),
+    new_status VARCHAR(50) NOT NULL,
+    changed_by_user_id BIGINT REFERENCES meethub_schema.users(id),
+    reason VARCHAR(500),
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ✅ DODAJ INDEKSY DLA STATUS CHANGES
+CREATE INDEX IF NOT EXISTS idx_status_changes_meeting
+    ON meethub_schema.meeting_status_changes(meeting_id, changed_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_status_changes_changed_by
+    ON meethub_schema.meeting_status_changes(changed_by_user_id);
+
+CREATE INDEX IF NOT EXISTS idx_status_changes_changed_at
+    ON meethub_schema.meeting_status_changes(changed_at);
+
+
+-- ✅ UPEWNIJ SIĘ ŻE meeting_tags MA ODPOWIEDNIE OGRANICZENIA
+ALTER TABLE meethub_schema.meeting_tags
+ADD COLUMN IF NOT EXISTS added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS added_by BIGINT REFERENCES meethub_schema.users(id);
+
+-- ✅ DODAJ INDEKS DLA TAGÓW
+CREATE INDEX IF NOT EXISTS idx_meeting_tags_tag
+    ON meethub_schema.meeting_tags(tag);
+
+
+-- ✅ DODAJ METADATA JAKO JSON (opcjonalnie)
+ALTER TABLE meethub_schema.meetings
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+
+-- ✅ DODAJ INDEKS DLA METADATA
+CREATE INDEX IF NOT EXISTS idx_meetings_metadata
+    ON meethub_schema.meetings USING GIN (metadata);
+
+
+-- ✅ ROZSZERZ meeting_participants O DODATKOWE POLA
+ALTER TABLE meethub_schema.meeting_participants
+ADD COLUMN IF NOT EXISTS join_method VARCHAR(50), -- 'INVITED', 'REQUESTED', 'DIRECT'
+ADD COLUMN IF NOT EXISTS rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+ADD COLUMN IF NOT EXISTS feedback TEXT,
+ADD COLUMN IF NOT EXISTS attendance_duration_minutes INTEGER;
+
+-- ✅ DODAJ DODATKOWE INDEKSY
+CREATE INDEX IF NOT EXISTS idx_participants_join_method
+    ON meethub_schema.meeting_participants(join_method);
+
+CREATE INDEX IF NOT EXISTS idx_participants_response_date
+    ON meethub_schema.meeting_participants(response_date);
+
+
+    -- ✅ STWÓRZ TABELĘ DLA KONKRETNYCH WYSTĄPIEŃ POWTARZAJĄCYCH SIĘ SPOTKAŃ
+    CREATE TABLE IF NOT EXISTS meethub_schema.recurrence_occurrences (
+        id BIGSERIAL PRIMARY KEY,
+        meeting_series_id BIGINT NOT NULL REFERENCES meethub_schema.meetings(id) ON DELETE CASCADE,
+        occurrence_date TIMESTAMP NOT NULL,
+        status VARCHAR(20) DEFAULT 'SCHEDULED',
+        is_exception BOOLEAN DEFAULT FALSE,
+        modified_start_date TIMESTAMP,
+        modified_end_date TIMESTAMP,
+        cancelled BOOLEAN DEFAULT FALSE,
+        notes TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- ✅ DODAJ INDEKSY
+    CREATE INDEX IF NOT EXISTS idx_occurrences_series
+        ON meethub_schema.recurrence_occurrences(meeting_series_id);
+
+    CREATE INDEX IF NOT EXISTS idx_occurrences_date
+        ON meethub_schema.recurrence_occurrences(occurrence_date);
+
+    CREATE INDEX IF NOT EXISTS idx_occurrences_status
+        ON meethub_schema.recurrence_occurrences(status);
+
+
+
+-- ✅ ZAKTUALIZUJ SEKWENCJE DLA NOWYCH TABEL
+SELECT setval('meethub_schema.categories_id_seq',
+    COALESCE((SELECT MAX(id) FROM meethub_schema.categories), 1));
+
+SELECT setval('meethub_schema.meeting_status_changes_id_seq',
+    COALESCE((SELECT MAX(id) FROM meethub_schema.meeting_status_changes), 1));
+
+SELECT setval('meethub_schema.recurrence_occurrences_id_seq',
+    COALESCE((SELECT MAX(id) FROM meethub_schema.recurrence_occurrences), 1));
+
+-- ✅ DODAJ PRZYKŁADOWE KATEGORIE
+INSERT INTO meethub_schema.categories (name, description, color_code, created_by) VALUES
+('Szkolenia', 'Spotkania szkoleniowe i warsztaty', '#3498db', 2),
+('Spotkania biznesowe', 'Spotkania związane z biznesem', '#2ecc71', 2),
+('Społecznościowe', 'Spotkania społeczności i networking', '#e74c3c', 2),
+('Techniczne', 'Spotkania techniczne i programistyczne', '#f39c12', 2),
+('Planowanie', 'Spotkania planistyczne i strategiczne', '#9b59b6', 2)
+ON CONFLICT DO NOTHING;
+
+-- ✅ STWÓRZ WIDOK DLA POWTARZAJĄCYCH SIĘ SPOTKAŃ
+CREATE OR REPLACE VIEW meethub_schema.recurring_meetings_view AS
+SELECT
+    m.id,
+    m.title,
+    m.start_date,
+    m.recurrence_pattern,
+    m.recurrence_end_date,
+    m.is_template,
+    u.email as organizer_email,
+    COUNT(DISTINCT mp.id) as participant_count
+FROM meethub_schema.meetings m
+JOIN meethub_schema.users u ON m.organizer_id = u.id
+LEFT JOIN meethub_schema.meeting_participants mp ON m.id = mp.meeting_id AND mp.status = 'CONFIRMED'
+WHERE m.is_recurring = TRUE
+GROUP BY m.id, m.title, m.start_date, m.recurrence_pattern, m.recurrence_end_date, m.is_template, u.email;
+
+-- ✅ STWÓRZ WIDOK DLA SZABLONÓW
+CREATE OR REPLACE VIEW meethub_schema.meeting_templates_view AS
+SELECT
+    m.id,
+    m.title,
+    m.description,
+    m.type,
+    m.visibility,
+    u.email as created_by_email,
+    COUNT(DISTINCT mc.category_id) as category_count,
+    ARRAY_AGG(DISTINCT mt.tag) as tags
+FROM meethub_schema.meetings m
+JOIN meethub_schema.users u ON m.organizer_id = u.id
+LEFT JOIN meethub_schema.meeting_categories mc ON m.id = mc.meeting_id
+LEFT JOIN meethub_schema.meeting_tags mt ON m.id = mt.meeting_id
+WHERE m.is_template = TRUE
+GROUP BY m.id, m.title, m.description, m.type, m.visibility, u.email;
+
+
+
+-- ✅ FUNKCJA DO GENEROWANIA NASTĘPNYCH WYSTĄPIEŃ
+CREATE OR REPLACE FUNCTION meethub_schema.generate_next_occurrences(
+    meeting_id BIGINT,
+    count INTEGER DEFAULT 5
+)
+RETURNS TABLE(
+    occurrence_date TIMESTAMP,
+    status VARCHAR
+) AS $$
+DECLARE
+    rec RECORD;
+    current_date TIMESTAMP;
+    pattern_parts TEXT[];
+    frequency TEXT;
+    interval_val INTEGER;
+    i INTEGER := 0;
+BEGIN
+    -- Pobierz dane spotkania
+    SELECT
+        m.start_date,
+        m.recurrence_pattern,
+        m.recurrence_end_date,
+        m.recurrence_exceptions_json
+    INTO rec
+    FROM meethub_schema.meetings m
+    WHERE m.id = meeting_id AND m.is_recurring = TRUE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Meeting not found or not recurring';
+    END IF;
+
+    current_date := rec.start_date;
+    pattern_parts := string_to_array(rec.recurrence_pattern, ':');
+    frequency := pattern_parts[1];
+
+    IF array_length(pattern_parts, 1) > 1 THEN
+        interval_val := pattern_parts[2]::INTEGER;
+    ELSE
+        interval_val := 1;
+    END IF;
+
+    -- Generuj daty
+    WHILE i < count LOOP
+        CASE frequency
+            WHEN 'DAILY' THEN
+                current_date := current_date + (interval_val || ' days')::INTERVAL;
+            WHEN 'WEEKLY' THEN
+                current_date := current_date + (interval_val || ' weeks')::INTERVAL;
+            WHEN 'MONTHLY' THEN
+                current_date := current_date + (interval_val || ' months')::INTERVAL;
+            WHEN 'YEARLY' THEN
+                current_date := current_date + (interval_val || ' years')::INTERVAL;
+            ELSE
+                current_date := current_date + '1 day'::INTERVAL;
+        END CASE;
+
+        -- Sprawdź czy nie przekroczono końca powtarzania
+        IF rec.recurrence_end_date IS NOT NULL AND current_date > rec.recurrence_end_date THEN
+            EXIT;
+        END IF;
+
+        occurrence_date := current_date;
+        status := 'SCHEDULED';
+        RETURN NEXT;
+
+        i := i + 1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ✅ FUNKCJA DO POBRANIA CAŁEJ SERII SPOTKAŃ
+CREATE OR REPLACE FUNCTION meethub_schema.get_meeting_series(original_id BIGINT)
+RETURNS TABLE(
+    meeting_id BIGINT,
+    title VARCHAR,
+    start_date TIMESTAMP,
+    status VARCHAR,
+    is_template BOOLEAN
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        m.id as meeting_id,
+        m.title,
+        m.start_date,
+        m.status,
+        m.is_template
+    FROM meethub_schema.meetings m
+    WHERE m.original_meeting_id = original_id
+       OR m.id = original_id
+    ORDER BY m.start_date;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+-- ✅ UDOSTĘPNIJ UPRAWNIENIA DLA NOWYCH TABEL
+GRANT ALL PRIVILEGES ON meethub_schema.categories TO meethub_user, meethub_app;
+GRANT ALL PRIVILEGES ON meethub_schema.meeting_categories TO meethub_user, meethub_app;
+GRANT ALL PRIVILEGES ON meethub_schema.meeting_status_changes TO meethub_user, meethub_app;
+GRANT ALL PRIVILEGES ON meethub_schema.recurrence_occurrences TO meethub_user, meethub_app;
+
+GRANT USAGE ON SEQUENCE meethub_schema.categories_id_seq TO meethub_user, meethub_app;
+GRANT USAGE ON SEQUENCE meethub_schema.meeting_status_changes_id_seq TO meethub_user, meethub_app;
+GRANT USAGE ON SEQUENCE meethub_schema.recurrence_occurrences_id_seq TO meethub_user, meethub_app;
+
+-- ✅ UDOSTĘPNIJ WIDOKI
+GRANT SELECT ON meethub_schema.recurring_meetings_view TO meethub_user, meethub_app;
+GRANT SELECT ON meethub_schema.meeting_templates_view TO meethub_user, meethub_app;
+
+-- ✅ UDOSTĘPNIJ FUNKCJE
+GRANT EXECUTE ON FUNCTION meethub_schema.generate_next_occurrences TO meethub_user, meethub_app;
+GRANT EXECUTE ON FUNCTION meethub_schema.get_meeting_series TO meethub_user, meethub_app;
+
+-- ✅ TRIGGER DLA meetings
+CREATE OR REPLACE FUNCTION meethub_schema.update_meetings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_meetings_updated_at
+BEFORE UPDATE ON meethub_schema.meetings
+FOR EACH ROW
+EXECUTE FUNCTION meethub_schema.update_meetings_updated_at();
+
+-- ✅ TRIGGER DLA categories
+CREATE OR REPLACE FUNCTION meethub_schema.update_categories_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_categories_updated_at
+BEFORE UPDATE ON meethub_schema.categories
+FOR EACH ROW
+EXECUTE FUNCTION meethub_schema.update_categories_updated_at();
+
+
+-- ✅ INDEKSY PEŁNOTEKSTOWE DLA LEPSZEGO WYSZUKIWANIA
+CREATE INDEX IF NOT EXISTS idx_meetings_search_title
+    ON meethub_schema.meetings USING GIN (to_tsvector('english', title));
+
+CREATE INDEX IF NOT EXISTS idx_meetings_search_description
+    ON meethub_schema.meetings USING GIN (to_tsvector('english', description));
+
+CREATE INDEX IF NOT EXISTS idx_categories_search
+    ON meethub_schema.categories USING GIN (to_tsvector('english', name || ' ' || description));
+
+
+--troche poprawic
+ALTER TABLE meethub_schema.meetings
+ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS recurrence_pattern VARCHAR(100),
+ADD COLUMN IF NOT EXISTS recurrence_end_date TIMESTAMP,
+ADD COLUMN IF NOT EXISTS recurrence_exceptions JSONB DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS is_template BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS original_meeting_id BIGINT,
+ADD COLUMN IF NOT EXISTS workflow_stage VARCHAR(50) DEFAULT 'DRAFT',
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
+
+ALTER TABLE meetings
+ALTER COLUMN recurrence_exceptions TYPE TEXT
+USING recurrence_exceptions::text;

@@ -1,311 +1,3 @@
-<!--&lt;!&ndash;<!DOCTYPE html>&ndash;&gt;-->
-<!--&lt;!&ndash;<html xmlns:th="http://www.thymeleaf.org"&ndash;&gt;-->
-<!--&lt;!&ndash;      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"&ndash;&gt;-->
-<!--&lt;!&ndash;      lang="pl"&ndash;&gt;-->
-<!--&lt;!&ndash;      th:replace="~{layout}">&ndash;&gt;-->
-<!--&lt;!&ndash;<head>&ndash;&gt;-->
-<!--&lt;!&ndash;    <title>Lista spotkań - MeetHub</title>&ndash;&gt;-->
-<!--&lt;!&ndash;</head>&ndash;&gt;-->
-<!--&lt;!&ndash;<body>&ndash;&gt;-->
-<!--&lt;!&ndash;<div th:fragment="content">&ndash;&gt;-->
-<!--&lt;!&ndash;    &lt;!&ndash; Nagłówek &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;    <div class="d-flex justify-content-between align-items-center mb-4">&ndash;&gt;-->
-<!--&lt;!&ndash;        <div>&ndash;&gt;-->
-<!--&lt;!&ndash;            <h1 class="display-6">&ndash;&gt;-->
-<!--&lt;!&ndash;                <i class="bi bi-calendar3 me-2"></i>Wszystkie spotkania&ndash;&gt;-->
-<!--&lt;!&ndash;            </h1>&ndash;&gt;-->
-<!--&lt;!&ndash;            <p class="text-muted">Przeglądaj dostępne spotkania</p>&ndash;&gt;-->
-<!--&lt;!&ndash;        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;        <a th:href="@{/meetings/create}" class="btn btn-primary">&ndash;&gt;-->
-<!--&lt;!&ndash;            <i class="bi bi-plus-circle me-2"></i>Utwórz spotkanie&ndash;&gt;-->
-<!--&lt;!&ndash;        </a>&ndash;&gt;-->
-<!--&lt;!&ndash;    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;&lt;!&ndash;    &lt;!&ndash; Filtry &ndash;&gt;&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;    <div class="card mb-4">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;        <div class="card-body">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;            <form th:action="@{/meetings}" method="get" class="row g-3">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                <div class="col-md-4">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <label class="form-label">Szukaj</label>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <input type="text" name="search" class="form-control"&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                           th:value="${param.search}"&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                           placeholder="Tytuł lub opis...">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                </div>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                <div class="col-md-3">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <label class="form-label">Typ</label>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <select name="type" class="form-select">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="">Wszystkie</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="ONLINE" th:selected="${param.type == 'ONLINE'}">Online</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="IN_PERSON" th:selected="${param.type == 'IN_PERSON'}">Osobiście</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="HYBRID" th:selected="${param.type == 'HYBRID'}">Hybrydowe</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    </select>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                </div>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                <div class="col-md-3">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <label class="form-label">Status</label>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <select name="status" class="form-select">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="">Wszystkie</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="PLANNED" th:selected="${param.status == 'PLANNED'}">Planowane</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="CONFIRMED" th:selected="${param.status == 'CONFIRMED'}">Potwierdzone</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <option value="COMPLETED" th:selected="${param.status == 'COMPLETED'}">Zakończone</option>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    </select>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                </div>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                <div class="col-md-2 d-flex align-items-end">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    <button type="submit" class="btn btn-outline-primary w-100">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <i class="bi bi-funnel me-1"></i>Filtruj&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                    </button>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                </div>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;            </form>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;        </div>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;    </div>&ndash;&gt;&ndash;&gt;-->
-
-
-<!--&lt;!&ndash;    &lt;!&ndash; Filtry &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;    <div class="card mb-4">&ndash;&gt;-->
-<!--&lt;!&ndash;        <div class="card-body">&ndash;&gt;-->
-<!--&lt;!&ndash;            <form th:action="@{/meetings}" method="get" class="row g-3">&ndash;&gt;-->
-<!--&lt;!&ndash;                <div class="col-md-4">&ndash;&gt;-->
-<!--&lt;!&ndash;                    <label class="form-label">Szukaj</label>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <input type="text" name="search" class="form-control"&ndash;&gt;-->
-<!--&lt;!&ndash;                           th:value="${searchParam}"&ndash;&gt;-->
-<!--&lt;!&ndash;                           placeholder="Tytuł lub opis...">&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                <div class="col-md-3">&ndash;&gt;-->
-<!--&lt;!&ndash;                    <label class="form-label">Typ</label>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <select name="type" class="form-select">&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="">Wszystkie</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        &lt;!&ndash; ✅ POPRAWIONE WARTOŚCI - zgodne z bazą danych &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="VIRTUAL" th:selected="${typeParam == 'VIRTUAL'}">Online</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="PHYSICAL" th:selected="${typeParam == 'PHYSICAL'}">Osobiście</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="HYBRID" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                    </select>&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                <div class="col-md-3">&ndash;&gt;-->
-<!--&lt;!&ndash;                    <label class="form-label">Status</label>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <select name="status" class="form-select">&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="">Wszystkie</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="PLANNED" th:selected="${statusParam == 'PLANNED'}">Planowane</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="CONFIRMED" th:selected="${statusParam == 'CONFIRMED'}">Potwierdzone</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="COMPLETED" th:selected="${statusParam == 'COMPLETED'}">Zakończone</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>&ndash;&gt;-->
-<!--&lt;!&ndash;                    </select>&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                <div class="col-md-2 d-flex align-items-end">&ndash;&gt;-->
-<!--&lt;!&ndash;                    <button type="submit" class="btn btn-outline-primary w-100">&ndash;&gt;-->
-<!--&lt;!&ndash;                        <i class="bi bi-funnel me-1"></i>Filtruj&ndash;&gt;-->
-<!--&lt;!&ndash;                    </button>&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;            </form>&ndash;&gt;-->
-
-<!--&lt;!&ndash;            &lt;!&ndash; ✅ DODAJ: Wyświetlanie aktywnych filtrów &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;            <div th:if="${searchParam != null or typeParam != null or statusParam != null}"&ndash;&gt;-->
-<!--&lt;!&ndash;                 class="mt-3">&ndash;&gt;-->
-<!--&lt;!&ndash;                <small class="text-muted">Aktywne filtry:</small>&ndash;&gt;-->
-<!--&lt;!&ndash;                <div>&ndash;&gt;-->
-<!--&lt;!&ndash;                <span th:if="${searchParam}" class="badge bg-light text-dark me-1">&ndash;&gt;-->
-<!--&lt;!&ndash;                    Szukaj: <span th:text="${searchParam}"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <a th:href="@{/meetings(type=${typeParam}, status=${statusParam})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                       class="text-danger ms-1">×</a>&ndash;&gt;-->
-<!--&lt;!&ndash;                </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <span th:if="${typeParam}" class="badge bg-light text-dark me-1">&ndash;&gt;-->
-<!--&lt;!&ndash;                    Typ: <span th:text="${typeParam}"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <a th:href="@{/meetings(search=${searchParam}, status=${statusParam})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                       class="text-danger ms-1">×</a>&ndash;&gt;-->
-<!--&lt;!&ndash;                </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <span th:if="${statusParam}" class="badge bg-light text-dark me-1">&ndash;&gt;-->
-<!--&lt;!&ndash;                    Status: <span th:text="${statusParam}"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <a th:href="@{/meetings(search=${searchParam}, type=${typeParam})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                       class="text-danger ms-1">×</a>&ndash;&gt;-->
-<!--&lt;!&ndash;                </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <a th:href="@{/meetings}" class="btn btn-sm btn-outline-secondary ms-2">&ndash;&gt;-->
-<!--&lt;!&ndash;                        Wyczyść wszystkie&ndash;&gt;-->
-<!--&lt;!&ndash;                    </a>&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;            </div>&ndash;&gt;-->
-<!--&lt;!&ndash;        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;    &lt;!&ndash; Lista spotkań &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;    <div th:if="${meetings.empty}" class="text-center py-5">&ndash;&gt;-->
-<!--&lt;!&ndash;        <i class="bi bi-calendar-x display-1 text-muted"></i>&ndash;&gt;-->
-<!--&lt;!&ndash;        <h4 class="text-muted mt-3">Brak spotkań</h4>&ndash;&gt;-->
-<!--&lt;!&ndash;        <p class="text-muted">Nie znaleziono spotkań spełniających kryteria</p>&ndash;&gt;-->
-<!--&lt;!&ndash;        <a th:href="@{/meetings/create}" class="btn btn-primary mt-3">&ndash;&gt;-->
-<!--&lt;!&ndash;            <i class="bi bi-plus-circle me-2"></i>Utwórz pierwsze spotkanie&ndash;&gt;-->
-<!--&lt;!&ndash;        </a>&ndash;&gt;-->
-<!--&lt;!&ndash;    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;    <div class="row" th:unless="${meetings.empty}">&ndash;&gt;-->
-<!--&lt;!&ndash;        <div class="col-lg-6 mb-4" th:each="meeting : ${meetings}">&ndash;&gt;-->
-<!--&lt;!&ndash;            <div class="card h-100 meeting-card">&ndash;&gt;-->
-<!--&lt;!&ndash;                <div class="card-body">&ndash;&gt;-->
-<!--&lt;!&ndash;                    <div class="d-flex justify-content-between align-items-start mb-2">&ndash;&gt;-->
-<!--&lt;!&ndash;                        <h5 class="card-title" th:text="${meeting.title}"></h5>&ndash;&gt;-->
-<!--&lt;!&ndash;                        &lt;!&ndash; ✅ POPRAWIONE: Uproszczone warunki dla badge &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                        <span th:if="${meeting.type}" class="badge"&ndash;&gt;-->
-<!--&lt;!&ndash;                              th:class="${meeting.type.name() == 'ONLINE' ? 'bg-success' :&ndash;&gt;-->
-<!--&lt;!&ndash;                                        (meeting.type.name() == 'IN_PERSON' ? 'bg-primary' : 'bg-warning')}"&ndash;&gt;-->
-<!--&lt;!&ndash;                              th:text="${meeting.type.name()}">&ndash;&gt;-->
-<!--&lt;!&ndash;                        </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <span th:unless="${meeting.type}" class="badge bg-secondary">BRAK TYPU</span>&ndash;&gt;-->
-<!--&lt;!&ndash;                    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                    <p class="card-text text-muted"&ndash;&gt;-->
-<!--&lt;!&ndash;                       th:text="${meeting.description ?: 'Brak opisu'}"></p>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                    <div class="meeting-meta mb-3">&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div class="d-flex justify-content-between text-muted small mb-2">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <span>&ndash;&gt;-->
-<!--&lt;!&ndash;                                <i class="bi bi-calendar"></i>&ndash;&gt;-->
-<!--&lt;!&ndash;                                <span th:if="${meeting.startDate}"&ndash;&gt;-->
-<!--&lt;!&ndash;                                      th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                                <span th:unless="${meeting.startDate}">Data nieustalona</span>&ndash;&gt;-->
-<!--&lt;!&ndash;                            </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                            &lt;!&ndash; ✅ POPRAWIONE: Uproszczone warunki dla statusu &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                            <span th:if="${meeting.status}"&ndash;&gt;-->
-<!--&lt;!&ndash;                                  th:class="${meeting.status.name() == 'CONFIRMED' ? 'text-success' :&ndash;&gt;-->
-<!--&lt;!&ndash;                                            (meeting.status.name() == 'CANCELLED' ? 'text-danger' : 'text-warning')}"&ndash;&gt;-->
-<!--&lt;!&ndash;                                  th:text="${meeting.status.name()}">&ndash;&gt;-->
-<!--&lt;!&ndash;                            </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <span th:unless="${meeting.status}" class="text-muted">BRAK STATUSU</span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div class="text-muted small mb-2" th:if="${meeting.organizer}">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <i class="bi bi-person"></i>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <span th:text="${meeting.organizer.firstName + ' ' + meeting.organizer.lastName}"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div class="text-muted small" th:if="${meeting.maxParticipants}">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <i class="bi bi-people"></i>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <span th:text="${meeting.maxParticipants + ' uczestników max'}"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                    &lt;!&ndash; Statystyki uczestników &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div class="participant-info">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <small class="text-muted">&ndash;&gt;-->
-<!--&lt;!&ndash;                                <i class="bi bi-people"></i>&ndash;&gt;-->
-<!--&lt;!&ndash;                                <span th:text="(${meeting.confirmedParticipantsCount != null} ? ${meeting.confirmedParticipantsCount} : 0) + '/' + (${meeting.maxParticipants} ?: '∞')"></span>&ndash;&gt;-->
-<!--&lt;!&ndash;                                potwierdzonych&ndash;&gt;-->
-<!--&lt;!&ndash;                            </small>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <span th:if="${meeting.waitingListCount != null && meeting.waitingListCount > 0}"&ndash;&gt;-->
-<!--&lt;!&ndash;                                  class="badge bg-warning ms-2"&ndash;&gt;-->
-<!--&lt;!&ndash;                                  th:text="${meeting.waitingListCount} + ' w kolejce'">&ndash;&gt;-->
-<!--&lt;!&ndash;                            </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div class="participant-actions">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <a th:href="@{/meetings/{id}/participants(id=${meeting.id})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                               class="btn btn-sm btn-outline-primary">&ndash;&gt;-->
-<!--&lt;!&ndash;                                <i class="bi bi-people"></i> Uczestnicy&ndash;&gt;-->
-<!--&lt;!&ndash;                            </a>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <a th:if="${meeting.organizer != null && meeting.organizer.id == currentUserId}"&ndash;&gt;-->
-<!--&lt;!&ndash;                               th:href="@{/meetings/{id}/participants/invite(id=${meeting.id})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                               class="btn btn-sm btn-success ms-1">&ndash;&gt;-->
-<!--&lt;!&ndash;                                <i class="bi bi-person-plus"></i> Zaproś&ndash;&gt;-->
-<!--&lt;!&ndash;                            </a>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                    <div class="d-flex justify-content-between align-items-center mt-2">&ndash;&gt;-->
-<!--&lt;!&ndash;                        &lt;!&ndash; ✅ POPRAWIONE: Uproszczone warunki dla visibility &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                        <span th:if="${meeting.visibility}" class="badge"&ndash;&gt;-->
-<!--&lt;!&ndash;                              th:class="${meeting.visibility.name() == 'PUBLIC' ? 'bg-info' : 'bg-secondary'}"&ndash;&gt;-->
-<!--&lt;!&ndash;                              th:text="${meeting.visibility.name()}">&ndash;&gt;-->
-<!--&lt;!&ndash;                        </span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <span th:unless="${meeting.visibility}" class="badge bg-secondary">BRAK</span>&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <a th:href="@{/meetings/{id}(id=${meeting.id})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                               class="btn btn-sm btn-primary me-1">Szczegóły</a>&ndash;&gt;-->
-<!--&lt;!&ndash;                            <a th:if="${meeting.organizer != null && meeting.organizer.id == currentUserId}"&ndash;&gt;-->
-<!--&lt;!&ndash;                               th:href="@{/meetings/{id}/edit(id=${meeting.id})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                               class="btn btn-sm btn-outline-secondary">Edytuj</a>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                    <div class="participant-actions mt-3 pt-3 border-top">&ndash;&gt;-->
-<!--&lt;!&ndash;                        &lt;!&ndash; Dołącz do publicznego &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div th:if="${meeting.visibility.name() == 'PUBLIC' and currentUserId != null}">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post" class="d-inline">&ndash;&gt;-->
-<!--&lt;!&ndash;                                <button type="submit" class="btn btn-success btn-sm">&ndash;&gt;-->
-<!--&lt;!&ndash;                                    <i class="bi bi-plus-circle me-1"></i>Dołącz&ndash;&gt;-->
-<!--&lt;!&ndash;                                </button>&ndash;&gt;-->
-<!--&lt;!&ndash;                            </form>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                        &lt;!&ndash; Zgłoś do prywatnego &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                        <div th:if="${meeting.visibility.name() == 'PRIVATE' and currentUserId != null}">&ndash;&gt;-->
-<!--&lt;!&ndash;                            <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post" class="d-inline">&ndash;&gt;-->
-<!--&lt;!&ndash;                                <button type="submit" class="btn btn-warning btn-sm">&ndash;&gt;-->
-<!--&lt;!&ndash;                                    <i class="bi bi-envelope me-1"></i>Zgłoś&ndash;&gt;-->
-<!--&lt;!&ndash;                                </button>&ndash;&gt;-->
-<!--&lt;!&ndash;                            </form>&ndash;&gt;-->
-<!--&lt;!&ndash;                        </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;                        &lt;!&ndash; Dla niezalogowanych &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <div th:if="${currentUserId == null}">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                            <a th:href="@{/login}" class="btn btn-outline-primary btn-sm">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                                <i class="bi bi-box-arrow-in-right me-1"></i>Zaloguj się&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                            </a>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        </div>&ndash;&gt;&ndash;&gt;-->
-
-<!--&lt;!&ndash;                        &lt;!&ndash; Szczegóły &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        <a th:href="@{/meetings/{id}(id=${meeting.id})}"&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                           class="btn btn-outline-secondary btn-sm float-end">&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                            <i class="bi bi-eye me-1"></i>Szczegóły&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;&lt;!&ndash;                        </a>&ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                    </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;                </div>&ndash;&gt;-->
-<!--&lt;!&ndash;            </div>&ndash;&gt;-->
-<!--&lt;!&ndash;        </div>&ndash;&gt;-->
-<!--&lt;!&ndash;    </div>&ndash;&gt;-->
-
-<!--&lt;!&ndash;    &lt;!&ndash; Paginacja &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;    <nav th:if="${totalPages > 1}" class="mt-4">&ndash;&gt;-->
-<!--&lt;!&ndash;        <ul class="pagination justify-content-center">&ndash;&gt;-->
-<!--&lt;!&ndash;            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">&ndash;&gt;-->
-<!--&lt;!&ndash;                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1}, search=${param.search}, type=${param.type}, status=${param.status})}">&ndash;&gt;-->
-<!--&lt;!&ndash;                    Poprzednia&ndash;&gt;-->
-<!--&lt;!&ndash;                </a>&ndash;&gt;-->
-<!--&lt;!&ndash;            </li>&ndash;&gt;-->
-
-<!--&lt;!&ndash;            <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"&ndash;&gt;-->
-<!--&lt;!&ndash;                class="page-item" th:classappend="${page == currentPage} ? 'active'">&ndash;&gt;-->
-<!--&lt;!&ndash;                <a class="page-link"&ndash;&gt;-->
-<!--&lt;!&ndash;                   th:href="@{/meetings(page=${page}, search=${param.search}, type=${param.type}, status=${param.status})}"&ndash;&gt;-->
-<!--&lt;!&ndash;                   th:text="${page + 1}"></a>&ndash;&gt;-->
-<!--&lt;!&ndash;            </li>&ndash;&gt;-->
-
-<!--&lt;!&ndash;            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">&ndash;&gt;-->
-<!--&lt;!&ndash;                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1}, search=${param.search}, type=${param.type}, status=${param.status})}">&ndash;&gt;-->
-<!--&lt;!&ndash;                    Następna&ndash;&gt;-->
-<!--&lt;!&ndash;                </a>&ndash;&gt;-->
-<!--&lt;!&ndash;            </li>&ndash;&gt;-->
-<!--&lt;!&ndash;        </ul>&ndash;&gt;-->
-<!--&lt;!&ndash;    </nav>&ndash;&gt;-->
-
-<!--&lt;!&ndash;    <style>&ndash;&gt;-->
-<!--&lt;!&ndash;        .meeting-card {&ndash;&gt;-->
-<!--&lt;!&ndash;            transition: transform 0.2s;&ndash;&gt;-->
-<!--&lt;!&ndash;        }&ndash;&gt;-->
-<!--&lt;!&ndash;        .meeting-card:hover {&ndash;&gt;-->
-<!--&lt;!&ndash;            transform: translateY(-2px);&ndash;&gt;-->
-<!--&lt;!&ndash;        }&ndash;&gt;-->
-<!--&lt;!&ndash;    </style>&ndash;&gt;-->
-<!--&lt;!&ndash;</div>&ndash;&gt;-->
-<!--&lt;!&ndash;</body>&ndash;&gt;-->
-<!--&lt;!&ndash;</html>&ndash;&gt;-->
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
@@ -313,33 +5,134 @@
       th:replace="~{layout}">
 <head>
     <title>Lista spotkań - MeetHub</title>
+    <style>
+        .meeting-card {
+            transition: transform 0.2s;
+            border-left: 4px solid transparent;
+        }
+        .meeting-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .meeting-card.template {
+            border-left-color: #6f42c1;
+        }
+        .meeting-card.recurring {
+            border-left-color: #20c997;
+        }
+        .meeting-card.categorized {
+            border-left-color: #fd7e14;
+        }
+        .category-badge {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .advanced-filters {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .badge-purple {
+            background-color: #6f42c1 !important;
+            color: white !important;
+        }
+    </style>
 </head>
 <body>
 <div th:fragment="content">
-    <!-- Nagłówek -->
+    <!-- Nagłówek z akcjami -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="display-6">
-                <i class="bi bi-calendar3 me-2"></i>Wszystkie spotkań
+                <i class="bi bi-calendar3 me-2"></i>Spotkania
             </h1>
-            <p class="text-muted">Przeglądaj dostępne spotkania</p>
+            <p class="text-muted">Zarządzaj swoimi spotkaniami i spotkaniami publicznymi</p>
         </div>
-        <a th:href="@{/meetings/create}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Utwórz spotkanie
-        </a>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-plus-circle me-2"></i>Utwórz spotkanie
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" th:href="@{/meetings/create}">
+                        <i class="bi bi-plus-lg me-2"></i>Nowe spotkanie
+                    </a></li>
+                    <li><a class="dropdown-item" th:href="@{/meetings/templates}">
+                        <i class="bi bi-file-earmark me-2"></i>Z szablonu
+                    </a></li>
+                    <li><a class="dropdown-item" href="#quickTemplateModal" data-bs-toggle="modal">
+                        <i class="bi bi-lightning me-2"></i>Szybkie szablony
+                    </a></li>
+                </ul>
+            </div>
+            <a th:href="@{/meetings/advanced}" class="btn btn-outline-primary">
+                <i class="bi bi-funnel me-2"></i>Zaawansowane
+            </a>
+        </div>
     </div>
 
-    <!-- Filtry -->
+    <!-- Szybkie akcje -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary bg-opacity-10 border-primary">
+                <div class="card-body py-3">
+                    <a th:href="@{/meetings/recurring}" class="text-decoration-none text-primary">
+                        <i class="bi bi-repeat me-2"></i>Powtarzające się
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success bg-opacity-10 border-success">
+                <div class="card-body py-3">
+                    <a th:href="@{/meetings/templates}" class="text-decoration-none text-success">
+                        <i class="bi bi-file-earmark me-2"></i>Moje szablony
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning bg-opacity-10 border-warning">
+                <div class="card-body py-3">
+                    <a th:href="@{/categories}" class="text-decoration-none text-warning">
+                        <i class="bi bi-tags me-2"></i>Kategorie
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info bg-opacity-10 border-info">
+                <div class="card-body py-3">
+                    <a th:href="@{/meetings?status=UPCOMING}" class="text-decoration-none text-info">
+                        <i class="bi bi-clock me-2"></i>Nadchodzące
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zaawansowane filtry (rozszerzone) -->
     <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="bi bi-funnel me-2"></i>Filtrowanie i wyszukiwanie
+            </h6>
+        </div>
         <div class="card-body">
             <form th:action="@{/meetings}" method="get" class="row g-3">
-                <div class="col-md-4">
+                <!-- Podstawowe filtry -->
+                <div class="col-md-3">
                     <label class="form-label">Szukaj</label>
                     <input type="text" name="search" class="form-control"
                            th:value="${searchParam}"
-                           placeholder="Tytuł lub opis...">
+                           placeholder="Tytuł, opis, tagi...">
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-2">
                     <label class="form-label">Typ</label>
                     <select name="type" class="form-select">
                         <option value="">Wszystkie</option>
@@ -348,7 +141,8 @@
                         <option value="HYBRID" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-2">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
                         <option value="">Wszystkie</option>
@@ -358,36 +152,244 @@
                         <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>
                     </select>
                 </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Kategoria</label>
+                    <select name="categoryId" class="form-select">
+                        <option value="">Wszystkie kategorie</option>
+                        <option th:each="category : ${userCategories}"
+                                th:value="${category.id}"
+                                th:text="${category.name}"></option>
+                    </select>
+                </div>
+
                 <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-outline-primary w-100">
-                        <i class="bi bi-funnel me-1"></i>Filtruj
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i>Filtruj
+                        </button>
+                        <a th:href="@{/meetings}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
                 </div>
             </form>
+        </div>
+    </div>
 
-            <!-- Aktywne filtry -->
-            <div th:if="${searchParam != null or typeParam != null or statusParam != null}"
-                 class="mt-3">
-                <small class="text-muted">Aktywne filtry:</small>
-                <div>
-                    <span th:if="${searchParam}" class="badge bg-light text-dark me-1">
-                        Szukaj: <span th:text="${searchParam}"></span>
-                        <a th:href="@{/meetings(type=${typeParam}, status=${statusParam})}"
-                           class="text-danger ms-1">×</a>
-                    </span>
-                    <span th:if="${typeParam}" class="badge bg-light text-dark me-1">
-                        Typ: <span th:text="${typeParam}"></span>
-                        <a th:href="@{/meetings(search=${searchParam}, status=${statusParam})}"
-                           class="text-danger ms-1">×</a>
-                    </span>
-                    <span th:if="${statusParam}" class="badge bg-light text-dark me-1">
-                        Status: <span th:text="${statusParam}"></span>
-                        <a th:href="@{/meetings(search=${searchParam}, type=${typeParam})}"
-                           class="text-danger ms-1">×</a>
-                    </span>
-                    <a th:href="@{/meetings}" class="btn btn-sm btn-outline-secondary ms-2">
-                        Wyczyść wszystkie
-                    </a>
+    <!-- Lista spotkań -->
+    <div class="row" th:unless="${meetings.empty}">
+        <!-- ✅ POPRAWIONE: Dodano sprawdzenie null w pętli -->
+        <div th:each="meeting : ${meetings}" th:if="${meeting != null}" class="col-lg-6 mb-4">
+            <!-- ✅ POPRAWIONE: Łączenie wszystkich warunków th:classappend w jeden -->
+            <div class="card h-100 meeting-card"
+                 th:classappend="${(meeting.template ? 'template ' : '') + 
+                                 (meeting.recurring ? 'recurring ' : '') + 
+                                 (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">
+
+                <div class="card-body">
+                    <!-- Nagłówek karty -->
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title">
+                            <span th:text="${meeting.title}"></span>
+                            <span th:if="${meeting?.recurring}" class="badge bg-success ms-2">
+                                <i class="bi bi-repeat me-1"></i>Cykl
+                            </span>
+                            <span th:if="${meeting?.template}" class="badge badge-purple ms-2">
+                                <i class="bi bi-file-earmark me-1"></i>Szablon
+                            </span>
+                        </h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" th:href="@{/meetings/{id}(id=${meeting.id})}">
+                                    <i class="bi bi-eye me-2"></i>Szczegóły
+                                </a></li>
+
+                                <!-- ✅ POPRAWIONE: Bezpieczne sprawdzenie właściwości -->
+                                <li th:if="${meeting?.userIsOrganizer}">
+                                    <a class="dropdown-item" th:href="@{/meetings/{id}/edit(id=${meeting.id})}">
+                                        <i class="bi bi-pencil me-2"></i>Edytuj
+                                    </a>
+                                </li>
+
+                                <li th:if="${meeting?.userIsOrganizer}">
+                                    <form th:action="@{/meetings/{id}/save-as-template(id=${meeting.id})}"
+                                          method="post" class="d-inline">
+                                        <input type="hidden" name="templateName" th:value="${meeting.title}">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-file-earmark me-2"></i>Zapisz jako szablon
+                                        </button>
+                                    </form>
+                                </li>
+
+                                <li th:if="${meeting?.recurring and meeting?.userIsOrganizer}">
+                                    <a class="dropdown-item"
+                                       th:href="@{/meetings/{id}/recurrence(id=${meeting.id})}">
+                                        <i class="bi bi-repeat me-2"></i>Zarządzaj cyklem
+                                    </a>
+                                </li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <li th:if="${meeting?.userIsOrganizer}">
+                                    <form th:action="@{/meetings/{id}/duplicate(id=${meeting.id})}"
+                                          method="post" class="d-inline">
+                                        <button type="submit" class="dropdown-item text-info">
+                                            <i class="bi bi-copy me-2"></i>Duplikuj
+                                        </button>
+                                    </form>
+                                </li>
+
+                                <li th:if="${meeting?.userIsOrganizer}">
+                                    <form th:action="@{/meetings/{id}/delete(id=${meeting.id})}"
+                                          method="post"
+                                          onsubmit="return confirm('Czy na pewno chcesz usunąć to spotkanie?')"
+                                          class="d-inline">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-trash me-2"></i>Usuń
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Informacje o spotkaniu -->
+                    <p class="card-text text-muted mb-3"
+                       th:text="${meeting.description ?: 'Brak opisu'}"></p>
+
+                    <!-- Kategorie i tagi -->
+                    <div class="mb-3">
+                        <div th:if="${meeting?.categories != null and not meeting.categories.empty}">
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span th:each="category : ${meeting.categories}"
+                                      class="badge d-flex align-items-center"
+                                      th:style="'background-color: ' + ${category?.colorCode} + '; color: white;'">
+                                    <span class="category-badge"
+                                          th:style="'background-color: white;'"></span>
+                                    <span th:text="${category?.name}"></span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div th:if="${meeting?.tags != null and not meeting.tags.empty}">
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="tag : ${#strings.arraySplit(meeting.tags, ',')}"
+                                      class="badge bg-light text-dark small">
+                                    <i class="bi bi-tag me-1"></i>
+                                    <span th:text="${#strings.trim(tag)}"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metadane -->
+                    <div class="meeting-meta small text-muted mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>
+                                <i class="bi bi-calendar me-1"></i>
+                                <span th:if="${meeting?.startDate}"
+                                      th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
+                                <span th:unless="${meeting?.startDate}">Brak daty</span>
+                            </span>
+                            <!-- ✅ POPRAWIONE: Użyj operatora bezpiecznego dostępu ?. -->
+                            <span th:class="${meeting?.status?.name() == 'CONFIRMED' ? 'text-success' :
+                                            meeting?.status?.name() == 'CANCELLED' ? 'text-danger' : 'text-warning'}"
+                                  th:text="${meeting?.status?.displayName ?: meeting?.status?.name()}"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>
+                                <i class="bi bi-person me-1"></i>
+                                <span th:if="${meeting?.organizer}"
+                                      th:text="${meeting.organizer.firstName + ' ' + meeting.organizer.lastName}"></span>
+                                <span th:unless="${meeting?.organizer}">Brak organizatora</span>
+                            </span>
+                            <span>
+                                <i class="bi bi-people me-1"></i>
+                                <span th:text="${meeting?.confirmedParticipantsCount ?: 0}"></span>/
+                                <span th:text="${meeting?.maxParticipants ?: '∞'}"></span>
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <span>
+                                <i class="bi bi-geo-alt me-1"></i>
+                                <span th:text="${meeting?.type?.displayName ?: meeting?.type?.name()}"></span>
+                            </span>
+                            <!-- ✅ POPRAWIONE: Bezpieczny dostęp do visibility -->
+                            <span class="badge"
+                                  th:class="${meeting?.visibility?.name() == 'PUBLIC' ? 'bg-info' :
+                                            meeting?.visibility?.name() == 'PRIVATE' ? 'bg-warning' : 'bg-secondary'}"
+                                  th:text="${meeting?.visibility?.displayName ?: meeting?.visibility?.name()}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Akcje użytkownika -->
+                    <!-- ✅ POPRAWIONE: Usunięto zbędne th:if="${meeting != null}" -->
+                    <div class="participant-actions mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <!-- Status użytkownika -->
+                            <div>
+                                <!-- ✅ POPRAWIONE: Bezpieczny dostęp do właściwości -->
+                                <span th:if="${meeting?.userIsConfirmed}"
+                                      class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Uczestnik
+                                </span>
+                                <span th:if="${meeting?.userIsPending}"
+                                      class="badge bg-warning">
+                                    <i class="bi bi-clock me-1"></i>Oczekuje
+                                </span>
+                                <span th:if="${meeting?.userIsInvited}"
+                                      class="badge bg-primary">
+                                    <i class="bi bi-envelope me-1"></i>Zaproszony
+                                </span>
+                            </div>
+
+                            <!-- Przyciski akcji -->
+                            <div class="d-flex gap-1">
+                                <!-- Dołączanie -->
+                                <!-- ✅ POPRAWIONE: Bezpieczny dostęp -->
+                                <div th:if="${meeting?.canJoin and not meeting?.userIsOrganizer}">
+                                    <form th:action="@{/meetings/{id}/join(id=${meeting.id})}"
+                                          method="post" class="d-inline">
+                                        <button type="submit"
+                                                class="btn btn-sm"
+                                                th:class="${meeting?.visibility?.name() == 'PRIVATE'} ? 'btn-warning' : 'btn-success'">
+                                            <span th:if="${meeting?.visibility?.name() == 'PRIVATE'}">
+                                                <i class="bi bi-envelope me-1"></i>Zgłoś
+                                            </span>
+                                            <span th:if="${meeting?.visibility?.name() != 'PRIVATE'}">
+                                                <i class="bi bi-plus-circle me-1"></i>Dołącz
+                                            </span>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Opuszczanie -->
+                                <div th:if="${meeting?.canLeave}">
+                                    <form th:action="@{/meetings/{id}/leave(id=${meeting.id})}"
+                                          method="post"
+                                          onsubmit="return confirm('Czy na pewno chcesz opuścić to spotkanie?')"
+                                          class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-box-arrow-right me-1"></i>Opuść
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Szczegóły -->
+                                <a th:href="@{/meetings/{id}(id=${meeting.id})}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye me-1"></i>Szczegóły
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -398,180 +400,13 @@
         <i class="bi bi-calendar-x display-1 text-muted"></i>
         <h4 class="text-muted mt-3">Brak spotkań</h4>
         <p class="text-muted">Nie znaleziono spotkań spełniających kryteria</p>
-        <a th:href="@{/meetings/create}" class="btn btn-primary mt-3">
-            <i class="bi bi-plus-circle me-2"></i>Utwórz pierwsze spotkanie
-        </a>
-    </div>
-
-    <!-- Lista spotkań -->
-    <div class="row" th:unless="${meetings.empty}">
-        <div class="col-lg-6 mb-4" th:each="meeting : ${meetings}">
-            <div class="card h-100 meeting-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title" th:text="${meeting.title}"></h5>
-                        <span th:if="${meeting.type}" class="badge"
-                              th:class="${meeting.type.name() == 'VIRTUAL' ? 'bg-success' :
-                                        (meeting.type.name() == 'PHYSICAL' ? 'bg-primary' : 'bg-warning')}"
-                              th:text="${meeting.type.name()}">
-                        </span>
-                        <span th:unless="${meeting.type}" class="badge bg-secondary">BRAK TYPU</span>
-                    </div>
-
-                    <p class="card-text text-muted"
-                       th:text="${meeting.description ?: 'Brak opisu'}"></p>
-
-                    <div class="meeting-meta mb-3">
-                        <div class="d-flex justify-content-between text-muted small mb-2">
-                            <span>
-                                <i class="bi bi-calendar"></i>
-                                <span th:if="${meeting.startDate}"
-                                      th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
-                                <span th:unless="${meeting.startDate}">Data nieustalona</span>
-                            </span>
-                            <span th:if="${meeting.status}"
-                                  th:class="${meeting.status.name() == 'CONFIRMED' ? 'text-success' :
-                                            (meeting.status.name() == 'CANCELLED' ? 'text-danger' : 'text-warning')}"
-                                  th:text="${meeting.status.name()}">
-                            </span>
-                            <span th:unless="${meeting.status}" class="text-muted">BRAK STATUSU</span>
-                        </div>
-
-                        <div class="text-muted small mb-2" th:if="${meeting.organizer}">
-                            <i class="bi bi-person"></i>
-                            <span th:text="${meeting.organizer.firstName + ' ' + meeting.organizer.lastName}"></span>
-                        </div>
-
-                        <div class="text-muted small" th:if="${meeting.maxParticipants}">
-                            <i class="bi bi-people"></i>
-                            <span th:text="${meeting.maxParticipants + ' uczestników max'}"></span>
-                        </div>
-                    </div>
-
-                    <!-- Statystyki uczestników -->
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                        <div class="participant-info">
-                            <small class="text-muted">
-                                <i class="bi bi-people"></i>
-                                <span th:text="(${meeting.confirmedParticipantsCount != null} ? ${meeting.confirmedParticipantsCount} : 0) + '/' + (${meeting.maxParticipants} ?: '∞')"></span>
-                                potwierdzonych
-                            </small>
-                            <span th:if="${meeting.waitingListCount != null && meeting.waitingListCount > 0}"
-                                  class="badge bg-warning ms-2"
-                                  th:text="${meeting.waitingListCount} + ' w kolejce'">
-                            </span>
-                        </div>
-                        <div class="participant-actions">
-                            <a th:href="@{/meetings/{id}/participants(id=${meeting.id})}"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-people"></i> Uczestnicy
-                            </a>
-                            <a th:if="${meeting.organizer != null && meeting.organizer.id == currentUserId}"
-                               th:href="@{/meetings/{id}/participants/invite(id=${meeting.id})}"
-                               class="btn btn-sm btn-success ms-1">
-                                <i class="bi bi-person-plus"></i> Zaproś
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <span th:if="${meeting.visibility}" class="badge"
-                              th:class="${meeting.visibility.name() == 'PUBLIC' ? 'bg-info' : 'bg-secondary'}"
-                              th:text="${meeting.visibility.name()}">
-                        </span>
-                        <span th:unless="${meeting.visibility}" class="badge bg-secondary">BRAK</span>
-                        <div>
-                            <a th:href="@{/meetings/{id}(id=${meeting.id})}"
-                               class="btn btn-sm btn-primary me-1">Szczegóły</a>
-                            <a th:if="${meeting.organizer != null && meeting.organizer.id == currentUserId}"
-                               th:href="@{/meetings/{id}/edit(id=${meeting.id})}"
-                               class="btn btn-sm btn-outline-secondary">Edytuj</a>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <h6>Debug informacje:</h6>
-                        <ul>
-                            <li>Meeting visibility: [[${meeting?.visibility?.name()}]]</li>
-                            <li>User ID: [[${userId}]]</li>
-                            <li>Is Participant: [[${meeting.userIsParticipant}]]</li>
-                            <li>Is Organizer: [[${meeting.userIsOrganizer}]]</li>
-                            <li>Meeting exists: [[${meeting != null}]]</li>
-                        </ul>
-                    </div>
-
-
-
-                    <div class="participant-actions mt-3 pt-3 border-top">
-                        <!-- Dołącz do publicznego -->
-                        <div th:if="${meeting?.visibility?.name() == 'PUBLIC' and userId != null and !meeting.userIsParticipant}">
-                            <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-success btn-sm">
-                                    <i class="bi bi-plus-circle me-1"></i>Dołącz do spotkania
-                                </button>
-                            </form>
-                        </div>
-
-                        <div th:if="${meeting?.visibility?.name() == 'PRIVATE' and userId != null and !meeting.userIsParticipant}">
-                            <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-warning btn-sm">
-                                    <i class="bi bi-envelope me-1"></i>Zgłoś chęć uczestnictwa
-                                </button>
-                            </form>
-                            <small class="text-muted d-block mt-1">
-                                Organizator musi zaakceptować Twoją prośbę
-                            </small>
-                        </div>
-
-
-                        <div th:if="${meeting.visibility.name() == 'PRIVATE'
-              and (meeting.userIsConfirmed or meeting.userIsPending or meeting.userIsInvited)}"
-                             class="mb-2">
-
-                            <!-- JESTEŚ POTWIERDZONYM UCZESTNIKIEM -->
-                            <div th:if="${meeting.userIsConfirmed}">
-        <span class="badge bg-success p-2">
-            <i class="bi bi-check-circle me-1"></i>Jesteś uczestnikiem tego prywatnego spotkania
-        </span>
-                            </div>
-
-                            <!-- OCZEKUJESZ NA AKCEPTACJĘ -->
-                            <div th:if="${meeting.userIsPending}">
-        <span class="badge bg-warning p-2">
-            <i class="bi bi-clock me-1"></i>Twoja prośba oczekuje na akceptację
-        </span>
-                            </div>
-
-                            <!-- MASZ ZAPROSZENIE -->
-                            <div th:if="${meeting.userIsInvited}">
-        <span class="badge bg-primary p-2">
-            <i class="bi bi-envelope me-1"></i>Masz zaproszenie do tego prywatnego spotkania
-        </span>
-                            </div>
-                        </div>
-
-                        <!-- Opuszczanie spotkania -->
-                        <div th:if="${meeting.userIsParticipant}" class="text-center">
-    <span class="badge bg-success p-2">
-        <i class="bi bi-check-circle me-1"></i>Jesteś uczestnikiem
-    </span>
-<!--                            <form th:action="@{/meetings/{id}/participants/leave(id=${meeting.id})}" method="post" class="mt-2">-->
-<!--                                <button type="submit" class="btn btn-outline-danger btn-sm"-->
-<!--                                        onclick="return confirm('Czy na pewno chcesz opuścić to spotkanie?')">-->
-<!--                                    <i class="bi bi-box-arrow-right me-1"></i>Opuść spotkanie-->
-<!--                                </button>-->
-<!--                            </form>-->
-
-                            <form th:action="@{/meetings/{id}/participants/leave(id=${meeting.id})}" method="post"
-                                  onsubmit="return confirm('Czy na pewno chcesz opuścić to spotkanie?')">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-box-arrow-right me-1"></i>Opuść spotkanie
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="mt-4">
+            <a th:href="@{/meetings/create}" class="btn btn-primary me-2">
+                <i class="bi bi-plus-circle me-2"></i>Utwórz pierwsze spotkanie
+            </a>
+            <a th:href="@{/meetings/templates}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark me-2"></i>Użyj szablonu
+            </a>
         </div>
     </div>
 
@@ -579,42 +414,92 @@
     <nav th:if="${totalPages > 1}" class="mt-4">
         <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1}, search=${searchParam}, type=${typeParam}, status=${statusParam})}">
-                    Poprzednia
+                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1},
+                                                         search=${searchParam},
+                                                         type=${typeParam},
+                                                         status=${statusParam})}">
+                    <i class="bi bi-chevron-left"></i>
                 </a>
             </li>
 
             <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"
                 class="page-item" th:classappend="${page == currentPage} ? 'active'">
                 <a class="page-link"
-                   th:href="@{/meetings(page=${page}, search=${searchParam}, type=${typeParam}, status=${statusParam})}"
+                   th:href="@{/meetings(page=${page},
+                                        search=${searchParam},
+                                        type=${typeParam},
+                                        status=${statusParam})}"
                    th:text="${page + 1}"></a>
             </li>
 
             <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
-                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1}, search=${searchParam}, type=${typeParam}, status=${statusParam})}">
-                    Następna
+                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1},
+                                                         search=${searchParam},
+                                                         type=${typeParam},
+                                                         status=${statusParam})}">
+                    <i class="bi bi-chevron-right"></i>
                 </a>
             </li>
         </ul>
     </nav>
 
-    <style>
-        .meeting-card {
-            transition: transform 0.2s;
-        }
-        .meeting-card:hover {
-            transform: translateY(-2px);
-        }
-    </style>
+    <!-- Modal szybkich szablonów -->
+    <div class="modal fade" id="quickTemplateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Szybkie szablony</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="card h-100 text-center">
+                                <div class="card-body">
+                                    <i class="bi bi-people display-5 text-primary mb-3"></i>
+                                    <h6>Spotkanie zespołu</h6>
+                                    <p class="small text-muted">Cotygodniowa synchronizacja</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card h-100 text-center">
+                                <div class="card-body">
+                                    <i class="bi bi-bar-chart display-5 text-success mb-3"></i>
+                                    <h6>Przegląd projektu</h6>
+                                    <p class="small text-muted">Miesięczny przegląd postępów</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a th:href="@{/meetings/templates}" class="btn btn-outline-primary">
+                        Zobacz wszystkie szablony
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicjalizacja tooltipów
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Automatyczne ukrywanie alertów po 5 sekundach
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert:not(.alert-persistent)');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    });
+</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
