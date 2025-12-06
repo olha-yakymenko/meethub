@@ -65,6 +65,9 @@ public interface MeetingParticipantService {
 
     MeetingParticipant acceptInvitationByToken(String token);
     boolean isUserParticipant(Long meetingId, Long userId);
+
+    boolean isViewer(Long meetingId, Long userId);
+
     boolean canUserEditMeeting(Long meetingId, Long userId);
 
     // Zachowaj istniejące metody dla kompatybilności
@@ -115,4 +118,18 @@ public interface MeetingParticipantService {
         long getWaitlistCount();
         long getPendingCount();
     }
+
+    ParticipantResponse getParticipantInfo(Long userId, Long meetingId);
+
+
+    boolean isParticipant(Long meetingId, Long userId);
+
+
+
+    boolean isConfirmedParticipant(Long meetingId, Long userId);
+    boolean isPendingParticipant(Long meetingId, Long userId);
+    boolean isInvitedParticipant(Long meetingId, Long userId);
+    boolean isDeclinedParticipant(Long meetingId, Long userId);
+    boolean isWaitingListParticipant(Long meetingId, Long userId);
+    boolean isUnrelatedUser(Long meetingId, Long userId);
 }

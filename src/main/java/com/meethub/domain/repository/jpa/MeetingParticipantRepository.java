@@ -165,4 +165,28 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
                        @Param("status") ParticipationStatus status);  // Użyj enuma
 
     long countByMeetingIdAndStatusIn(Long meetingId, List<ParticipationStatus> statuses);
+
+
+    boolean existsByMeetingIdAndUserIdAndStatus(Long meetingId, Long userId, ParticipationStatus status);
+
+    // Opcjonalnie - jeśli chcesz precyzyjniejsze metody
+    default boolean isUserConfirmed(Long meetingId, Long userId) {
+        return existsByMeetingIdAndUserIdAndStatus(meetingId, userId, ParticipationStatus.CONFIRMED);
+    }
+
+    default boolean isUserPending(Long meetingId, Long userId) {
+        return existsByMeetingIdAndUserIdAndStatus(meetingId, userId, ParticipationStatus.PENDING);
+    }
+
+    default boolean isUserInvited(Long meetingId, Long userId) {
+        return existsByMeetingIdAndUserIdAndStatus(meetingId, userId, ParticipationStatus.INVITED);
+    }
+
+    default boolean isUserDeclined(Long meetingId, Long userId) {
+        return existsByMeetingIdAndUserIdAndStatus(meetingId, userId, ParticipationStatus.DECLINED);
+    }
+
+    default boolean isUserWaiting(Long meetingId, Long userId) {
+        return existsByMeetingIdAndUserIdAndStatus(meetingId, userId, ParticipationStatus.WAITING_LIST);
+    }
 }

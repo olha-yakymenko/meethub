@@ -88,21 +88,62 @@ public class MeetingTaskController {
         }
     }
 
+//    @GetMapping("/{taskId}")
+//    public String getTaskDetails(@PathVariable Long meetingId,
+//                                 @PathVariable Long taskId,
+//                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                 Model model) {
+//        try {
+//            Task task = taskService.getTaskById(taskId);
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
+//            boolean canAccess = isOrganizer || task.getAssignments().stream()
+//                    .anyMatch(a -> a.getUser().getId().equals(userDetails.getId()));
+//
+//            if (!canAccess) {
+//                throw new RuntimeException("Brak uprawnień do tego zadania");
+//            }
+//
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("task", task);
+//            model.addAttribute("isOrganizer", isOrganizer);
+//            model.addAttribute("userId", userDetails.getId());
+//
+//            return "meetings/tasks/details";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks";
+//        }
+//    }
+
+
+
     @GetMapping("/{taskId}")
     public String getTaskDetails(@PathVariable Long meetingId,
                                  @PathVariable Long taskId,
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
                                  Model model) {
         try {
+            System.out.println("DEBUG: Getting task details for taskId=" + taskId);
             Task task = taskService.getTaskById(taskId);
+            System.out.println("DEBUG: Task found: " + task.getTitle());
+
             Meeting meeting = meetingRepository.findById(meetingId)
                     .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
 
             boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
+            System.out.println("DEBUG: Is organizer: " + isOrganizer);
+            System.out.println("DEBUG: User ID: " + userDetails.getId());
+
             boolean canAccess = isOrganizer || task.getAssignments().stream()
                     .anyMatch(a -> a.getUser().getId().equals(userDetails.getId()));
 
+            System.out.println("DEBUG: Can access: " + canAccess);
+
             if (!canAccess) {
+                System.out.println("DEBUG: Access denied!");
                 throw new RuntimeException("Brak uprawnień do tego zadania");
             }
 
@@ -111,12 +152,18 @@ public class MeetingTaskController {
             model.addAttribute("isOrganizer", isOrganizer);
             model.addAttribute("userId", userDetails.getId());
 
+            System.out.println("DEBUG: All attributes added successfully");
+
             return "meetings/tasks/details";
         } catch (Exception e) {
+            System.out.println("DEBUG: Error in getTaskDetails: " + e.getMessage());
+            e.printStackTrace();
             model.addAttribute("error", e.getMessage());
             return "redirect:/meetings/" + meetingId + "/tasks";
         }
     }
+
+
 
 //    @GetMapping("/{taskId}/edit")
 //    public String showEditTaskForm(@PathVariable Long meetingId,

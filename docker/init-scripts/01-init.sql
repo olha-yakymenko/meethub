@@ -1641,3 +1641,89 @@ CREATE INDEX IF NOT EXISTS idx_meeting_statistics_created
 
 ALTER TABLE meeting_statistics
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
+
+
+
+INSERT INTO meethub_schema.email_templates (
+    template_key,
+    subject,
+    body_template,
+    language,
+    name,
+    category,
+    description,
+    variables_help,
+    is_active,
+    version,
+    channel,
+    available_variables
+) VALUES (
+    'participant_joined',
+    'Nowy uczestnik w spotkaniu',
+    'Użytkownik {{participantName}} dołączył do spotkania "{{meetingTitle}}" dnia {{meetingDate}}.
+Aktualna liczba uczestników: {{currentParticipants}}.',
+    'pl',
+    'Uczestnik dołączył',
+    'MEETING',
+    'Powiadomienie o nowym uczestniku',
+    '{{participantName}}, {{meetingTitle}}, {{meetingDate}}, {{currentParticipants}}',
+    true,
+    1,
+    'EMAIL',
+    '{{participantName}},{{meetingTitle}},{{meetingDate}},{{currentParticipants}}'
+);
+
+
+INSERT INTO meethub_schema.email_templates (
+    template_key, subject, body_template, language,
+    name, category, description, variables_help,
+    is_active, version, channel, available_variables
+) VALUES (
+    'join_request',
+    'Nowa prośba o dołączenie do spotkania',
+    'Użytkownik {{requesterName}} ({{requesterEmail}}) wysłał prośbę o dołączenie do spotkania "{{meetingTitle}}" zaplanowanego na {{meetingDate}}.',
+    'pl',
+    'Prośba o dołączenie',
+    'MEETING',
+    'Powiadomienie o nowej prośbie o dołączenie',
+    '{{requesterName}}, {{requesterEmail}}, {{meetingTitle}}, {{meetingDate}}',
+    true, 1, 'EMAIL',
+    '{{requesterName}},{{requesterEmail}},{{meetingTitle}},{{meetingDate}}'
+);
+
+
+INSERT INTO meethub_schema.email_templates (
+    template_key, subject, body_template, language,
+    name, category, description, variables_help,
+    is_active, version, channel, available_variables
+) VALUES (
+    'request_approved',
+    'Twoja prośba została zaakceptowana',
+    'Cześć {{userName}}, Twoja prośba o dołączenie do spotkania "{{meetingTitle}}" w dniu {{meetingDate}} została zaakceptowana przez {{organizerName}}.
+Lokalizacja: {{meetingLocation}}.',
+    'pl',
+    'Prośba zaakceptowana',
+    'MEETING',
+    'Powiadomienie o zaakceptowaniu prośby',
+    '{{userName}}, {{meetingTitle}}, {{meetingDate}}, {{organizerName}}, {{meetingLocation}}',
+    true, 1, 'EMAIL',
+    '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}},{{meetingLocation}}'
+);
+
+
+INSERT INTO meethub_schema.email_templates (
+    template_key, subject, body_template, language,
+    name, category, description, variables_help,
+    is_active, version, channel, available_variables
+) VALUES (
+    'request_rejected',
+    'Twoja prośba została odrzucona',
+    'Cześć {{userName}}, Twoja prośba o dołączenie do spotkania "{{meetingTitle}}" w dniu {{meetingDate}} została odrzucona przez {{organizerName}}.',
+    'pl',
+    'Prośba odrzucona',
+    'MEETING',
+    'Powiadomienie o odrzuceniu prośby',
+    '{{userName}}, {{meetingTitle}}, {{meetingDate}}, {{organizerName}}',
+    true, 1, 'EMAIL',
+    '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}}'
+);
