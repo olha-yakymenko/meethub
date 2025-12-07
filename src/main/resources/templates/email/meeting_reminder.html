@@ -1,0 +1,28 @@
+<!-- meeting_reminder.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Przypomnienie o spotkaniu</title>
+</head>
+<body>
+<h2>🔔 Przypomnienie o spotkaniu</h2>
+<p>Cześć {{organizerName}},</p>
+<p>To przypomnienie o nadchodzącym spotkaniu:</p>
+
+<div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
+    <h3>{{meetingTitle}}</h3>
+    <p><strong>⏰ Czas:</strong> {{meetingTime}}</p>
+    {{#location}}
+    <p><strong>📍 Lokalizacja:</strong> {{location}}</p>
+    {{/location}}
+    {{#meetingLink}}
+    <p><strong>🔗 Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>
+    {{/meetingLink}}
+</div>
+
+<p>Spotkanie rozpocznie się za <strong>{{minutesBefore}} minut</strong>.</p>
+
+<p>Pozdrawiamy,<br>Zespół MeetHub</p>
+</body>
+</html>

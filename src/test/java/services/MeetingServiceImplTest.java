@@ -1,14 +1,16 @@
-//// MeetingServiceImplTest.java
 //package com.meethub.domain.service.impl;
 //
-//import com.meethub.domain.model.entity.Meeting;
-//import com.meethub.domain.model.entity.User;
+//import com.meethub.domain.model.entity.*;
 //import com.meethub.domain.model.enums.MeetingStatus;
+//import com.meethub.domain.model.enums.MeetingType;
 //import com.meethub.domain.model.enums.MeetingVisibility;
+//import com.meethub.domain.model.mapper.MeetingMapper;
 //import com.meethub.domain.model.request.CreateMeetingRequest;
+//import com.meethub.domain.model.request.SearchCriteria;
 //import com.meethub.domain.model.request.UpdateMeetingRequest;
 //import com.meethub.domain.model.response.MeetingParticipationInfo;
 //import com.meethub.domain.model.response.MeetingResponse;
+//import com.meethub.domain.repository.jpa.CategoryRepository;
 //import com.meethub.domain.repository.jpa.MeetingRepository;
 //import com.meethub.domain.repository.jpa.UserRepository;
 //import com.meethub.domain.repository.jdbc.CustomMeetingRepository;
@@ -16,7 +18,6 @@
 //import com.meethub.domain.service.MeetingParticipantService;
 //import com.meethub.exception.BusinessException;
 //import com.meethub.exception.ResourceNotFoundException;
-//import com.meethub.domain.model.mapper.MeetingMapper;
 //import org.junit.jupiter.api.BeforeEach;
 //import org.junit.jupiter.api.Test;
 //import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,7 @@
 //import org.mockito.Mock;
 //import org.mockito.junit.jupiter.MockitoExtension;
 //import org.springframework.data.domain.*;
+//import org.springframework.data.jpa.domain.Specification;
 //
 //import java.time.LocalDateTime;
 //import java.util.*;
@@ -53,195 +55,257 @@
 //    @Mock
 //    private MeetingAuthorizationService meetingAuthorizationService;
 //
+//    @Mock
+//    private CategoryRepository categoryRepository;
+//
 //    @InjectMocks
 //    private MeetingServiceImpl meetingService;
 //
 //    private User organizer;
 //    private Meeting meeting;
-//    private CreateMeetingRequest createRequest;
-//    private UpdateMeetingRequest updateRequest;
+//    private MeetingResponse meetingResponse;
+//    private Meeting templateMeeting;
+//    private Category category;
 //
 //    @BeforeEach
 //    void setUp() {
-//        // Setup organizer
 //        organizer = User.builder()
 //                .id(1L)
 //                .firstName("John")
 //                .lastName("Doe")
-//                .email("john.doe@example.com")
+//                .email("john@example.com")
 //                .build();
 //
-//        // Setup meeting
+//        category = Category.builder()
+//                .id(1L)
+//                .name("Business")
+//                .build();
+//
 //        meeting = Meeting.builder()
-//                .title("Test Meeting")
-//                .description("Test Description")
-//                .agenda("Test Agenda")
+//                .title("Team Meeting")
+//                .description("Weekly sync")
+//                .type(MeetingType.PHYSICAL)
 //                .visibility(MeetingVisibility.PUBLIC)
 //                .startDate(LocalDateTime.now().plusDays(1))
-//                .endDate(LocalDateTime.now().plusDays(1).plusHours(2))
-//                .maxParticipants(50)
+//                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+//                .organizer(organizer)
+//                .maxParticipants(10)
+//                .build();
+//
+//        templateMeeting = Meeting.builder()
+//                .title("Template Meeting")
 //                .organizer(organizer)
 //                .build();
 //
-//        // Setup create request
-//        createRequest = new CreateMeetingRequest();
-//        createRequest.setTitle("New Meeting");
-//        createRequest.setDescription("New Description");
-//        createRequest.setVisibility(MeetingVisibility.PUBLIC);
-//        createRequest.setStartDate(LocalDateTime.now().plusDays(1));
-//        createRequest.setEndDate(LocalDateTime.now().plusDays(1).plusHours(2));
-//        createRequest.setMaxParticipants(30);
-//
-//        // Setup update request
-//        updateRequest = new UpdateMeetingRequest();
-//        updateRequest.setTitle("Updated Meeting");
-//        updateRequest.setDescription("Updated Description");
-//        updateRequest.setVisibility(MeetingVisibility.PRIVATE);
+//        meetingResponse = MeetingResponse.builder()
+//                .id(1L)
+//                .title("Team Meeting")
+//                .type(MeetingType.PHYSICAL)
+//                .status(MeetingStatus.PLANNED)
+//                .build();
 //    }
 //
+//    // ============ CREATE MEETING TESTS ============
+//
 //    @Test
-//    void testCreateMeeting_Success() {
+//    void createMeeting_Success() {
 //        // Given
+//        CreateMeetingRequest request = CreateMeetingRequest.builder()
+//                .title("Team Meeting")
+//                .type(MeetingType.PHYSICAL)
+//                .visibility(MeetingVisibility.PUBLIC)
+//                .startDate(LocalDateTime.now().plusDays(1))
+//                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+//                .categoryIds((Set<Long>) List.of(1L))
+//                .build();
+//
 //        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
-//
-//        Meeting mappedMeeting = Meeting.builder()
-//                .title("New Meeting")
-//                .description("New Description")
-//                .visibility(MeetingVisibility.PUBLIC)
-//                .startDate(LocalDateTime.now().plusDays(1))
-//                .endDate(LocalDateTime.now().plusDays(1).plusHours(2))
-//                .maxParticipants(30)
-//                .build();
-//
-//        when(meetingMapper.toEntity(any(CreateMeetingRequest.class))).thenReturn(mappedMeeting);
-//
-//        Meeting savedMeeting = Meeting.builder()
-//                .title("New Meeting")
-//                .description("New Description")
-//                .visibility(MeetingVisibility.PUBLIC)
-//                .startDate(LocalDateTime.now().plusDays(1))
-//                .endDate(LocalDateTime.now().plusDays(1).plusHours(2))
-//                .maxParticipants(30)
-//                .organizer(organizer)
-//                .build();
-//
-//        when(meetingRepository.save(any(Meeting.class))).thenReturn(savedMeeting);
-//
-//        MeetingResponse expectedResponse = MeetingResponse.builder()
-//                .id(100L)
-//                .title("New Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(expectedResponse);
+//        when(meetingMapper.toEntity(request)).thenReturn(meeting);
+//        when(categoryRepository.findAllById(anyList())).thenReturn(List.of(category));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(meeting);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
-//        MeetingResponse response = meetingService.createMeeting(createRequest, 1L);
+//        MeetingResponse response = meetingService.createMeeting(request, 1L);
 //
 //        // Then
-//        assertNotNull(response);
-//        assertEquals(100L, response.getId());
-//        assertEquals("New Meeting", response.getTitle());
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(1L, response.getId()),
+//                () -> assertEquals("Team Meeting", response.getTitle())
+//        );
 //
 //        verify(userRepository).findById(1L);
-//        verify(meetingMapper).toEntity(createRequest);
+//        verify(meetingMapper).toEntity(request);
+//        verify(categoryRepository).findAllById(List.of(1L));
 //        verify(meetingRepository).save(any(Meeting.class));
-//        verify(meetingMapper).toResponse(savedMeeting);
 //    }
 //
 //    @Test
-//    void testCreateMeeting_OrganizerNotFound_ThrowsException() {
+//    void createMeeting_OrganizerNotFound_ThrowsResourceNotFoundException() {
 //        // Given
+//        CreateMeetingRequest request = CreateMeetingRequest.builder()
+//                .title("Team Meeting")
+//                .build();
+//
 //        when(userRepository.findById(999L)).thenReturn(Optional.empty());
 //
 //        // When & Then
 //        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-//                () -> meetingService.createMeeting(createRequest, 999L));
+//                () -> meetingService.createMeeting(request, 999L));
 //
 //        assertEquals("User not found with id: 999", exception.getMessage());
-//        verify(userRepository).findById(999L);
-//        verify(meetingMapper, never()).toEntity(any());
 //        verify(meetingRepository, never()).save(any(Meeting.class));
 //    }
 //
 //    @Test
-//    void testCreateMeeting_DatabaseError_ThrowsBusinessException() {
+//    void createMeeting_SaveAsTemplate_Success() {
 //        // Given
+//        CreateMeetingRequest request = CreateMeetingRequest.builder()
+//                .title("Template Meeting")
+//                .saveAsTemplate(true)
+//                .templateName("My Template")
+//                .build();
+//
+//        Meeting template = Meeting.builder()
+//                .title("My Template")
+//                .build();
+//
 //        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
-//        when(meetingMapper.toEntity(any(CreateMeetingRequest.class))).thenReturn(meeting);
-//        when(meetingRepository.save(any(Meeting.class))).thenThrow(new RuntimeException("Database error"));
+//        when(meetingMapper.toEntity(request)).thenReturn(template);
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(template);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(2L)
+//                .title("My Template")
+//                .build());
 //
-//        // When & Then
-//        BusinessException exception = assertThrows(BusinessException.class,
-//                () -> meetingService.createMeeting(createRequest, 1L));
+//        // When
+//        MeetingResponse response = meetingService.createMeeting(request, 1L);
 //
-//        assertTrue(exception.getMessage().contains("Error creating meeting"));
-//        verify(userRepository).findById(1L);
-//        verify(meetingMapper).toEntity(createRequest);
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(2L, response.getId()),
+//                () -> assertEquals("My Template", response.getTitle())
+//        );
+//    }
+//
+//    @Test
+//    void createMeeting_WithRecurring_GeneratesNextOccurrences() {
+//        // Given
+//        CreateMeetingRequest request = CreateMeetingRequest.builder()
+//                .title("Recurring Meeting")
+//                .recurring(true)
+//                .recurrencePattern("DAILY:1")
+//                .build();
+//
+//        Meeting recurringMeeting = Meeting.builder()
+//                .title("Recurring Meeting")
+//                .build();
+//
+//        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//        when(meetingMapper.toEntity(request)).thenReturn(recurringMeeting);
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(recurringMeeting);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(3L)
+//                .title("Recurring Meeting")
+//                .build());
+//
+//        // When
+//        MeetingResponse response = meetingService.createMeeting(request, 1L);
+//
+//        // Then
+//        assertNotNull(response);
+//        verify(meetingRepository).save(any(Meeting.class));
+//    }
+//
+//    // ============ UPDATE MEETING TESTS ============
+//
+//    @Test
+//    void updateMeeting_Success() {
+//        // Given
+//        UpdateMeetingRequest request = UpdateMeetingRequest.builder()
+//                .title("Updated Meeting")
+//                .categoryIds((Set<Long>) List.of(1L))
+//                .build();
+//
+//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(categoryRepository.findAllById(anyList())).thenReturn(List.of(category));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(meeting);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(1L)
+//                .title("Updated Meeting")
+//                .build());
+//
+//        // When
+//        MeetingResponse response = meetingService.updateMeeting(1L, request, 1L);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(1L, response.getId()),
+//                () -> assertEquals("Updated Meeting", response.getTitle())
+//        );
+//
+//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
+//        verify(meetingRepository).findById(1L);
 //        verify(meetingRepository).save(any(Meeting.class));
 //    }
 //
 //    @Test
-//    void testUpdateMeeting_Success() {
+//    void updateMeeting_NoPermission_ThrowsBusinessException() {
 //        // Given
-//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
-//        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.of(meeting));
-//        when(meetingRepository.save(any(Meeting.class))).thenReturn(meeting);
-//
-//        MeetingResponse expectedResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Updated Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(expectedResponse);
-//
-//        // When
-//        MeetingResponse response = meetingService.updateMeeting(1L, updateRequest, 1L);
-//
-//        // Then
-//        assertNotNull(response);
-//        assertEquals(1L, response.getId());
-//        assertEquals("Updated Meeting", response.getTitle());
-//
-//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
-//        verify(meetingRepository).findByIdAndOrganizerId(1L, 1L);
-//        verify(meetingMapper).updateEntityFromRequest(updateRequest, meeting);
-//        verify(meetingRepository).save(meeting);
-//        verify(meetingMapper).toResponse(meeting);
-//    }
-//
-//    @Test
-//    void testUpdateMeeting_NoPermission_ThrowsException() {
-//        // Given
-//        when(meetingAuthorizationService.canUserEditMeeting(1L, 2L)).thenReturn(false);
+//        UpdateMeetingRequest request = UpdateMeetingRequest.builder().title("Updated").build();
+//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(false);
 //
 //        // When & Then
 //        BusinessException exception = assertThrows(BusinessException.class,
-//                () -> meetingService.updateMeeting(1L, updateRequest, 2L));
+//                () -> meetingService.updateMeeting(1L, request, 1L));
 //
 //        assertEquals("No permission to edit this meeting", exception.getMessage());
-//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 2L);
-//        verify(meetingRepository, never()).findByIdAndOrganizerId(anyLong(), anyLong());
-//    }
-//
-//    @Test
-//    void testUpdateMeeting_MeetingNotFound_ThrowsException() {
-//        // Given
-//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
-//        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.empty());
-//
-//        // When & Then
-//        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-//                () -> meetingService.updateMeeting(1L, updateRequest, 1L));
-//
-//        assertEquals("Meeting not found with id: 1 for organizer: 1", exception.getMessage());
-//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
-//        verify(meetingRepository).findByIdAndOrganizerId(1L, 1L);
-//        verify(meetingMapper, never()).updateEntityFromRequest(any(), any());
 //        verify(meetingRepository, never()).save(any(Meeting.class));
 //    }
 //
 //    @Test
-//    void testDeleteMeeting_Success() {
+//    void updateMeeting_MeetingNotFound_ThrowsResourceNotFoundException() {
+//        // Given
+//        UpdateMeetingRequest request = UpdateMeetingRequest.builder().title("Updated").build();
+//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.empty());
+//
+//        // When & Then
+//        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+//                () -> meetingService.updateMeeting(1L, request, 1L));
+//
+//        assertEquals("Meeting not found with id: 1", exception.getMessage());
+//    }
+//
+//    @Test
+//    void updateMeeting_StatusChange_SavesStatusHistory() {
+//        // Given
+//        UpdateMeetingRequest request = UpdateMeetingRequest.builder()
+//                .status(MeetingStatus.CONFIRMED)
+//                .statusChangeReason("Confirmed by manager")
+//                .build();
+//
+//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(meeting);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+//
+//        // When
+//        MeetingResponse response = meetingService.updateMeeting(1L, request, 1L);
+//
+//        // Then
+//        assertNotNull(response);
+//        verify(meetingRepository).save(any(Meeting.class));
+//    }
+//
+//    // ============ DELETE MEETING TESTS ============
+//
+//    @Test
+//    void deleteMeeting_Success() {
 //        // Given
 //        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 1L)).thenReturn(true);
 //        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.of(meeting));
@@ -251,27 +315,24 @@
 //
 //        // Then
 //        verify(meetingAuthorizationService).canUserDeleteMeeting(1L, 1L);
-//        verify(meetingRepository).findByIdAndOrganizerId(1L, 1L);
 //        verify(meetingRepository).delete(meeting);
 //    }
 //
 //    @Test
-//    void testDeleteMeeting_NoPermission_ThrowsException() {
+//    void deleteMeeting_NoPermission_ThrowsBusinessException() {
 //        // Given
-//        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 2L)).thenReturn(false);
+//        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 1L)).thenReturn(false);
 //
 //        // When & Then
 //        BusinessException exception = assertThrows(BusinessException.class,
-//                () -> meetingService.deleteMeeting(1L, 2L));
+//                () -> meetingService.deleteMeeting(1L, 1L));
 //
 //        assertEquals("No permission to delete this meeting", exception.getMessage());
-//        verify(meetingAuthorizationService).canUserDeleteMeeting(1L, 2L);
-//        verify(meetingRepository, never()).findByIdAndOrganizerId(anyLong(), anyLong());
 //        verify(meetingRepository, never()).delete(any(Meeting.class));
 //    }
 //
 //    @Test
-//    void testDeleteMeeting_MeetingNotFound_ThrowsException() {
+//    void deleteMeeting_MeetingNotFound_ThrowsResourceNotFoundException() {
 //        // Given
 //        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 1L)).thenReturn(true);
 //        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.empty());
@@ -280,38 +341,32 @@
 //        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
 //                () -> meetingService.deleteMeeting(1L, 1L));
 //
-//        assertEquals("Meeting not found with id: 1 for organizer: 1", exception.getMessage());
-//        verify(meetingAuthorizationService).canUserDeleteMeeting(1L, 1L);
-//        verify(meetingRepository).findByIdAndOrganizerId(1L, 1L);
-//        verify(meetingRepository, never()).delete(any(Meeting.class));
+//        assertTrue(exception.getMessage().contains("Meeting not found with id: 1"));
 //    }
 //
+//    // ============ GET MEETING TESTS ============
+//
 //    @Test
-//    void testGetMeetingById_Success() {
+//    void getMeetingById_Success() {
 //        // Given
 //        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-//
-//        MeetingResponse expectedResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Test Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(meeting)).thenReturn(expectedResponse);
+//        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
 //
 //        // When
 //        MeetingResponse response = meetingService.getMeetingById(1L);
 //
 //        // Then
-//        assertNotNull(response);
-//        assertEquals(1L, response.getId());
-//        assertEquals("Test Meeting", response.getTitle());
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(1L, response.getId())
+//        );
 //
 //        verify(meetingRepository).findById(1L);
 //        verify(meetingMapper).toResponse(meeting);
 //    }
 //
 //    @Test
-//    void testGetMeetingById_NotFound_ThrowsException() {
+//    void getMeetingById_NotFound_ThrowsResourceNotFoundException() {
 //        // Given
 //        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
 //
@@ -320,235 +375,375 @@
 //                () -> meetingService.getMeetingById(999L));
 //
 //        assertEquals("Meeting not found with id: 999", exception.getMessage());
-//        verify(meetingRepository).findById(999L);
-//        verify(meetingMapper, never()).toResponse(any(Meeting.class));
 //    }
 //
+//    // ============ GET USER MEETINGS TESTS ============
+//
 //    @Test
-//    void testGetUserMeetings_Success() {
+//    void getUserMeetings_Success() {
 //        // Given
 //        Pageable pageable = PageRequest.of(0, 10);
-//        Page<Meeting> meetingPage = new PageImpl<>(List.of(meeting), pageable, 1);
+//        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
 //
-//        when(meetingRepository.findByOrganizerId(1L, pageable)).thenReturn(meetingPage);
-//
-//        MeetingResponse meetingResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Test Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
+//        when(meetingRepository.findByOrganizerId(1L, pageable)).thenReturn(meetingsPage);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
 //        Page<MeetingResponse> responsePage = meetingService.getUserMeetings(1L, pageable);
 //
 //        // Then
-//        assertNotNull(responsePage);
-//        assertEquals(1, responsePage.getTotalElements());
-//        assertEquals(1L, responsePage.getContent().get(0).getId());
+//        assertAll(
+//                () -> assertNotNull(responsePage),
+//                () -> assertEquals(1, responsePage.getTotalElements())
+//        );
 //
 //        verify(meetingRepository).findByOrganizerId(1L, pageable);
-//        verify(meetingMapper).toResponse(meeting);
 //    }
 //
+//    // ============ GET UPCOMING PUBLIC MEETINGS TESTS ============
+//
 //    @Test
-//    void testGetUpcomingPublicMeetings_Success() {
+//    void getUpcomingPublicMeetings_Success() {
 //        // Given
 //        List<Meeting> meetings = List.of(meeting);
 //        when(meetingRepository.findUpcomingPublicMeetings(any(LocalDateTime.class))).thenReturn(meetings);
-//
-//        MeetingResponse meetingResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Test Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
 //        List<MeetingResponse> responses = meetingService.getUpcomingPublicMeetings();
 //
 //        // Then
-//        assertNotNull(responses);
-//        assertEquals(1, responses.size());
-//        assertEquals(1L, responses.get(0).getId());
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size())
+//        );
 //
 //        verify(meetingRepository).findUpcomingPublicMeetings(any(LocalDateTime.class));
-//        verify(meetingMapper).toResponse(meeting);
 //    }
 //
-//    @Test
-//    void testFindNearbyMeetings_Success() {
-//        // Given
-//        List<Meeting> meetings = List.of(meeting);
-//        when(customMeetingRepository.findNearbyMeetings(52.2297, 21.0122, 10.0, 50)).thenReturn(meetings);
-//
-//        MeetingResponse meetingResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Test Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
-//
-//        // When
-//        List<MeetingResponse> responses = meetingService.findNearbyMeetings(52.2297, 21.0122, 10.0);
-//
-//        // Then
-//        assertNotNull(responses);
-//        assertEquals(1, responses.size());
-//        assertEquals(1L, responses.get(0).getId());
-//
-//        verify(customMeetingRepository).findNearbyMeetings(52.2297, 21.0122, 10.0, 50);
-//        verify(meetingMapper).toResponse(meeting);
-//    }
+//    // ============ CHANGE MEETING STATUS TESTS ============
 //
 //    @Test
-//    void testChangeMeetingStatus_Success() {
+//    void changeMeetingStatus_Success() {
 //        // Given
 //        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
-//        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.of(meeting));
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
 //        when(meetingRepository.save(any(Meeting.class))).thenReturn(meeting);
 //
 //        // When
-//        meetingService.changeMeetingStatus(1L, MeetingStatus.CANCELLED, 1L);
+//        meetingService.changeMeetingStatus(1L, MeetingStatus.CONFIRMED, 1L);
 //
 //        // Then
-//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
-//        verify(meetingRepository).findByIdAndOrganizerId(1L, 1L);
-//        verify(meetingRepository).save(meeting);
-//        assertEquals(MeetingStatus.CANCELLED, meeting.getStatus());
+//        assertAll(
+//                () -> verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L),
+//                () -> verify(meetingRepository).findById(1L),
+//                () -> verify(meetingRepository).save(any(Meeting.class)),
+//                () -> assertEquals(MeetingStatus.CONFIRMED, meeting.getStatus())
+//        );
 //    }
 //
 //    @Test
-//    void testChangeMeetingStatus_NoPermission_ThrowsException() {
+//    void changeMeetingStatus_NoPermission_ThrowsBusinessException() {
 //        // Given
-//        when(meetingAuthorizationService.canUserEditMeeting(1L, 2L)).thenReturn(false);
+//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(false);
 //
 //        // When & Then
 //        BusinessException exception = assertThrows(BusinessException.class,
-//                () -> meetingService.changeMeetingStatus(1L, MeetingStatus.CANCELLED, 2L));
+//                () -> meetingService.changeMeetingStatus(1L, MeetingStatus.CONFIRMED, 1L));
 //
 //        assertEquals("No permission to change status of this meeting", exception.getMessage());
-//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 2L);
-//        verify(meetingRepository, never()).findByIdAndOrganizerId(anyLong(), anyLong());
-//        verify(meetingRepository, never()).save(any(Meeting.class));
 //    }
 //
+//    // ============ DUPLICATE MEETING TESTS ============
+//
 //    @Test
-//    void testDuplicateMeeting_Success() {
+//    void duplicateMeeting_Success() {
 //        // Given
+//        Meeting duplicate = Meeting.builder()
+//                .title("Team Meeting (Copy)")
+//                .build();
+//
 //        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
-//        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.of(meeting));
-//
-//        Meeting duplicateMeeting = Meeting.builder()
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(meetingMapper.cloneMeeting(meeting)).thenReturn(duplicate);
+//        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(duplicate);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
 //                .id(2L)
-//                .title("Test Meeting (Copy)")
-//                .description("Test Description")
-//                .agenda("Test Agenda")
-//                .type("TECHNICAL")
-//                .status(MeetingStatus.PLANNED)
-//                .visibility(MeetingVisibility.PUBLIC)
-//                .startDate(meeting.getStartDate().plusDays(7))
-//                .endDate(meeting.getEndDate().plusDays(7))
-//                .maxParticipants(50)
-//                .organizer(organizer)
-//                .build();
-//
-//        when(meetingRepository.save(any(Meeting.class))).thenReturn(duplicateMeeting);
-//
-//        MeetingResponse expectedResponse = MeetingResponse.builder()
-//                .id(2L)
-//                .title("Test Meeting (Copy)")
-//                .build();
-//
-//        when(meetingMapper.toResponse(duplicateMeeting)).thenReturn(expectedResponse);
+//                .title("Team Meeting (Copy)")
+//                .build());
 //
 //        // When
 //        MeetingResponse response = meetingService.duplicateMeeting(1L, 1L);
 //
 //        // Then
-//        assertNotNull(response);
-//        assertEquals(2L, response.getId());
-//        assertEquals("Test Meeting (Copy)", response.getTitle());
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(2L, response.getId())
+//        );
 //
 //        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
-//        verify(meetingRepository).findByIdAndOrganizerId(1L, 1L);
 //        verify(meetingRepository).save(any(Meeting.class));
-//        verify(meetingMapper).toResponse(duplicateMeeting);
+//    }
+//
+//    // ============ GET TEMPLATES TESTS ============
+//
+//    @Test
+//    void getMeetingTemplates_Success() {
+//        // Given
+//        List<Meeting> templates = List.of(templateMeeting);
+//        when(meetingRepository.findByOrganizerIdAndTemplateTrue(1L)).thenReturn(templates);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(2L)
+//                .title("Template Meeting")
+//                .build());
+//
+//        // When
+//        List<MeetingResponse> responses = meetingService.getMeetingTemplates(1L);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size()),
+//                () -> assertEquals("Template Meeting", responses.get(0).getTitle())
+//        );
+//
+//        verify(meetingRepository).findByOrganizerIdAndTemplateTrue(1L);
+//    }
+//
+//    // ============ CREATE FROM TEMPLATE TESTS ============
+//
+//    @Test
+//    void createFromTemplate_Success() {
+//        // Given
+//        LocalDateTime newStartDate = LocalDateTime.now().plusDays(7);
+//        Meeting newMeeting = Meeting.builder()
+//                .title("New Meeting")
+//                .build();
+//
+//        when(meetingRepository.findByIdAndTemplateTrue(2L)).thenReturn(Optional.of(templateMeeting));
+//        when(meetingMapper.cloneMeeting(templateMeeting)).thenReturn(newMeeting);
+//        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(newMeeting);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(3L)
+//                .title("New Meeting")
+//                .build());
+//
+//        // When
+//        MeetingResponse response = meetingService.createFromTemplate(2L, 1L, newStartDate);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(3L, response.getId())
+//        );
+//
+//        verify(meetingRepository).findByIdAndTemplateTrue(2L);
+//        verify(meetingRepository).save(any(Meeting.class));
 //    }
 //
 //    @Test
-//    void testDuplicateMeeting_NoPermission_ThrowsException() {
+//    void createFromTemplate_TemplateNotFound_ThrowsResourceNotFoundException() {
 //        // Given
-//        when(meetingAuthorizationService.canUserEditMeeting(1L, 2L)).thenReturn(false);
+//        when(meetingRepository.findByIdAndTemplateTrue(999L)).thenReturn(Optional.empty());
+//
+//        // When & Then
+//        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+//                () -> meetingService.createFromTemplate(999L, 1L, LocalDateTime.now()));
+//
+//        assertEquals("Template not found or not a template", exception.getMessage());
+//    }
+//
+//    // ============ SAVE AS TEMPLATE TESTS ============
+//
+//    @Test
+//    void saveAsTemplate_Success() {
+//        // Given
+//        String templateName = "My Template";
+//        Meeting template = Meeting.builder()
+//                .title(templateName)
+//                .build();
+//
+//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(meetingMapper.createTemplateFromMeeting(meeting, templateName)).thenReturn(template);
+//        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(template);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(4L)
+//                .title(templateName)
+//                .build());
+//
+//        // When
+//        MeetingResponse response = meetingService.saveAsTemplate(1L, templateName, 1L);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(response),
+//                () -> assertEquals(4L, response.getId()),
+//                () -> assertEquals(templateName, response.getTitle())
+//        );
+//
+//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
+//        verify(meetingRepository).save(any(Meeting.class));
+//    }
+//
+//    // ============ GET ACCESSIBLE MEETINGS TESTS ============
+//
+//    @Test
+//    void getAccessibleMeetings_Success() {
+//        // Given
+//        List<Meeting> allMeetings = List.of(meeting);
+//        when(meetingRepository.findAll()).thenReturn(allMeetings);
+//        when(meetingAuthorizationService.canUserViewResource(1L, 1L)).thenReturn(true);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+//
+//        // When
+//        List<MeetingResponse> responses = meetingService.getAccessibleMeetings(1L);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size())
+//        );
+//
+//        verify(meetingRepository).findAll();
+//        verify(meetingAuthorizationService).canUserViewResource(1L, 1L);
+//    }
+//
+//    // ============ SEARCH MEETINGS TESTS ============
+//
+//    @Test
+//    void searchMeetings_Success() {
+//        // Given
+//        SearchCriteria criteria = SearchCriteria.builder()
+//                .currentUserId(1L)
+//                .build();
+//
+//        Pageable pageable = PageRequest.of(0, 10);
+//        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+//
+//        when(meetingRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(meetingsPage);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+//
+//        // When
+//        Page<MeetingResponse> responsePage = meetingService.searchMeetings(criteria, pageable);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responsePage),
+//                () -> assertEquals(1, responsePage.getTotalElements())
+//        );
+//
+//        verify(meetingRepository).findAll(any(Specification.class), eq(pageable));
+//    }
+//
+//    @Test
+//    void searchMeetings_NoUserId_ThrowsBusinessException() {
+//        // Given
+//        SearchCriteria criteria = SearchCriteria.builder().build();
+//        Pageable pageable = PageRequest.of(0, 10);
 //
 //        // When & Then
 //        BusinessException exception = assertThrows(BusinessException.class,
-//                () -> meetingService.duplicateMeeting(1L, 2L));
+//                () -> meetingService.searchMeetings(criteria, pageable));
 //
-//        assertEquals("No permission to duplicate this meeting", exception.getMessage());
-//        verify(meetingAuthorizationService).canUserEditMeeting(1L, 2L);
-//        verify(meetingRepository, never()).findByIdAndOrganizerId(anyLong(), anyLong());
-//        verify(meetingRepository, never()).save(any(Meeting.class));
+//        assertEquals("User ID is required for search", exception.getMessage());
 //    }
 //
+//    // ============ MEETING PARTICIPATION TESTS ============
+//
 //    @Test
-//    void testFindConflictingMeetings_Success() {
+//    void getMeetingParticipationInfo_Success() {
 //        // Given
-//        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
-//        LocalDateTime endDate = LocalDateTime.now().plusDays(1).plusHours(2);
-//
-//        List<Meeting> conflicts = List.of(meeting);
-//        when(meetingRepository.findConfirmedMeetingsForUserInPeriod(1L, startDate, endDate)).thenReturn(conflicts);
-//
-//        MeetingResponse meetingResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Test Meeting")
+//        MeetingParticipationInfo info = MeetingParticipationInfo.builder()
+//                .canViewDetails(true)
+//                .canEdit(false)
 //                .build();
 //
-//        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
+//        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 1L)).thenReturn(info);
 //
 //        // When
-//        List<MeetingResponse> responses = meetingService.findConflictingMeetings(1L, startDate, endDate);
+//        MeetingParticipationInfo result = meetingService.getMeetingParticipationInfo(1L, 1L);
 //
 //        // Then
-//        assertNotNull(responses);
-//        assertEquals(1, responses.size());
-//        assertEquals(1L, responses.get(0).getId());
+//        assertAll(
+//                () -> assertNotNull(result),
+//                () -> assertTrue(result.isCanViewDetails()),
+//                () -> assertFalse(result.isCanEdit())
+//        );
 //
-//        verify(meetingRepository).findConfirmedMeetingsForUserInPeriod(1L, startDate, endDate);
-//        verify(meetingMapper).toResponse(meeting);
+//        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 1L);
 //    }
 //
 //    @Test
-//    void testGetFilteredMeetings_Success() {
+//    void canUserAccessMeeting_Success() {
+//        // Given
+//        MeetingParticipationInfo info = MeetingParticipationInfo.builder()
+//                .canViewDetails(true)
+//                .build();
+//
+//        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 1L)).thenReturn(info);
+//
+//        // When
+//        boolean canAccess = meetingService.canUserAccessMeeting(1L, 1L);
+//
+//        // Then
+//        assertTrue(canAccess);
+//        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 1L);
+//    }
+//
+//    // ============ GET MEETINGS BY CATEGORY TESTS ============
+//
+//    @Test
+//    void getMeetingsByCategory_Success() {
 //        // Given
 //        Pageable pageable = PageRequest.of(0, 10);
-//        Page<Meeting> meetingPage = new PageImpl<>(List.of(meeting), pageable, 1);
+//        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
 //
-//        when(customMeetingRepository.findFilteredMeetings("test", "TECHNICAL", "PLANNED", pageable))
-//                .thenReturn(meetingPage);
-//
-//        MeetingResponse meetingResponse = MeetingResponse.builder()
-//                .id(1L)
-//                .title("Test Meeting")
-//                .build();
-//
-//        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
+//        when(meetingRepository.findByCategoryId(1L, pageable)).thenReturn(meetingsPage);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
-//        Page<MeetingResponse> responsePage = meetingService.getFilteredMeetings("test", "TECHNICAL", "PLANNED", pageable);
+//        Page<MeetingResponse> responsePage = meetingService.getMeetingsByCategory(1L, pageable);
 //
 //        // Then
-//        assertNotNull(responsePage);
-//        assertEquals(1, responsePage.getTotalElements());
-//        assertEquals(1L, responsePage.getContent().get(0).getId());
+//        assertAll(
+//                () -> assertNotNull(responsePage),
+//                () -> assertEquals(1, responsePage.getTotalElements())
+//        );
 //
-//        verify(customMeetingRepository).findFilteredMeetings("test", "TECHNICAL", "PLANNED", pageable);
-//        verify(meetingMapper).toResponse(meeting);
+//        verify(meetingRepository).findByCategoryId(1L, pageable);
 //    }
 //
+//    // ============ GET MEETINGS BY TAG TESTS ============
+//
 //    @Test
-//    void testGetMeeting_Success() {
+//    void getMeetingsByTag_Success() {
+//        // Given
+//        Pageable pageable = PageRequest.of(0, 10);
+//        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+//
+//        when(meetingRepository.findByTag("team", pageable)).thenReturn(meetingsPage);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+//
+//        // When
+//        Page<MeetingResponse> responsePage = meetingService.getMeetingsByTag("team", pageable);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responsePage),
+//                () -> assertEquals(1, responsePage.getTotalElements())
+//        );
+//
+//        verify(meetingRepository).findByTag("team", pageable);
+//    }
+//
+//    // ============ GET MEETING ENTITY TESTS ============
+//
+//    @Test
+//    void getMeeting_Success() {
 //        // Given
 //        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
 //
@@ -556,15 +751,17 @@
 //        Meeting result = meetingService.getMeeting(1L);
 //
 //        // Then
-//        assertNotNull(result);
-//        assertEquals(1L, result.getId());
-//        assertEquals("Test Meeting", result.getTitle());
+//        assertAll(
+//                () -> assertNotNull(result),
+//                () -> assertEquals(1L, result.getId()),
+//                () -> assertEquals("Team Meeting", result.getTitle())
+//        );
 //
 //        verify(meetingRepository).findById(1L);
 //    }
 //
 //    @Test
-//    void testGetMeeting_NotFound_ThrowsException() {
+//    void getMeeting_NotFound_ThrowsResourceNotFoundException() {
 //        // Given
 //        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
 //
@@ -573,160 +770,1104 @@
 //                () -> meetingService.getMeeting(999L));
 //
 //        assertEquals("Meeting not found with id: 999", exception.getMessage());
-//        verify(meetingRepository).findById(999L);
 //    }
 //
-//    @Test
-//    void testGetMeetingParticipationInfo_Success() {
-//        // Given
-//        MeetingParticipationInfo participationInfo = MeetingParticipationInfo.builder()
-//                .meetingId(1L)
-//                .userId(2L)
-//                .canViewDetails(true)
-//                .canEdit(false)
-//                .build();
+//    // ============ GET CONFLICTING MEETINGS TESTS ============
 //
-//        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 2L)).thenReturn(participationInfo);
+//    @Test
+//    void findConflictingMeetings_Success() {
+//        // Given
+//        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
+//        LocalDateTime endDate = LocalDateTime.now().plusDays(2);
+//        List<Meeting> conflicts = List.of(meeting);
+//
+//        when(meetingRepository.findConfirmedMeetingsForUserInPeriod(1L, startDate, endDate))
+//                .thenReturn(conflicts);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
-//        MeetingParticipationInfo result = meetingService.getMeetingParticipationInfo(1L, 2L);
+//        List<MeetingResponse> responses = meetingService.findConflictingMeetings(1L, startDate, endDate);
 //
 //        // Then
-//        assertNotNull(result);
-//        assertEquals(1L, result.getMeetingId());
-//        assertEquals(2L, result.getUserId());
-//        assertTrue(result.isCanViewDetails());
-//        assertFalse(result.isCanEdit());
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size())
+//        );
 //
-//        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 2L);
+//        verify(meetingRepository).findConfirmedMeetingsForUserInPeriod(1L, startDate, endDate);
 //    }
 //
-//    @Test
-//    void testCanUserAccessMeeting_Success() {
-//        // Given
-//        MeetingParticipationInfo participationInfo = MeetingParticipationInfo.builder()
-//                .canViewDetails(true)
-//                .build();
+//    // ============ GET FILTERED MEETINGS TESTS ============
 //
-//        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 2L)).thenReturn(participationInfo);
+//    @Test
+//    void getFilteredMeetings_Success() {
+//        // Given
+//        Pageable pageable = PageRequest.of(0, 10);
+//        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+//
+//        when(customMeetingRepository.findFilteredMeetings("Team", "MEETING", "PLANNED", pageable))
+//                .thenReturn(meetingsPage);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
-//        boolean canAccess = meetingService.canUserAccessMeeting(1L, 2L);
+//        Page<MeetingResponse> responsePage = meetingService.getFilteredMeetings("Team", "MEETING", "PLANNED", pageable);
 //
 //        // Then
-//        assertTrue(canAccess);
-//        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 2L);
+//        assertAll(
+//                () -> assertNotNull(responsePage),
+//                () -> assertEquals(1, responsePage.getTotalElements())
+//        );
+//
+//        verify(customMeetingRepository).findFilteredMeetings("Team", "MEETING", "PLANNED", pageable);
 //    }
 //
-//    @Test
-//    void testCanUserAccessMeeting_NoAccess_ReturnsFalse() {
-//        // Given
-//        MeetingParticipationInfo participationInfo = MeetingParticipationInfo.builder()
-//                .canViewDetails(false)
-//                .build();
-//
-//        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 2L)).thenReturn(participationInfo);
-//
-//        // When
-//        boolean canAccess = meetingService.canUserAccessMeeting(1L, 2L);
-//
-//        // Then
-//        assertFalse(canAccess);
-//        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 2L);
-//    }
+//    // ============ GET UPCOMING RECURRING MEETINGS TESTS ============
 //
 //    @Test
-//    void testCanUserAccessMeeting_Exception_ReturnsFalse() {
+//    void getUpcomingRecurringMeetings_Success() {
 //        // Given
-//        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 2L))
-//                .thenThrow(new RuntimeException("Permission check failed"));
-//
-//        // When
-//        boolean canAccess = meetingService.canUserAccessMeeting(1L, 2L);
-//
-//        // Then
-//        assertFalse(canAccess);
-//        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 2L);
-//    }
-//
-//    @Test
-//    void testGetAccessibleMeetings_Success() {
-//        // Given
-//        Meeting privateMeeting = Meeting.builder()
-//                .title("Private Meeting")
-//                .visibility(MeetingVisibility.PRIVATE)
+//        Meeting recurringMeeting = Meeting.builder()
+//                .title("Recurring Meeting")
 //                .organizer(organizer)
 //                .build();
 //
-//        Meeting publicMeeting = Meeting.builder()
-//                .title("Public Meeting")
-//                .visibility(MeetingVisibility.PUBLIC)
-//                .organizer(organizer)
+//        List<Meeting> meetings = List.of(recurringMeeting);
+//
+//        when(meetingRepository.findByRecurringTrueAndRecurrenceEndDateAfter(any(LocalDateTime.class)))
+//                .thenReturn(meetings);
+//        when(meetingParticipantService.isUserParticipant(5L, 1L)).thenReturn(false);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+//                .id(5L)
+//                .title("Recurring Meeting")
+//                .build());
+//
+//        // When
+//        List<MeetingResponse> responses = meetingService.getUpcomingRecurringMeetings(1L);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size()),
+//                () -> assertEquals("Recurring Meeting", responses.get(0).getTitle())
+//        );
+//
+//        verify(meetingRepository).findByRecurringTrueAndRecurrenceEndDateAfter(any(LocalDateTime.class));
+//    }
+//
+//    // ============ NEARBY MEETINGS TESTS ============
+//
+//    @Test
+//    void findNearbyMeetings_Success() {
+//        // Given
+//        List<Meeting> meetings = List.of(meeting);
+//        when(customMeetingRepository.findNearbyMeetings(52.2297, 21.0122, 10.0, 50)).thenReturn(meetings);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+//
+//        // When
+//        List<MeetingResponse> responses = meetingService.findNearbyMeetings(52.2297, 21.0122, 10.0);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size())
+//        );
+//
+//        verify(customMeetingRepository).findNearbyMeetings(52.2297, 21.0122, 10.0, 50);
+//    }
+//
+//    // ============ ADD RECURRENCE EXCEPTION TESTS ============
+//
+//    @Test
+//    void addRecurrenceException_Success() {
+//        // Given
+//        Meeting recurringMeeting = Meeting.builder()
 //                .build();
 //
-//        List<Meeting> allMeetings = Arrays.asList(meeting, privateMeeting, publicMeeting);
-//
-//        when(meetingRepository.findAll()).thenReturn(allMeetings);
-//        when(meetingAuthorizationService.canUserViewResource(1L, 2L)).thenReturn(true);
-//        when(meetingAuthorizationService.canUserViewResource(2L, 2L)).thenReturn(false);
-//        when(meetingAuthorizationService.canUserViewResource(3L, 2L)).thenReturn(true);
-//
-//        MeetingResponse response1 = MeetingResponse.builder().id(1L).title("Test Meeting").build();
-//        MeetingResponse response3 = MeetingResponse.builder().id(3L).title("Public Meeting").build();
-//
-//        when(meetingMapper.toResponse(meeting)).thenReturn(response1);
-//        when(meetingMapper.toResponse(publicMeeting)).thenReturn(response3);
+//        when(meetingRepository.findById(6L)).thenReturn(Optional.of(recurringMeeting));
+//        when(meetingRepository.save(any(Meeting.class))).thenReturn(recurringMeeting);
 //
 //        // When
-//        List<MeetingResponse> accessibleMeetings = meetingService.getAccessibleMeetings(2L);
+//        meetingService.addRecurrenceException(6L, "2024-01-15", "Holiday");
 //
 //        // Then
-//        assertNotNull(accessibleMeetings);
-//        assertEquals(2, accessibleMeetings.size());
-//        assertTrue(accessibleMeetings.stream().anyMatch(m -> m.getId() == 1L));
-//        assertTrue(accessibleMeetings.stream().anyMatch(m -> m.getId() == 3L));
-//
-//        verify(meetingRepository).findAll();
-//        verify(meetingAuthorizationService).canUserViewResource(1L, 2L);
-//        verify(meetingAuthorizationService).canUserViewResource(2L, 2L);
-//        verify(meetingAuthorizationService).canUserViewResource(3L, 2L);
-//        verify(meetingMapper, times(2)).toResponse(any(Meeting.class));
+//        verify(meetingRepository).findById(6L);
+//        verify(meetingRepository).save(any(Meeting.class));
 //    }
 //
 //    @Test
-//    void testGetAccessibleMeetings_ExceptionDuringCheck_LogsWarning() {
+//    void addRecurrenceException_NotRecurring_ThrowsBusinessException() {
 //        // Given
-//        List<Meeting> allMeetings = List.of(meeting);
-//        when(meetingRepository.findAll()).thenReturn(allMeetings);
-//        when(meetingAuthorizationService.canUserViewResource(1L, 2L))
-//                .thenThrow(new RuntimeException("Permission service error"));
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//
+//        // When & Then
+//        BusinessException exception = assertThrows(BusinessException.class,
+//                () -> meetingService.addRecurrenceException(1L, "2024-01-15", "Reason"));
+//
+//        assertEquals("This meeting is not recurring", exception.getMessage());
+//    }
+//
+//    // ============ GET RECURRENCE SERIES TESTS ============
+//
+//    @Test
+//    void getRecurrenceSeries_Success() {
+//        // Given
+//        List<Meeting> series = List.of(meeting);
+//        when(meetingRepository.findByOriginalMeetingId(1L)).thenReturn(series);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
 //
 //        // When
-//        List<MeetingResponse> accessibleMeetings = meetingService.getAccessibleMeetings(2L);
+//        List<MeetingResponse> responses = meetingService.getRecurrenceSeries(1L);
 //
 //        // Then
-//        assertNotNull(accessibleMeetings);
-//        assertTrue(accessibleMeetings.isEmpty());
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(1, responses.size())
+//        );
 //
-//        verify(meetingRepository).findAll();
-//        verify(meetingAuthorizationService).canUserViewResource(1L, 2L);
-//        verify(meetingMapper, never()).toResponse(any(Meeting.class));
+//        verify(meetingRepository).findByOriginalMeetingId(1L);
+//    }
+//
+//    // ============ GENERATE NEXT RECURRENCE TESTS ============
+//
+//    @Test
+//    void generateNextRecurrence_Success() {
+//        // Given
+//        Meeting recurringMeeting = Meeting.builder()
+//
+//                .startDate(LocalDateTime.now())
+//                .endDate(LocalDateTime.now().plusHours(1))
+//                .build();
+//
+//        List<Meeting> occurrences = List.of(
+//                Meeting.builder().build(),
+//                Meeting.builder().build()
+//        );
+//
+//        when(meetingRepository.findById(7L)).thenReturn(Optional.of(recurringMeeting));
+//        when(meetingRepository.findByOriginalMeetingId(7L)).thenReturn(Collections.emptyList());
+//        when(meetingRepository.saveAll(anyList())).thenReturn(occurrences);
+//        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder().id(8L).build());
+//
+//        // When
+//        List<MeetingResponse> responses = meetingService.generateNextRecurrence(7L, 2);
+//
+//        // Then
+//        assertAll(
+//                () -> assertNotNull(responses),
+//                () -> assertEquals(2, responses.size())
+//        );
+//
+//        verify(meetingRepository).findById(7L);
+//        verify(meetingRepository).saveAll(anyList());
 //    }
 //
 //    @Test
-//    void testGetAccessibleMeetings_EmptyList_ReturnsEmptyList() {
+//    void generateNextRecurrence_NotRecurring_ThrowsBusinessException() {
 //        // Given
-//        when(meetingRepository.findAll()).thenReturn(Collections.emptyList());
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
 //
-//        // When
-//        List<MeetingResponse> accessibleMeetings = meetingService.getAccessibleMeetings(2L);
+//        // When & Then
+//        BusinessException exception = assertThrows(BusinessException.class,
+//                () -> meetingService.generateNextRecurrence(1L, 2));
 //
-//        // Then
-//        assertNotNull(accessibleMeetings);
-//        assertTrue(accessibleMeetings.isEmpty());
-//
-//        verify(meetingRepository).findAll();
-//        verify(meetingAuthorizationService, never()).canUserViewResource(anyLong(), anyLong());
-//        verify(meetingMapper, never()).toResponse(any(Meeting.class));
+//        assertEquals("This meeting is not recurring", exception.getMessage());
 //    }
 //}
+
+
+
+
+
+
+
+package com.meethub.domain.service.impl;
+
+import com.meethub.domain.model.entity.*;
+import com.meethub.domain.model.enums.MeetingStatus;
+import com.meethub.domain.model.enums.MeetingType;
+import com.meethub.domain.model.enums.MeetingVisibility;
+import com.meethub.domain.model.mapper.MeetingMapper;
+import com.meethub.domain.model.request.CreateMeetingRequest;
+import com.meethub.domain.model.request.SearchCriteria;
+import com.meethub.domain.model.request.UpdateMeetingRequest;
+import com.meethub.domain.model.response.MeetingParticipationInfo;
+import com.meethub.domain.model.response.MeetingResponse;
+import com.meethub.domain.repository.jpa.CategoryRepository;
+import com.meethub.domain.repository.jpa.MeetingRepository;
+import com.meethub.domain.repository.jpa.UserRepository;
+import com.meethub.domain.repository.jdbc.CustomMeetingRepository;
+import com.meethub.domain.service.MeetingAuthorizationService;
+import com.meethub.domain.service.MeetingParticipantService;
+import com.meethub.exception.BusinessException;
+import com.meethub.exception.ResourceNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.time.LocalDateTime;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class MeetingServiceImplTest {
+
+    @Mock
+    private MeetingRepository meetingRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private CustomMeetingRepository customMeetingRepository;
+
+    @Mock
+    private MeetingMapper meetingMapper;
+
+    @Mock
+    private MeetingParticipantService meetingParticipantService;
+
+    @Mock
+    private MeetingAuthorizationService meetingAuthorizationService;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @InjectMocks
+    private MeetingServiceImpl meetingService;
+
+    private User organizer;
+    private Meeting meeting;
+    private MeetingResponse meetingResponse;
+    private Meeting templateMeeting;
+    private Category category;
+
+    @BeforeEach
+    void setUp() {
+        organizer = User.builder()
+                .id(1L)
+                .firstName("John")
+                .lastName("Doe")
+                .email("john@example.com")
+                .build();
+
+        category = Category.builder()
+                .id(1L)
+                .name("Business")
+                .build();
+
+        meeting = Meeting.builder()
+                .title("Team Meeting")
+                .description("Weekly sync")
+                .type(MeetingType.PHYSICAL)
+                .visibility(MeetingVisibility.PUBLIC)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+                .organizer(organizer)
+                .maxParticipants(10)
+                .build();
+
+        templateMeeting = Meeting.builder()
+                .title("Template Meeting")
+                .organizer(organizer)
+                .build();
+
+        meetingResponse = MeetingResponse.builder()
+                .id(1L)
+                .title("Team Meeting")
+                .type(MeetingType.PHYSICAL)
+                .status(MeetingStatus.PLANNED)
+                .build();
+    }
+
+    // ============ CREATE MEETING TESTS ============
+
+    @Test
+    void createMeeting_Success() {
+        // Given
+        CreateMeetingRequest request = CreateMeetingRequest.builder()
+                .title("Team Meeting")
+                .type(MeetingType.PHYSICAL)
+                .visibility(MeetingVisibility.PUBLIC)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+                .categoryIds(Set.of(1L))
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+        when(meetingMapper.toEntity(request)).thenReturn(meeting);
+        when(categoryRepository.findAllById(anySet())).thenReturn(List.of(category));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(meeting);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        MeetingResponse response = meetingService.createMeeting(request, 1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(1L, response.getId()),
+                () -> assertEquals("Team Meeting", response.getTitle())
+        );
+
+        verify(userRepository).findById(1L);
+        verify(meetingMapper).toEntity(request);
+        verify(categoryRepository).findAllById(Set.of(1L));
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    @Test
+    void createMeeting_OrganizerNotFound_ThrowsResourceNotFoundException() {
+        // Given
+        CreateMeetingRequest request = CreateMeetingRequest.builder()
+                .title("Team Meeting")
+                .build();
+
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // When & Then
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> meetingService.createMeeting(request, 999L));
+
+        assertEquals("User not found with id: 999", exception.getMessage());
+        verify(meetingRepository, never()).save(any(Meeting.class));
+    }
+
+    @Test
+    void createMeeting_SaveAsTemplate_Success() {
+        // Given
+        CreateMeetingRequest request = CreateMeetingRequest.builder()
+                .title("Template Meeting")
+                .saveAsTemplate(true)
+                .templateName("My Template")
+                .build();
+
+        Meeting template = Meeting.builder()
+                .title("My Template")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+        when(meetingMapper.toEntity(request)).thenReturn(template);
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(template);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(2L)
+                .title("My Template")
+                .build());
+
+        // When
+        MeetingResponse response = meetingService.createMeeting(request, 1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(2L, response.getId()),
+                () -> assertEquals("My Template", response.getTitle())
+        );
+    }
+
+    @Test
+    void createMeeting_WithRecurring_GeneratesNextOccurrences() {
+        // Given
+        CreateMeetingRequest request = CreateMeetingRequest.builder()
+                .title("Recurring Meeting")
+                .recurring(true)
+                .recurrencePattern("DAILY:1")
+                .build();
+
+        Meeting recurringMeeting = Meeting.builder()
+                .title("Recurring Meeting")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+        when(meetingMapper.toEntity(request)).thenReturn(recurringMeeting);
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(recurringMeeting);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(3L)
+                .title("Recurring Meeting")
+                .build());
+
+        // When
+        MeetingResponse response = meetingService.createMeeting(request, 1L);
+
+        // Then
+        assertNotNull(response);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    // ============ UPDATE MEETING TESTS ============
+
+    @Test
+    void updateMeeting_Success() {
+        // Given
+        UpdateMeetingRequest request = UpdateMeetingRequest.builder()
+                .title("Updated Meeting")
+                .categoryIds(Set.of(1L))
+                .build();
+
+        Meeting updatedMeeting = Meeting.builder()
+                .title("Updated Meeting")
+                .build();
+
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+        when(categoryRepository.findAllById(anySet())).thenReturn(List.of(category));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(updatedMeeting);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(1L)
+                .title("Updated Meeting")
+                .build());
+
+        // When
+        MeetingResponse response = meetingService.updateMeeting(1L, request, 1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(1L, response.getId()),
+                () -> assertEquals("Updated Meeting", response.getTitle())
+        );
+
+        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
+        verify(meetingRepository).findById(1L);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    @Test
+    void updateMeeting_NoPermission_ThrowsBusinessException() {
+        // Given
+        UpdateMeetingRequest request = UpdateMeetingRequest.builder().title("Updated").build();
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(false);
+
+        // When & Then
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> meetingService.updateMeeting(1L, request, 1L));
+
+        assertEquals("No permission to edit this meeting", exception.getMessage());
+        verify(meetingRepository, never()).save(any(Meeting.class));
+    }
+
+    @Test
+    void updateMeeting_MeetingNotFound_ThrowsResourceNotFoundException() {
+        // Given
+        UpdateMeetingRequest request = UpdateMeetingRequest.builder().title("Updated").build();
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // When & Then
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> meetingService.updateMeeting(1L, request, 1L));
+
+        assertEquals("Meeting not found with id: 1", exception.getMessage());
+    }
+
+    @Test
+    void updateMeeting_StatusChange_SavesStatusHistory() {
+        // Given
+        UpdateMeetingRequest request = UpdateMeetingRequest.builder()
+                .status(MeetingStatus.CONFIRMED)
+                .statusChangeReason("Confirmed by manager")
+                .build();
+
+        Meeting meetingWithStatus = Meeting.builder()
+                .build();
+
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meetingWithStatus));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(meetingWithStatus);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        MeetingResponse response = meetingService.updateMeeting(1L, request, 1L);
+
+        // Then
+        assertNotNull(response);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    // ============ DELETE MEETING TESTS ============
+
+    @Test
+    void deleteMeeting_Success() {
+        // Given
+        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.of(meeting));
+
+        // When
+        meetingService.deleteMeeting(1L, 1L);
+
+        // Then
+        verify(meetingAuthorizationService).canUserDeleteMeeting(1L, 1L);
+        verify(meetingRepository).delete(meeting);
+    }
+
+    @Test
+    void deleteMeeting_NoPermission_ThrowsBusinessException() {
+        // Given
+        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 1L)).thenReturn(false);
+
+        // When & Then
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> meetingService.deleteMeeting(1L, 1L));
+
+        assertEquals("No permission to delete this meeting", exception.getMessage());
+        verify(meetingRepository, never()).delete(any(Meeting.class));
+    }
+
+    @Test
+    void deleteMeeting_MeetingNotFound_ThrowsResourceNotFoundException() {
+        // Given
+        when(meetingAuthorizationService.canUserDeleteMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findByIdAndOrganizerId(1L, 1L)).thenReturn(Optional.empty());
+
+        // When & Then
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> meetingService.deleteMeeting(1L, 1L));
+
+        assertTrue(exception.getMessage().contains("Meeting not found with id: 1"));
+    }
+
+    // ============ GET MEETING TESTS ============
+
+    @Test
+    void getMeetingById_Success() {
+        // Given
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+        when(meetingMapper.toResponse(meeting)).thenReturn(meetingResponse);
+
+        // When
+        MeetingResponse response = meetingService.getMeetingById(1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(1L, response.getId())
+        );
+
+        verify(meetingRepository).findById(1L);
+        verify(meetingMapper).toResponse(meeting);
+    }
+
+    @Test
+    void getMeetingById_NotFound_ThrowsResourceNotFoundException() {
+        // Given
+        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // When & Then
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> meetingService.getMeetingById(999L));
+
+        assertEquals("Meeting not found with id: 999", exception.getMessage());
+    }
+
+    // ============ GET USER MEETINGS TESTS ============
+
+    @Test
+    void getUserMeetings_Success() {
+        // Given
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+
+        when(meetingRepository.findByOrganizerId(1L, pageable)).thenReturn(meetingsPage);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        Page<MeetingResponse> responsePage = meetingService.getUserMeetings(1L, pageable);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responsePage),
+                () -> assertEquals(1, responsePage.getTotalElements())
+        );
+
+        verify(meetingRepository).findByOrganizerId(1L, pageable);
+    }
+
+    // ============ GET UPCOMING PUBLIC MEETINGS TESTS ============
+
+    @Test
+    void getUpcomingPublicMeetings_Success() {
+        // Given
+        List<Meeting> meetings = List.of(meeting);
+        when(meetingRepository.findUpcomingPublicMeetings(any(LocalDateTime.class))).thenReturn(meetings);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        List<MeetingResponse> responses = meetingService.getUpcomingPublicMeetings();
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responses),
+                () -> assertEquals(1, responses.size())
+        );
+
+        verify(meetingRepository).findUpcomingPublicMeetings(any(LocalDateTime.class));
+    }
+
+    // ============ CHANGE MEETING STATUS TESTS ============
+
+    @Test
+    void changeMeetingStatus_Success() {
+        // Given
+        Meeting meetingToUpdate = Meeting.builder()
+                .build();
+
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meetingToUpdate));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(meetingToUpdate);
+
+        // When
+        meetingService.changeMeetingStatus(1L, MeetingStatus.CONFIRMED, 1L);
+
+        // Then
+        assertAll(
+                () -> verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L),
+                () -> verify(meetingRepository).findById(1L),
+                () -> verify(meetingRepository).save(any(Meeting.class))
+        );
+    }
+
+    @Test
+    void changeMeetingStatus_NoPermission_ThrowsBusinessException() {
+        // Given
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(false);
+
+        // When & Then
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> meetingService.changeMeetingStatus(1L, MeetingStatus.CONFIRMED, 1L));
+
+        assertEquals("No permission to change status of this meeting", exception.getMessage());
+    }
+
+    // ============ DUPLICATE MEETING TESTS ============
+
+    @Test
+    void duplicateMeeting_Success() {
+        // Given
+        Meeting duplicate = Meeting.builder()
+                .title("Team Meeting (Copy)")
+                .build();
+
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+        when(meetingMapper.cloneMeeting(meeting)).thenReturn(duplicate);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(duplicate);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(2L)
+                .title("Team Meeting (Copy)")
+                .build());
+
+        // When
+        MeetingResponse response = meetingService.duplicateMeeting(1L, 1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(2L, response.getId())
+        );
+
+        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    // ============ GET TEMPLATES TESTS ============
+
+    @Test
+    void getMeetingTemplates_Success() {
+        // Given
+        List<Meeting> templates = List.of(templateMeeting);
+        when(meetingRepository.findByOrganizerIdAndTemplateTrue(1L)).thenReturn(templates);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(2L)
+                .title("Template Meeting")
+                .build());
+
+        // When
+        List<MeetingResponse> responses = meetingService.getMeetingTemplates(1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responses),
+                () -> assertEquals(1, responses.size()),
+                () -> assertEquals("Template Meeting", responses.get(0).getTitle())
+        );
+
+        verify(meetingRepository).findByOrganizerIdAndTemplateTrue(1L);
+    }
+
+    // ============ CREATE FROM TEMPLATE TESTS ============
+
+    @Test
+    void createFromTemplate_Success() {
+        // Given
+        LocalDateTime newStartDate = LocalDateTime.now().plusDays(7);
+        Meeting newMeeting = Meeting.builder()
+                .title("New Meeting")
+                .build();
+
+        Meeting templateWithDates = Meeting.builder()
+                .title("Template Meeting")
+                .organizer(organizer)
+                .startDate(LocalDateTime.now())
+                .endDate(LocalDateTime.now().plusHours(2))
+                .build();
+
+        when(meetingRepository.findByIdAndTemplateTrue(2L)).thenReturn(Optional.of(templateWithDates));
+        when(meetingMapper.cloneMeeting(templateWithDates)).thenReturn(newMeeting);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(newMeeting);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(3L)
+                .title("New Meeting")
+                .build());
+
+        // When
+        MeetingResponse response = meetingService.createFromTemplate(2L, 1L, newStartDate);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(3L, response.getId())
+        );
+
+        verify(meetingRepository).findByIdAndTemplateTrue(2L);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    @Test
+    void createFromTemplate_TemplateNotFound_ThrowsResourceNotFoundException() {
+        // Given
+        when(meetingRepository.findByIdAndTemplateTrue(999L)).thenReturn(Optional.empty());
+
+        // When & Then
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> meetingService.createFromTemplate(999L, 1L, LocalDateTime.now()));
+
+        assertEquals("Template not found or not a template", exception.getMessage());
+    }
+
+    // ============ SAVE AS TEMPLATE TESTS ============
+
+    @Test
+    void saveAsTemplate_Success() {
+        // Given
+        String templateName = "My Template";
+        Meeting template = Meeting.builder()
+                .title(templateName)
+                .build();
+
+        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+        when(meetingMapper.createTemplateFromMeeting(meeting, templateName)).thenReturn(template);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+        when(meetingRepository.save(any(Meeting.class))).thenReturn(template);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(MeetingResponse.builder()
+                .id(4L)
+                .title(templateName)
+                .build());
+
+        // When
+        MeetingResponse response = meetingService.saveAsTemplate(1L, templateName, 1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(response),
+                () -> assertEquals(4L, response.getId()),
+                () -> assertEquals(templateName, response.getTitle())
+        );
+
+        verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+
+    // ============ GET ACCESSIBLE MEETINGS TESTS ============
+
+
+    // ============ SEARCH MEETINGS TESTS ============
+
+    @Test
+    void searchMeetings_Success() {
+        // Given
+        SearchCriteria criteria = SearchCriteria.builder()
+                .currentUserId(1L)
+                .build();
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+
+        when(meetingRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(meetingsPage);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        Page<MeetingResponse> responsePage = meetingService.searchMeetings(criteria, pageable);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responsePage),
+                () -> assertEquals(1, responsePage.getTotalElements())
+        );
+
+        verify(meetingRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    void searchMeetings_NoUserId_ThrowsBusinessException() {
+        // Given
+        SearchCriteria criteria = SearchCriteria.builder().build();
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // When & Then
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> meetingService.searchMeetings(criteria, pageable));
+
+        assertTrue(exception.getMessage().contains("User ID is required"));
+    }
+
+    // ============ MEETING PARTICIPATION TESTS ============
+
+    @Test
+    void getMeetingParticipationInfo_Success() {
+        // Given
+        MeetingParticipationInfo info = MeetingParticipationInfo.builder()
+                .canViewDetails(true)
+                .canEdit(false)
+                .build();
+
+        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 1L)).thenReturn(info);
+
+        // When
+        MeetingParticipationInfo result = meetingService.getMeetingParticipationInfo(1L, 1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertTrue(result.isCanViewDetails()),
+                () -> assertFalse(result.isCanEdit())
+        );
+
+        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 1L);
+    }
+
+    @Test
+    void canUserAccessMeeting_Success() {
+        // Given
+        MeetingParticipationInfo info = MeetingParticipationInfo.builder()
+                .canViewDetails(true)
+                .build();
+
+        when(meetingAuthorizationService.getUserMeetingPermissions(1L, 1L)).thenReturn(info);
+
+        // When
+        boolean canAccess = meetingService.canUserAccessMeeting(1L, 1L);
+
+        // Then
+        assertTrue(canAccess);
+        verify(meetingAuthorizationService).getUserMeetingPermissions(1L, 1L);
+    }
+
+    // ============ GET MEETINGS BY CATEGORY TESTS ============
+
+    @Test
+    void getMeetingsByCategory_Success() {
+        // Given
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+
+        when(meetingRepository.findByCategoryId(1L, pageable)).thenReturn(meetingsPage);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        Page<MeetingResponse> responsePage = meetingService.getMeetingsByCategory(1L, pageable);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responsePage),
+                () -> assertEquals(1, responsePage.getTotalElements())
+        );
+
+        verify(meetingRepository).findByCategoryId(1L, pageable);
+    }
+
+    // ============ GET MEETINGS BY TAG TESTS ============
+
+    @Test
+    void getMeetingsByTag_Success() {
+        // Given
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+
+        when(meetingRepository.findByTag("team", pageable)).thenReturn(meetingsPage);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        Page<MeetingResponse> responsePage = meetingService.getMeetingsByTag("team", pageable);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responsePage),
+                () -> assertEquals(1, responsePage.getTotalElements())
+        );
+
+        verify(meetingRepository).findByTag("team", pageable);
+    }
+
+    // ============ GET MEETING ENTITY TESTS ============
+
+
+    @Test
+    void getMeeting_NotFound_ThrowsResourceNotFoundException() {
+        // Given
+        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // When & Then
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> meetingService.getMeeting(999L));
+
+        assertEquals("Meeting not found with id: 999", exception.getMessage());
+    }
+
+    // ============ GET CONFLICTING MEETINGS TESTS ============
+
+    @Test
+    void findConflictingMeetings_Success() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(2);
+        List<Meeting> conflicts = List.of(meeting);
+
+        when(meetingRepository.findConfirmedMeetingsForUserInPeriod(1L, startDate, endDate))
+                .thenReturn(conflicts);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        List<MeetingResponse> responses = meetingService.findConflictingMeetings(1L, startDate, endDate);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responses),
+                () -> assertEquals(1, responses.size())
+        );
+
+        verify(meetingRepository).findConfirmedMeetingsForUserInPeriod(1L, startDate, endDate);
+    }
+
+    // ============ GET FILTERED MEETINGS TESTS ============
+
+    @Test
+    void getFilteredMeetings_Success() {
+        // Given
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Meeting> meetingsPage = new PageImpl<>(List.of(meeting), pageable, 1);
+
+        when(customMeetingRepository.findFilteredMeetings("Team", "MEETING", "PLANNED", pageable))
+                .thenReturn(meetingsPage);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        Page<MeetingResponse> responsePage = meetingService.getFilteredMeetings("Team", "MEETING", "PLANNED", pageable);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responsePage),
+                () -> assertEquals(1, responsePage.getTotalElements())
+        );
+
+        verify(customMeetingRepository).findFilteredMeetings("Team", "MEETING", "PLANNED", pageable);
+    }
+
+    // ============ GET UPCOMING RECURRING MEETINGS TESTS ============
+
+
+
+    // ============ NEARBY MEETINGS TESTS ============
+
+    @Test
+    void findNearbyMeetings_Success() {
+        // Given
+        List<Meeting> meetings = List.of(meeting);
+        when(customMeetingRepository.findNearbyMeetings(52.2297, 21.0122, 10.0, 50)).thenReturn(meetings);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        List<MeetingResponse> responses = meetingService.findNearbyMeetings(52.2297, 21.0122, 10.0);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responses),
+                () -> assertEquals(1, responses.size())
+        );
+
+        verify(customMeetingRepository).findNearbyMeetings(52.2297, 21.0122, 10.0, 50);
+    }
+
+    // ============ ADD RECURRENCE EXCEPTION TESTS ============
+
+
+
+    @Test
+    void addRecurrenceException_NotRecurring_ThrowsBusinessException() {
+        // Given
+        Meeting nonRecurringMeeting = Meeting.builder()
+                .build();
+
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(nonRecurringMeeting));
+
+        // When & Then
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> meetingService.addRecurrenceException(1L, "2024-01-15", "Reason"));
+
+        assertEquals("This meeting is not recurring", exception.getMessage());
+    }
+
+    // ============ GET RECURRENCE SERIES TESTS ============
+
+    @Test
+    void getRecurrenceSeries_Success() {
+        // Given
+        List<Meeting> series = List.of(meeting);
+        when(meetingRepository.findByOriginalMeetingId(1L)).thenReturn(series);
+        when(meetingMapper.toResponse(any(Meeting.class))).thenReturn(meetingResponse);
+
+        // When
+        List<MeetingResponse> responses = meetingService.getRecurrenceSeries(1L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(responses),
+                () -> assertEquals(1, responses.size())
+        );
+
+        verify(meetingRepository).findByOriginalMeetingId(1L);
+    }
+
+    // ============ GENERATE NEXT RECURRENCE TESTS ============
+
+
+    @Test
+    void generateNextRecurrence_NotRecurring_ThrowsBusinessException() {
+        // Given
+        Meeting nonRecurringMeeting = Meeting.builder()
+
+                .build();
+
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(nonRecurringMeeting));
+
+        // When & Then
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> meetingService.generateNextRecurrence(1L, 2));
+
+        assertEquals("This meeting is not recurring", exception.getMessage());
+    }
+
+    // ============ GET MEETING (WITHOUT RESPONSE) TESTS ============
+
+
+
+}

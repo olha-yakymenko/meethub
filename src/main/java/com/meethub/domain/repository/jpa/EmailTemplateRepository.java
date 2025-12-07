@@ -10,5 +10,4 @@ import java.util.Optional;
 @Repository
 public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, Long> {
     Optional<EmailTemplate> findByTemplateKeyAndLanguage(String templateKey, String language);
-    List<EmailTemplate> findByTemplateKey(String templateKey);
 }

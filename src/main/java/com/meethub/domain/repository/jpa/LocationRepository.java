@@ -31,45 +31,12 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
     @Override
     boolean existsById(Long id);
-
-    // Filtrowanie (generowane automatycznie)
-    List<Location> findByType(LocationType type);
-    List<Location> findByCity(String city);
-    List<Location> findByCountry(String country);
-    List<Location> findByName(String name);
-    List<Location> findByNameContaining(String name);
-    List<Location> findByNameContainingIgnoreCase(String name);
-    Page<Location> findByNameContainingIgnoreCase(String name, Pageable pageable);
-
-    // Filtrowanie + sortowanie (generowane automatycznie)
-    List<Location> findAllByOrderByNameAsc();
-    List<Location> findAllByOrderByNameDesc();
-    List<Location> findByTypeOrderByNameAsc(LocationType type);
-    List<Location> findByCityOrderByNameAsc(String city);
-    List<Location> findByCountryOrderByNameAsc(String country);
-
-    // Sprawdzanie istnienia (generowane automatycznie)
     boolean existsByNameAndAddress(String name, String address);
-    boolean existsByVirtualMeetingUrl(String virtualMeetingUrl);
+
 
     // Wyszukiwanie pojedynczego rekordu (generowane automatycznie)
     Optional<Location> findByVirtualMeetingUrl(String virtualMeetingUrl);
 
-    // ============ CUSTOM QUERY METHODS ============
-
-    // Lokalizacje z koordynatami
-    @Query("SELECT l FROM Location l WHERE l.latitude IS NOT NULL AND l.longitude IS NOT NULL")
-    List<Location> findLocationsWithCoordinates();
-
-    // Lokalizacje po mieście (case-insensitive)
-    @Query("SELECT l FROM Location l WHERE LOWER(l.city) = LOWER(:city)")
-    List<Location> findByCityIgnoreCase(@Param("city") String city);
-
-    // Lokalizacje po mieście z sortowaniem (case-insensitive)
-    @Query("SELECT l FROM Location l WHERE LOWER(l.city) = LOWER(:city) ORDER BY l.name")
-    List<Location> findByCityIgnoreCaseOrderByName(@Param("city") String city);
-
-    // ============ NATIVE QUERIES (dla złożonych zapytań) ============
 
     // Zaawansowane wyszukiwanie
     @Query(value = """
@@ -145,40 +112,4 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
         """)
     List<LocationBasicInfo> findAllForSelect();
 
-    // Lokalizacje fizyczne dla selecta
-    @Query("""
-        SELECT l.id as id, l.name as name, l.city as city 
-        FROM Location l 
-        WHERE l.type = 'PHYSICAL' 
-        ORDER BY l.name
-        """)
-    List<LocationBasicInfo> findPhysicalLocationsForSelect();
-
-    // Lokalizacje wirtualne dla selecta
-    @Query("""
-        SELECT l.id as id, l.name as name, l.virtualMeetingUrl as virtualMeetingUrl 
-        FROM Location l 
-        WHERE l.type = 'VIRTUAL' 
-        ORDER BY l.name
-        """)
-    List<LocationBasicInfo> findVirtualLocationsForSelect();
-
-    // ============ SPECJALNE METODY ============
-
-    // Liczba lokalizacji według typu
-    @Query("SELECT COUNT(l) FROM Location l WHERE l.type = :type")
-    Long countByLocationType(@Param("type") LocationType type);
-
-    // Czy istnieje lokalizacja z takim samym adresem
-    @Query("SELECT CASE WHEN COUNT(l) > 0 THEN TRUE ELSE FALSE END " +
-            "FROM Location l WHERE l.address = :address AND l.city = :city")
-    boolean existsByAddressAndCity(@Param("address") String address,
-                                   @Param("city") String city);
-
-    // Pobierz lokalizacje bez koordynat (do geokodowania)
-    @Query("SELECT l FROM Location l " +
-            "WHERE l.type = 'PHYSICAL' " +
-            "AND (l.latitude IS NULL OR l.longitude IS NULL) " +
-            "AND l.address IS NOT NULL")
-    List<Location> findLocationsWithoutCoordinates();
 }

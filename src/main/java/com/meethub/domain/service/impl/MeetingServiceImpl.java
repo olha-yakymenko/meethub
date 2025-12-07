@@ -285,9 +285,7 @@
 
 package com.meethub.domain.service.impl;
 
-import com.meethub.domain.model.entity.Category;
-import com.meethub.domain.model.entity.Meeting;
-import com.meethub.domain.model.entity.User;
+import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.SearchCriteria;
@@ -301,6 +299,7 @@ import com.meethub.domain.repository.jdbc.CustomMeetingRepository;
 import com.meethub.domain.repository.specification.MeetingSpecification;
 import com.meethub.domain.service.MeetingAuthorizationService;
 import com.meethub.domain.service.MeetingParticipantService;
+import com.meethub.domain.service.MeetingSchedulerService;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.exception.BusinessException;
 import com.meethub.exception.ResourceNotFoundException;
@@ -332,6 +331,8 @@ public class MeetingServiceImpl implements MeetingService {
     private final MeetingParticipantService meetingParticipantService;
     private final MeetingAuthorizationService meetingAuthorizationService;
     private final CategoryRepository categoryRepository;
+
+    private final MeetingSchedulerService meetingSchedulerService;
 
     @Override
     @Transactional
@@ -386,6 +387,10 @@ public class MeetingServiceImpl implements MeetingService {
                 generateNextRecurrence(savedMeeting.getId(), 3); // Generuj 3 następne
             }
 
+            meetingSchedulerService.scheduleMeetingNotifications(savedMeeting);
+
+            log.info("✅ Utworzono spotkanie {} i zaplanowano powiadomienia", savedMeeting.getId());
+
             return meetingMapper.toResponse(savedMeeting);
         } catch (Exception e) {
             log.error("=== ERROR CREATING MEETING ===");
@@ -394,12 +399,62 @@ public class MeetingServiceImpl implements MeetingService {
         }
     }
 
+//    @Override
+//    @Transactional
+//    public MeetingResponse updateMeeting(Long meetingId, UpdateMeetingRequest request, Long userId) {
+//        log.info("Updating meeting {} by user {}", meetingId, userId);
+//
+//        // ✅ SPRAWDŹ UPRAWNIENIA
+//        if (!meetingAuthorizationService.canUserEditMeeting(meetingId, userId)) {
+//            throw new BusinessException("No permission to edit this meeting");
+//        }
+//
+//        Meeting meeting = meetingRepository.findById(meetingId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
+//
+//        // ✅ ZAPISZ ZMIANĘ STATUSU W HISTORII
+//        if (request.getStatus() != null && !request.getStatus().equals(meeting.getStatus())) {
+//            saveStatusChange(meeting, meeting.getStatus().name(),
+//                    request.getStatus().name(), userId, request.getStatusChangeReason());
+//        }
+//
+//        if (request.getStartDate() != null &&
+//                !request.getStartDate().equals(meeting.getStartDate())) {
+//
+//            // Anuluj stare powiadomienia
+//            meetingSchedulerService.cancelMeetingSchedule(meetingId);
+//
+//            // Zaplanuj nowe
+//            meetingSchedulerService.scheduleMeetingNotifications(updatedMeeting);
+//
+//            log.info("🔄 Przeplanowano powiadomienia dla spotkania {} po zmianie daty",
+//                    meetingId);
+//        }
+//
+//
+//        // ✅ AKTUALIZUJ KATEGORIE
+//        if (request.getCategoryIds() != null) {
+//            Set<Category> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
+//            meeting.setCategories(categories);
+//            log.info("Updated categories for meeting {}: {} categories", meetingId, categories.size());
+//        }
+//
+//        // ✅ AKTUALIZUJ POZOSTAŁE POLA
+//        meetingMapper.updateEntityFromRequest(request, meeting);
+//
+//        Meeting updatedMeeting = meetingRepository.save(meeting);
+//        log.info("Meeting {} updated by user {}", meetingId, userId);
+//
+//        return meetingMapper.toResponse(updatedMeeting);
+//    }
+
+
     @Override
     @Transactional
     public MeetingResponse updateMeeting(Long meetingId, UpdateMeetingRequest request, Long userId) {
         log.info("Updating meeting {} by user {}", meetingId, userId);
 
-        // ✅ SPRAWDŹ UPRAWNIENIA
+        // 1. SPRAWDŹ UPRAWNIENIA
         if (!meetingAuthorizationService.canUserEditMeeting(meetingId, userId)) {
             throw new BusinessException("No permission to edit this meeting");
         }
@@ -407,27 +462,124 @@ public class MeetingServiceImpl implements MeetingService {
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
 
-        // ✅ ZAPISZ ZMIANĘ STATUSU W HISTORII
-        if (request.getStatus() != null && !request.getStatus().equals(meeting.getStatus())) {
-            saveStatusChange(meeting, meeting.getStatus().name(),
+        // 2. ZAPISZ STARE DANE DO PORÓWNANIA
+        MeetingStatus oldStatus = meeting.getStatus();
+        LocalDateTime oldStartDate = meeting.getStartDate();
+        LocalDateTime oldEndDate = meeting.getEndDate();
+        String oldTitle = meeting.getTitle();
+        Location oldLocation = meeting.getLocation() != null ?
+                new Location(meeting.getLocation()) : null; // głęboka kopia jeśli potrzeba
+
+        // 3. ZAPISZ ZMIANĘ STATUSU W HISTORII
+        if (request.getStatus() != null && !request.getStatus().equals(oldStatus)) {
+            saveStatusChange(meeting, oldStatus.name(),
                     request.getStatus().name(), userId, request.getStatusChangeReason());
+
+            // Jeśli zmieniasz status na CANCELLED - anuluj powiadomienia
+            if (request.getStatus() == MeetingStatus.CANCELLED) {
+                meetingSchedulerService.cancelMeetingSchedule(meetingId);
+                log.info("❌ Anulowano powiadomienia dla spotkania {} (status zmieniony na CANCELLED)",
+                        meetingId);
+            }
+            // Jeśli zmieniasz status z CANCELLED na PLANNED - zaplanuj powiadomienia
+            else if (oldStatus == MeetingStatus.CANCELLED && request.getStatus() == MeetingStatus.PLANNED) {
+                meetingSchedulerService.scheduleMeetingNotifications(meeting);
+                log.info("🔄 Zaplanowano powiadomienia dla spotkania {} (status zmieniony z CANCELLED na PLANNED)",
+                        meetingId);
+            }
         }
 
-        // ✅ AKTUALIZUJ KATEGORIE
+        // 4. AKTUALIZUJ KATEGORIE (jeśli podano)
         if (request.getCategoryIds() != null) {
             Set<Category> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
             meeting.setCategories(categories);
             log.info("Updated categories for meeting {}: {} categories", meetingId, categories.size());
         }
 
-        // ✅ AKTUALIZUJ POZOSTAŁE POLA
+        // 5. AKTUALIZUJ POZOSTAŁE POLA
         meetingMapper.updateEntityFromRequest(request, meeting);
 
+        // 6. ZAPISZ ZMIANY
         Meeting updatedMeeting = meetingRepository.save(meeting);
         log.info("Meeting {} updated by user {}", meetingId, userId);
 
+        // 7. SPRAWDŹ CZY ZMIENIŁA SIĘ DATA I PRZEPLANUJ POWIADOMIENIA
+        handleDateChanges(meetingId, updatedMeeting, oldStartDate, oldEndDate, userId);
+
+        // 8. WYŚLIJ POWIADOMIENIA O ZMIANACH (opcjonalnie)
+        if (shouldNotifyParticipantsAboutUpdate(request, oldTitle, oldStartDate, oldLocation)) {
+//            sendMeetingUpdateNotifications(updatedMeeting, userId, getChangesSummary(request, oldTitle, oldStartDate, oldEndDate, oldLocation));
+        }
+
         return meetingMapper.toResponse(updatedMeeting);
     }
+
+    /**
+     * Obsługa zmian daty spotkania
+     */
+    private void handleDateChanges(Long meetingId, Meeting updatedMeeting,
+                                   LocalDateTime oldStartDate, LocalDateTime oldEndDate,
+                                   Long userId) {
+        boolean dateChanged = false;
+
+        // Sprawdź czy zmieniła się data rozpoczęcia
+        if (oldStartDate != null && updatedMeeting.getStartDate() != null &&
+                !oldStartDate.equals(updatedMeeting.getStartDate())) {
+            dateChanged = true;
+            log.info("📅 Zmieniono datę rozpoczęcia spotkania {} z {} na {}",
+                    meetingId, oldStartDate, updatedMeeting.getStartDate());
+        }
+
+        // Sprawdź czy zmieniła się data zakończenia
+        if (oldEndDate != null && updatedMeeting.getEndDate() != null &&
+                !oldEndDate.equals(updatedMeeting.getEndDate())) {
+            dateChanged = true;
+            log.info("📅 Zmieniono datę zakończenia spotkania {} z {} na {}",
+                    meetingId, oldEndDate, updatedMeeting.getEndDate());
+        }
+
+        // Jeśli zmieniono datę - przepłań powiadomienia
+        if (dateChanged && updatedMeeting.getStatus() == MeetingStatus.PLANNED) {
+            // 1. Anuluj stare powiadomienia
+            meetingSchedulerService.cancelMeetingSchedule(meetingId);
+
+            // 2. Zaplanuj nowe
+            meetingSchedulerService.scheduleMeetingNotifications(updatedMeeting);
+
+            log.info("🔄 Przeplanowano powiadomienia dla spotkania {} po zmianie daty", meetingId);
+
+            // 3. Zaloguj zmianę
+        }
+    }
+
+
+    private String formatDateChange(LocalDateTime startDate, LocalDateTime endDate) {
+        return "Start: " + (startDate != null ? startDate.toString() : "null") +
+                ", End: " + (endDate != null ? endDate.toString() : "null");
+    }
+
+    /**
+     * Sprawdza czy wysłać powiadomienia o zmianach
+     */
+    private boolean shouldNotifyParticipantsAboutUpdate(UpdateMeetingRequest request,
+                                                        String oldTitle,
+                                                        LocalDateTime oldStartDate,
+                                                        Location oldLocation) {
+        // Wysyłaj powiadomienia tylko o ważnych zmianach
+        if (request.getTitle() != null && !request.getTitle().equals(oldTitle)) {
+            return true;
+        }
+        if (request.getStartDate() != null && !request.getStartDate().equals(oldStartDate)) {
+            return true;
+        }
+        if (request.getLocationId() != null && oldLocation != null &&
+                !request.getLocationId().equals(oldLocation.getId())) {
+            return true;
+        }
+        return false;
+    }
+
+
 
     @Override
     @Transactional

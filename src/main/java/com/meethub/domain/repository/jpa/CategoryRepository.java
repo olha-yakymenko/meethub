@@ -11,7 +11,4 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByCreatedById(Long userId);
 
-    List<Category> findByNameContainingIgnoreCase(String name);
-
-    List<Category> findByCreatedByIdAndNameContainingIgnoreCase(Long userId, String name);
 }

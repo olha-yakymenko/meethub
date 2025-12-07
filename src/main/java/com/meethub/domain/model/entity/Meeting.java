@@ -1,5 +1,6 @@
 package com.meethub.domain.model.entity;
 
+import com.meethub.domain.model.enums.LocationType;
 import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
@@ -420,5 +421,32 @@ public class Meeting {
     }
 
 
+
+    public boolean isStartingSoon(int minutesThreshold) {
+        if (startDate == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thresholdTime = startDate.minusMinutes(minutesThreshold);
+        return !now.isBefore(thresholdTime) && !now.isAfter(startDate);
+    }
+
+    public boolean hasStarted() {
+        if (startDate == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(startDate) || now.isEqual(startDate);
+    }
+
+    public boolean hasEnded() {
+        if (endDate == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(endDate);
+    }
+
+    public boolean isVirtual() {
+        return location != null && location.getType() == LocationType.VIRTUAL;
+    }
+
+    public String getVirtualMeetingUrl() {
+        return isVirtual() ? location.getVirtualMeetingUrl() : null;
+    }
 
 }

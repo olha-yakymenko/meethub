@@ -24,5 +24,4 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     @Query("SELECT COUNT(f) FROM Feedback f WHERE f.meeting.id = :meetingId")
     Long countByMeetingId(@Param("meetingId") Long meetingId);
 
-    boolean existsByMeetingIdAndUserId(Long meetingId, Long userId);
 }

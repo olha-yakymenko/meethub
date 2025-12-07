@@ -49,8 +49,10 @@ public enum ParticipationStatus {
     ORGANIZER("Organizator"),        // Twórca spotkania
     CO_ORGANIZER("Współorganizator"), // Współorganizator
     SPEAKER("Prelegent"),            // Prelegent/prowadzący
-    GUEST("Gość");                   // Specjalny gość
+    GUEST("Gość");// Specjalny gość
 
+
+//    PESENT("Obecny");
     private final String displayName;
 
     ParticipationStatus(String displayName) {

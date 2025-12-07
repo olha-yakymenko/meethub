@@ -15,7 +15,6 @@ import java.util.Optional;
 @Repository
 public interface MeetingResourceRepository extends JpaRepository<MeetingResource, Long> {
 
-    List<MeetingResource> findByMeetingIdOrderByUploadedAtDesc(Long meetingId);
 
     List<MeetingResource> findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(Long meetingId);
 
@@ -23,26 +22,4 @@ public interface MeetingResourceRepository extends JpaRepository<MeetingResource
 
     List<MeetingResource> findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(Long meetingId, String tag);
 
-    List<MeetingResource> findByMeetingIdAndAccessLevelOrderByUploadedAtDesc(Long meetingId, AccessLevel accessLevel);
-
-    @Query("SELECT mr FROM MeetingResource mr WHERE mr.meeting.id = :meetingId AND mr.uploadedBy.id = :userId")
-    List<MeetingResource> findByMeetingIdAndUploadedBy(@Param("meetingId") Long meetingId,
-                                                       @Param("userId") Long userId);
-
-    Optional<MeetingResource> findByIdAndMeetingId(Long id, Long meetingId);
-
-    boolean existsByMeetingIdAndOriginalFilename(Long meetingId, String originalFilename);
-
-    Long countByMeetingId(Long meetingId);
-
-    Long countByMeetingIdAndResourceType(Long meetingId, ResourceType resourceType);
-
-    @Query("SELECT DISTINCT mr.tags FROM MeetingResource mr WHERE mr.meeting.id = :meetingId")
-    List<String> findDistinctTagsByMeetingId(@Param("meetingId") Long meetingId);
-
-    @Query("SELECT mr FROM MeetingResource mr WHERE mr.meeting.id = :meetingId AND mr.isCurrent = true")
-    List<MeetingResource> findCurrentResourcesByMeetingId(@Param("meetingId") Long meetingId);
-
-    @Query("SELECT mr FROM MeetingResource mr WHERE mr.filename = :filename AND mr.isCurrent = true")
-    Optional<MeetingResource> findByFilenameAndCurrent(@Param("filename") String filename);
 }

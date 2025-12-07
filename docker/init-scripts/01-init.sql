@@ -2100,3 +2100,174 @@ ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
 ALTER TABLE meetings
 ALTER COLUMN recurrence_exceptions TYPE TEXT
 USING recurrence_exceptions::text;
+
+
+
+
+
+-- Wykonaj te komendy w PostgreSQL
+INSERT INTO email_templates (template_key, language, subject, body_template, created_at, updated_at)
+VALUES
+-- Szablon dla organizatora gdy spotkanie się rozpoczęło
+('meeting_started', 'pl',
+ '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
+ '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Spotkanie się rozpoczęło</title>
+</head>
+<body>
+    <h1>🎉 Spotkanie się rozpoczęło!</h1>
+    <p>Cześć {{userName}}!</p>
+    <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
+    <p><strong>Czas:</strong> {{meetingTime}}</p>
+    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+    {{#meetingLink}}<p><strong>Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+    <br>
+    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+</body>
+</html>',
+ NOW(), NOW()),
+
+-- Szablon przypomnienia o spotkaniu
+('meeting_reminder', 'pl',
+ '🔔 Przypomnienie: Spotkanie {{meetingTitle}} za {{minutesBefore}} minut',
+ '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Przypomnienie o spotkaniu</title>
+</head>
+<body>
+    <h1>🔔 Przypomnienie o spotkaniu</h1>
+    <p>Cześć {{userName}}!</p>
+    <p>Przypominamy o spotkaniu <strong>{{meetingTitle}}</strong>.</p>
+    <p><strong>Rozpoczyna się za:</strong> {{minutesBefore}} minut</p>
+    <p><strong>Godzina:</strong> {{meetingTime}}</p>
+    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+    {{#meetingLink}}<p><strong>Link:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+    <br>
+    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+</body>
+</html>',
+ NOW(), NOW()),
+
+-- Szablon dla uczestnika gdy spotkanie się rozpoczęło
+('meeting_started_participant', 'pl',
+ '🎉 Spotkanie {{meetingTitle}} się rozpoczęło',
+ '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Spotkanie się rozpoczęło</title>
+</head>
+<body>
+    <h1>🎉 Spotkanie się rozpoczęło!</h1>
+    <p>Cześć {{userName}}!</p>
+    <p>Spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
+    <p><strong>Organizator:</strong> {{organizerName}}</p>
+    <p><strong>Czas:</strong> {{meetingTime}}</p>
+    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+    {{#meetingLink}}<p><strong>Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+    <br>
+    <p>Do zobaczenia na spotkaniu!<br>Zespół MeetHub</p>
+</body>
+</html>',
+ NOW(), NOW()),
+
+-- Szablon przypomnienia dla uczestnika
+('meeting_reminder_participant', 'pl',
+ '🔔 Przypomnienie: Spotkanie {{meetingTitle}} za {{minutesBefore}} minut',
+ '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Przypomnienie o spotkaniu</title>
+</head>
+<body>
+    <h1>🔔 Przypomnienie o spotkaniu</h1>
+    <p>Cześć {{userName}}!</p>
+    <p>Przypominamy o spotkaniu <strong>{{meetingTitle}}</strong>.</p>
+    <p><strong>Rozpoczyna się za:</strong> {{minutesBefore}} minut</p>
+    <p><strong>Godzina:</strong> {{meetingTime}}</p>
+    <p><strong>Organizator:</strong> {{organizerName}}</p>
+    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+    {{#meetingLink}}<p><strong>Link:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+    <br>
+    <p>Do zobaczenia!<br>Zespół MeetHub</p>
+</body>
+</html>',
+ NOW(), NOW()),
+
+-- Szablon gdy spotkanie nie zostało rozpoczęte
+('meeting_not_started', 'pl',
+ '⚠️ Spotkanie {{meetingTitle}} nie zostało rozpoczęte',
+ '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Spotkanie nie rozpoczęte</title>
+</head>
+<body>
+    <h1>⚠️ Uwaga!</h1>
+    <p>Cześć {{organizerName}},</p>
+    <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> miało rozpocząć się o {{scheduledTime}},</p>
+    <p>ale <strong>nie zostało jeszcze oznaczone jako rozpoczęte</strong>.</p>
+    <p><strong>Opóźnienie:</strong> {{minutesLate}} minut</p>
+    <br>
+    <p>Proszę sprawdzić:</p>
+    <ul>
+        <li>Czy spotkanie faktycznie się odbywa?</li>
+        <li>Czy trzeba je anulować?</li>
+        <li>Czy uczestnicy są poinformowani?</li>
+    </ul>
+    <br>
+    <p>Zespół MeetHub</p>
+</body>
+</html>',
+ NOW(), NOW()),
+
+-- Szablon testowy
+('test_email', 'pl',
+ '📧 Testowy email z MeetHub',
+ '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Email</title>
+</head>
+<body>
+    <h1>✅ Test systemu powiadomień</h1>
+    <p>Cześć {{userName}}!</p>
+    <p>To jest testowy email wysłany o {{testTime}}.</p>
+    <p>Jeśli go otrzymujesz, oznacza to że system powiadomień działa poprawnie! 🎉</p>
+    <br>
+    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+</body>
+</html>',
+ NOW(), NOW());
+
+
+
+ -- Zaktualizuj szablon meeting_started na prostszy
+ UPDATE meethub_schema.email_templates
+ SET body_template = '<!DOCTYPE html>
+ <html>
+ <head>
+     <meta charset="UTF-8">
+     <title>Spotkanie się rozpoczęło</title>
+ </head>
+ <body>
+     <h1>🎉 Spotkanie się rozpoczęło!</h1>
+     <p>Cześć {{userName}}!</p>
+     <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
+     <p><strong>Czas:</strong> {{meetingDate}}</p>
+     <p>Dołącz do spotkania w aplikacji MeetHub.</p>
+     <br>
+     <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+ </body>
+ </html>',
+     subject = '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
+     updated_at = NOW()
+ WHERE template_key = 'meeting_started' AND language = 'pl';

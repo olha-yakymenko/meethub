@@ -41,16 +41,21 @@ spring:
       max-request-size: 10MB
 
   mail:
-    host: smtp.gmail.com
+    host: smtp.gmail.com  # lub localhost dla testów
     port: 587
-    username: ${SMTP_USERNAME:}
-    password: ${SMTP_PASSWORD:}
+    username: ${EMAIL_USERNAME:test@example.com}
+    password: ${EMAIL_PASSWORD:test123}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+    protocol: smtp
 
 server:
   port: 8080
