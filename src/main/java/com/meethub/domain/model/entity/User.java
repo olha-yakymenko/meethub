@@ -384,31 +384,10 @@ public class User {
         return firstName + " " + lastName;
     }
 
-    // Sprawdza czy użytkownik może organizować spotkania (na podstawie roli systemowej)
-    public boolean canOrganizeMeetings() {
-        return UserRole.ORGANIZER.equals(role) || UserRole.ADMIN.equals(role);
-    }
-
-    // Sprawdza czy użytkownik ma uprawnienia administracyjne
-    public boolean hasAdminPrivileges() {
-        return UserRole.ADMIN.equals(role);
-    }
-
-    // Sprawdza czy użytkownik jest moderatorem systemowym
-    public boolean isSystemModerator() {
-        return UserRole.MODERATOR.equals(role) || UserRole.ADMIN.equals(role);
-    }
 
     // Sprawdza czy użytkownik jest organizatorem (dla kompatybilności)
     public boolean isOrganizer() {
         return UserRole.ORGANIZER.equals(role) || UserRole.ADMIN.equals(role);
-    }
-
-    // Sprawdza czy użytkownik może zarządzać spotkaniami (dla kompatybilności)
-    public boolean canManageMeetings() {
-        return UserRole.ORGANIZER.equals(role) ||
-                UserRole.MODERATOR.equals(role) ||
-                UserRole.ADMIN.equals(role);
     }
 
     // Pobiera poziom uprawnień użytkownika w konkretnym spotkaniu
@@ -422,21 +401,6 @@ public class User {
                 .orElse(null);
     }
 
-    // Sprawdza czy użytkownik może zarządzać konkretnym spotkaniem
-    public boolean canManageMeeting(Meeting meeting) {
-        if (meeting == null) return false;
-
-        // Admin systemowy może zarządzać wszystkimi spotkaniami
-        if (hasAdminPrivileges()) return true;
-
-        // Organizator spotkania może nim zarządzać
-        if (meeting.getOrganizer().getId().equals(this.id)) return true;
-
-        // Sprawdź poziom uprawnień w spotkaniu
-        PermissionLevel permissionLevel = getPermissionLevelInMeeting(meeting);
-        return permissionLevel != null &&
-                (PermissionLevel.MODERATOR.equals(permissionLevel));
-    }
 
     // Sprawdza czy użytkownik jest organizatorem konkretnego spotkania
     public boolean isOrganizerOf(Meeting meeting) {

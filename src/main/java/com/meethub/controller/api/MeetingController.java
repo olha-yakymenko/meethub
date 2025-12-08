@@ -8,6 +8,7 @@ import com.meethub.domain.model.response.MeetingResponse;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.domain.model.enums.MeetingStatus;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,13 @@ public class MeetingController {
     private final MeetingService meetingService;
 
     @PostMapping
-    @Operation(summary = "Create a new meeting")
+    @Operation(summary = "Tworzy nowe spotkanie",
+            description = "Tworzy nowe spotkanie z podanymi danymi. Wymaga autoryzacji.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "201", description = "Spotkanie utworzone pomyślnie"),
+//            @ApiResponse(responseCode = "400", description = "Nieprawidłowe dane wejściowe"),
+//            @ApiResponse(responseCode = "401", description = "Użytkownik nieautoryzowany")
+//    })
     public ResponseEntity<ApiResponse<MeetingResponse>> createMeeting(
             @Valid @RequestBody CreateMeetingRequest request,
             @AuthenticationPrincipal Long userId) {
@@ -42,7 +49,8 @@ public class MeetingController {
     }
 
     @PutMapping("/{meetingId}")
-    @Operation(summary = "Update an existing meeting")
+    @Operation(summary = "Aktualizuje istniejące spotkanie",
+            description = "Aktualizuje spotkanie o podanym ID. Tylko organizator może edytować.")
     public ResponseEntity<ApiResponse<MeetingResponse>> updateMeeting(
             @PathVariable Long meetingId,
             @Valid @RequestBody UpdateMeetingRequest request,
@@ -53,7 +61,8 @@ public class MeetingController {
     }
 
     @DeleteMapping("/{meetingId}")
-    @Operation(summary = "Delete a meeting")
+    @Operation(summary = "Usuwa spotkanie",
+            description = "Usuwa spotkanie o podanym ID. Tylko organizator może usunąć.")
     public ResponseEntity<ApiResponse<Void>> deleteMeeting(
             @PathVariable Long meetingId,
             @AuthenticationPrincipal Long userId) {
@@ -63,7 +72,8 @@ public class MeetingController {
     }
 
     @GetMapping("/{meetingId}")
-    @Operation(summary = "Get meeting by ID")
+    @Operation(summary = "Pobiera szczegóły spotkania",
+            description = "Zwraca szczegóły spotkania o podanym ID.")
     public ResponseEntity<ApiResponse<MeetingResponse>> getMeeting(@PathVariable Long meetingId) {
         MeetingResponse meeting = meetingService.getMeetingById(meetingId);
         return ResponseEntity.ok(ApiResponse.success("Meeting retrieved successfully", meeting));
@@ -73,7 +83,8 @@ public class MeetingController {
 
 
     @GetMapping("/my-meetings")
-    @Operation(summary = "Get user's meetings with pagination")
+    @Operation(summary = "Pobiera spotkania użytkownika",
+            description = "Zwraca paginowaną listę spotkań zalogowanego użytkownika.")
     public ResponseEntity<ApiResponse<Page<MeetingResponse>>> getUserMeetings(
             @AuthenticationPrincipal Long userId,
             Pageable pageable) {
@@ -83,14 +94,17 @@ public class MeetingController {
     }
 
     @GetMapping("/public/upcoming")
-    @Operation(summary = "Get upcoming public meetings")
+    @Operation(summary = "Pobiera nadchodzące publiczne spotkania",
+            description = "Zwraca listę nadchodzących spotkań publicznych.")
+
     public ResponseEntity<ApiResponse<List<MeetingResponse>>> getUpcomingPublicMeetings() {
         List<MeetingResponse> meetings = meetingService.getUpcomingPublicMeetings();
         return ResponseEntity.ok(ApiResponse.success("Public meetings retrieved successfully", meetings));
     }
 
     @GetMapping("/nearby")
-    @Operation(summary = "Find nearby meetings")
+    @Operation(summary = "Znajduje spotkania w pobliżu",
+            description = "Zwraca spotkania w określonym promieniu od podanych współrzędnych.")
     public ResponseEntity<ApiResponse<List<MeetingResponse>>> findNearbyMeetings(
             @RequestParam double latitude,
             @RequestParam double longitude,
@@ -101,7 +115,8 @@ public class MeetingController {
     }
 
     @PatchMapping("/{meetingId}/status")
-    @Operation(summary = "Change meeting status")
+    @Operation(summary = "Zmienia status spotkania",
+            description = "Zmienia status spotkania (np. z PLANOWANE na W_TRAKCIE).")
     public ResponseEntity<ApiResponse<Void>> changeMeetingStatus(
             @PathVariable Long meetingId,
             @RequestParam MeetingStatus status,
@@ -112,7 +127,9 @@ public class MeetingController {
     }
 
     @PostMapping("/{meetingId}/duplicate")
-    @Operation(summary = "Duplicate a meeting")
+    @Operation(summary = "Duplikuje spotkanie",
+            description = "Tworzy kopię istniejącego spotkania.")
+
     public ResponseEntity<ApiResponse<MeetingResponse>> duplicateMeeting(
             @PathVariable Long meetingId,
             @AuthenticationPrincipal Long userId) {
@@ -122,7 +139,8 @@ public class MeetingController {
     }
 
     @GetMapping("/conflicts")
-    @Operation(summary = "Check for conflicting meetings")
+    @Operation(summary = "Sprawdza konflikty terminów",
+            description = "Sprawdza, czy użytkownik ma konflikty terminów w podanym zakresie.")
     public ResponseEntity<ApiResponse<List<MeetingResponse>>> findConflictingMeetings(
             @AuthenticationPrincipal Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,

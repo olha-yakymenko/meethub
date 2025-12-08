@@ -122,29 +122,6 @@ public class ParticipationServiceImpl implements ParticipationService {
         return avgHours != null ? avgHours : 0.0;
     }
 
-//    @Override
-//    @Transactional(readOnly = true)
-//    public List<MeetingParticipant> getSlowResponders(Long meetingId, int thresholdHours) {
-//        List<MeetingParticipant> participants = participantRepository.findByMeetingId(meetingId);
-//
-//        return participants.stream()
-//                .filter(p -> p.getInvitedAt() != null && p.getResponseAt() != null)
-//                .filter(p -> {
-//                    long responseTime = ChronoUnit.HOURS.between(p.getInvitedAt(), p.getResponseAt());
-//                    return responseTime > thresholdHours;
-//                })
-//                .collect(Collectors.toList());
-//    }
-
-    // ========== SPRAWDZANIE ==========
-
-//    @Override
-//    @Transactional(readOnly = true)
-//    public boolean hasUserResponded(Long meetingId, Long userId) {
-//        return participantRepository.findByMeetingIdAndUserId(meetingId, userId)
-//                .map(p -> p.getResponseAt() != null)
-//                .orElse(false);
-//    }
 
     @Override
     @Transactional(readOnly = true)

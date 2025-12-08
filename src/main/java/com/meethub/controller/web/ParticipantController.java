@@ -11,6 +11,10 @@ import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +45,15 @@ public class ParticipantController {
     private final MeetingRepository meetingRepository;
 
     @GetMapping
-    public String getParticipants(@PathVariable Long meetingId,
+    @Operation(summary = "Lista uczestników spotkania", description = "Zwraca listę wszystkich uczestników spotkania oraz statystyki. Wymagane odpowiednie uprawnienia.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista uczestników zwrócona pomyślnie"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do wyświetlenia uczestników")
+    })
+    public String getParticipants(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                                   @AuthenticationPrincipal CustomUserDetails userDetails,
                                   Model model) {
         try {
-            // Sprawdź uprawnienia użytkownika do tego spotkania
             boolean hasAccess = participantService.hasAccessToMeeting(meetingId, userDetails.getId());
             if (!hasAccess) {
                 model.addAttribute("error", "Nie masz dostępu do tej listy uczestników");
@@ -69,11 +77,15 @@ public class ParticipantController {
     }
 
     @GetMapping("/invite")
-    public String showInviteForm(@PathVariable Long meetingId,
+    @Operation(summary = "Formularz zaproszeń uczestników", description = "Wyświetla formularz do zapraszania nowych uczestników spotkania. Tylko dla organizatora.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Formularz zaproszeń wyświetlony pomyślnie"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do zapraszania uczestników")
+    })
+    public String showInviteForm(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
                                  Model model) {
         try {
-            // Sprawdź czy użytkownik jest organizatorem
             if (!participantService.isOrganizer(meetingId, userDetails.getId())) {
                 model.addAttribute("error", "Tylko organizator może zapraszać uczestników");
                 return "redirect:/meetings/" + meetingId + "/participants";
@@ -90,29 +102,30 @@ public class ParticipantController {
     }
 
     @PostMapping("/invite")
-    public String inviteParticipants(@PathVariable Long meetingId,
+    @Operation(summary = "Wyślij zaproszenia do uczestników", description = "Pozwala organizatorowi wysłać zaproszenia do nowych uczestników spotkania.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Przekierowanie po wysłaniu zaproszeń"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do wysłania zaproszeń")
+    })
+    public String inviteParticipants(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                                      @Valid @ModelAttribute("inviteRequest") InviteParticipantsRequest request,
                                      BindingResult bindingResult,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      RedirectAttributes redirectAttributes,
-                                     Model model) {  // Dodaj Model parameter
-
+                                     Model model) {
         try {
-            // Walidacja
             if (bindingResult.hasErrors()) {
                 redirectAttributes.addFlashAttribute("error",
                         "Błąd walidacji: " + bindingResult.getFieldError().getDefaultMessage());
                 return "redirect:/meetings/" + meetingId + "/participants/invite";
             }
 
-            // Sprawdź uprawnienia
             if (!participantService.isOrganizer(meetingId, userDetails.getId())) {
                 redirectAttributes.addFlashAttribute("error", "Tylko organizator może zapraszać uczestników");
                 return "redirect:/meetings/" + meetingId + "/participants";
             }
 
             List<ParticipantResponse> invited = participantService.inviteParticipants(meetingId, request);
-
             redirectAttributes.addFlashAttribute("success",
                     "Wysłano " + invited.size() + " zaproszeń");
 
@@ -120,53 +133,23 @@ public class ParticipantController {
             log.error("Błąd podczas zapraszania uczestników do meetingId: {}", meetingId, e);
             redirectAttributes.addFlashAttribute("error",
                     "Błąd podczas zapraszania: " + e.getMessage());
-            // W przypadku błędu wróć do formularza zamiast listy
             return "redirect:/meetings/" + meetingId + "/participants/invite";
         }
 
         return "redirect:/meetings/" + meetingId + "/participants";
     }
 
-//    @GetMapping("/{participantId}/edit")
-//    public String showEditForm(@PathVariable Long meetingId,
-//                               @PathVariable Long participantId,
-//                               @AuthenticationPrincipal CustomUserDetails userDetails,
-//                               Model model) {
-//        try {
-//            // Sprawdź uprawnienia
-//            if (!participantService.canEditParticipant(meetingId, participantId, userDetails.getId())) {
-//                model.addAttribute("error", "Nie masz uprawnień do edycji tego uczestnika");
-//                return "redirect:/meetings/" + meetingId + "/participants";
-//            }
-//
-//            ParticipantResponse participant = participantService.getParticipant(participantId);
-//            model.addAttribute("participant", participant);
-//            model.addAttribute("meetingId", meetingId);
-//            model.addAttribute("participantId", participantId);
-//            model.addAttribute("updateRequest", new UpdateParticipantRequest());
-//
-//            // Dodaj enumy do modelu
-//            model.addAttribute("participantStatuses",
-//                    java.util.Arrays.asList(com.meethub.domain.model.enums.ParticipationStatus.values()));
-//            model.addAttribute("permissionLevels",
-//                    java.util.Arrays.asList(com.meethub.domain.model.enums.PermissionLevel.values()));
-//
-//            return "participants/edit";
-//        } catch (Exception e) {
-//            log.error("Błąd podczas ładowania formularza edycji", e);
-//            return "redirect:/meetings/" + meetingId + "/participants?error=Nie można załadować formularza";
-//        }
-//    }
-
-
-
     @GetMapping("/{participantId}/edit")
-    public String showEditForm(@PathVariable Long meetingId,
-                               @PathVariable Long participantId,
+    @Operation(summary = "Formularz edycji uczestnika", description = "Wyświetla formularz do edycji danych uczestnika spotkania. Wymagane odpowiednie uprawnienia.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Formularz wyświetlony pomyślnie"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji uczestnika")
+    })
+    public String showEditForm(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
+                               @Parameter(description = "ID uczestnika") @PathVariable Long participantId,
                                @AuthenticationPrincipal CustomUserDetails userDetails,
                                Model model) {
         try {
-            // Sprawdź uprawnienia
             if (!participantService.canEditParticipant(meetingId, participantId, userDetails.getId())) {
                 model.addAttribute("error", "Nie masz uprawnień do edycji tego uczestnika");
                 return "redirect:/meetings/" + meetingId + "/participants";
@@ -174,15 +157,12 @@ public class ParticipantController {
 
             ParticipantResponse participant = participantService.getParticipant(participantId);
 
-            // Debug - sprawdźmy co mamy w participant
             log.info("Participant status: {}", participant.getStatus());
             log.info("Participant permission level: {}", participant.getPermissionLevel());
 
-            // Pobierz enumy
             ParticipationStatus[] statuses = ParticipationStatus.values();
             PermissionLevel[] levels = PermissionLevel.values();
 
-            // Debug - sprawdźmy enumy
             log.info("Available statuses: {}", Arrays.toString(statuses));
             log.info("Available permission levels: {}", Arrays.toString(levels));
 
@@ -191,7 +171,6 @@ public class ParticipantController {
             model.addAttribute("participantId", participantId);
             model.addAttribute("updateRequest", new UpdateParticipantRequest());
 
-            // Dodaj enumy do modelu
             model.addAttribute("participantStatuses", statuses);
             model.addAttribute("permissionLevels", levels);
 
@@ -203,28 +182,30 @@ public class ParticipantController {
     }
 
     @PostMapping("/{participantId}/update")
-    public String updateParticipant(@PathVariable Long meetingId,
-                                    @PathVariable Long participantId,
+    @Operation(summary = "Aktualizuj uczestnika", description = "Aktualizuje dane uczestnika spotkania. Wymagane odpowiednie uprawnienia.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Przekierowanie po aktualizacji"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do aktualizacji uczestnika")
+    })
+    public String updateParticipant(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
+                                    @Parameter(description = "ID uczestnika") @PathVariable Long participantId,
                                     @Valid @ModelAttribute("updateRequest") UpdateParticipantRequest request,
                                     BindingResult bindingResult,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     RedirectAttributes redirectAttributes) {
         try {
-            // Walidacja
             if (bindingResult.hasErrors()) {
                 redirectAttributes.addFlashAttribute("error",
                         "Błąd walidacji: " + bindingResult.getFieldError().getDefaultMessage());
                 return "redirect:/meetings/" + meetingId + "/participants/" + participantId + "/edit";
             }
 
-            // Sprawdź uprawnienia
             if (!participantService.canEditParticipant(meetingId, participantId, userDetails.getId())) {
                 redirectAttributes.addFlashAttribute("error", "Nie masz uprawnień do edycji tego uczestnika");
                 return "redirect:/meetings/" + meetingId + "/participants";
             }
 
-            ParticipantResponse updated = participantService.updateParticipant(participantId, request);
-
+            participantService.updateParticipant(participantId, request);
             redirectAttributes.addFlashAttribute("success", "Zaktualizowano uczestnika");
         } catch (Exception e) {
             log.error("Błąd podczas aktualizacji uczestnika: {}", participantId, e);
@@ -235,12 +216,16 @@ public class ParticipantController {
     }
 
     @PostMapping("/{participantId}/remove")
-    public String removeParticipant(@PathVariable Long meetingId,
-                                    @PathVariable Long participantId,
+    @Operation(summary = "Usuń uczestnika", description = "Usuwa uczestnika ze spotkania. Wymagane odpowiednie uprawnienia.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Przekierowanie po usunięciu uczestnika"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do usunięcia uczestnika")
+    })
+    public String removeParticipant(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
+                                    @Parameter(description = "ID uczestnika") @PathVariable Long participantId,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     RedirectAttributes redirectAttributes) {
         try {
-            // Sprawdź uprawnienia
             if (!participantService.canRemoveParticipant(meetingId, participantId, userDetails.getId())) {
                 redirectAttributes.addFlashAttribute("error", "Nie masz uprawnień do usunięcia tego uczestnika");
                 return "redirect:/meetings/" + meetingId + "/participants";
@@ -256,9 +241,9 @@ public class ParticipantController {
         return "redirect:/meetings/" + meetingId + "/participants";
     }
 
-    // Publiczne endpointy do potwierdzania przez token
     @GetMapping("/confirm/{token}")
-    public String confirmParticipation(@PathVariable String token,
+    @Operation(summary = "Potwierdź udział uczestnika", description = "Potwierdza udział uczestnika w spotkaniu na podstawie tokena.")
+    public String confirmParticipation(@Parameter(description = "Token uczestnika") @PathVariable String token,
                                        @RequestParam(required = false) String comment,
                                        Model model) {
         try {
@@ -274,7 +259,8 @@ public class ParticipantController {
     }
 
     @GetMapping("/decline/{token}")
-    public String declineParticipation(@PathVariable String token,
+    @Operation(summary = "Odrzuć udział uczestnika", description = "Odrzuca udział uczestnika w spotkaniu na podstawie tokena.")
+    public String declineParticipation(@Parameter(description = "Token uczestnika") @PathVariable String token,
                                        @RequestParam(required = false) String comment,
                                        Model model) {
         try {
@@ -288,178 +274,53 @@ public class ParticipantController {
             return "meetings/participants/confirmation-error";
         }
     }
-//
-//    @GetMapping("/tentative/{token}")
-//    public String setTentative(@PathVariable String token,
-//                               @RequestParam(required = false) String comment,
-//                               Model model) {
-//        try {
-//            ParticipantResponse participant = participantService.setTentative(token, comment);
-//            model.addAttribute("success", "Ustawiono status 'Tentative' dla spotkania");
-//            model.addAttribute("participant", participant);
-//            return "meetings/participants/confirmation-success";
-//        } catch (Exception e) {
-//            log.error("Błąd podczas ustawiania statusu tentative z tokenem: {}", token, e);
-//            model.addAttribute("error", "Błąd podczas ustawiania statusu: " + e.getMessage());
-//            return "meetings/participants/confirmation-error";
-//        }
-//    }
-
-
-    // W ParticipantController.java dodaj:
-
-//    @PostMapping("/join")
-//    public String joinMeeting(@PathVariable Long meetingId,
-//                              @AuthenticationPrincipal CustomUserDetails userDetails,
-//                              RedirectAttributes redirectAttributes) {
-//        try {
-//            Meeting meeting = meetingRepository.findById(meetingId)
-//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
-//
-//            switch (meeting.getVisibility()) {
-//                case PUBLIC:
-//                    participantService.joinPublicMeeting(meetingId, userDetails.getId());
-//                    redirectAttributes.addFlashAttribute("message", "Dołączono do spotkania publicznego");
-//                    break;
-//
-//                case PRIVATE:
-//                    participantService.requestToJoinPrivateMeeting(meetingId, userDetails.getId());
-//                    redirectAttributes.addFlashAttribute("message", "Wysłano prośbę o dołączenie do spotkania prywatnego");
-//                    break;
-//
-//                case INVITE_ONLY:
-//                    redirectAttributes.addFlashAttribute("error", "To spotkanie jest dostępne tylko dla zaproszonych");
-//                    break;
-//            }
-//
-//        } catch (Exception e) {
-//            redirectAttributes.addFlashAttribute("error", "Błąd podczas dołączania: " + e.getMessage());
-//        }
-//
-//        return "redirect:/meetings/" + meetingId;
-//    }
-
-
-//    @PostMapping("/join")
-//    public String joinMeeting(@PathVariable Long meetingId,
-//                              @AuthenticationPrincipal CustomUserDetails userDetails,
-//                              RedirectAttributes redirectAttributes) {
-//        try {
-//            Meeting meeting = meetingRepository.findById(meetingId)
-//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
-//
-//            log.info("Attempting to join meeting {} with visibility {} by user {}",
-//                    meetingId, meeting.getVisibility(), userDetails.getId());
-//
-//            switch (meeting.getVisibility()) {
-//                case PUBLIC:
-//                    log.info("Calling joinPublicMeeting for meeting {}", meetingId);
-//                    participantService.joinPublicMeeting(meetingId, userDetails.getId());
-//                    redirectAttributes.addFlashAttribute("success", "Dołączono do spotkania publicznego");
-//                    break;
-//
-//                case PRIVATE:
-//                    log.info("Calling requestToJoinPrivateMeeting for meeting {}", meetingId);
-//                    participantService.requestToJoinPrivateMeeting(meetingId, userDetails.getId());
-//                    redirectAttributes.addFlashAttribute("success", "Wysłano prośbę o dołączenie do spotkania prywatnego");
-//                    break;
-//
-//                case INVITE_ONLY:
-//                    redirectAttributes.addFlashAttribute("error", "To spotkanie jest dostępne tylko dla zaproszonych");
-//                    break;
-//            }
-//
-//        } catch (SecurityException e) {
-//            log.warn("Security exception while joining meeting {}: {}", meetingId, e.getMessage());
-//            redirectAttributes.addFlashAttribute("error", e.getMessage());
-//        } catch (IllegalArgumentException e) {
-//            log.warn("Validation exception while joining meeting {}: {}", meetingId, e.getMessage());
-//            redirectAttributes.addFlashAttribute("error", e.getMessage());
-//        } catch (Exception e) {
-//            log.error("Unexpected error while joining meeting {}: {}", meetingId, e.getMessage(), e); // DODAJ FULL STACKTRACE
-//            redirectAttributes.addFlashAttribute("error", "Błąd podczas dołączania: " + e.getMessage()); // POKAŻ PRAWDZIWY BŁĄD
-//        }
-//
-//        return "redirect:/meetings/" + meetingId;
-//    }
-
-
-
-
-
 
     @PostMapping("/join")
-    public String joinMeeting(@PathVariable Long meetingId,
+    @Operation(summary = "Dołącz do spotkania", description = "Pozwala zalogowanemu użytkownikowi dołączyć do spotkania publicznego lub wysłać prośbę do spotkania prywatnego.")
+    public String joinMeeting(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               RedirectAttributes redirectAttributes) {
-
-        log.info("🟢 START POST /meetings/{}/participants/join", meetingId);
-        log.info("🟢 User: {} (ID: {})",
-                userDetails != null ? userDetails.getUsername() : "null",
-                userDetails != null ? userDetails.getId() : "null");
-
-        if (userDetails == null) {
-            log.warn("🔴 User not authenticated");
-            redirectAttributes.addFlashAttribute("error", "Musisz być zalogowany");
-            return "redirect:/login";
-        }
-
         try {
-            log.info("🟢 Looking for meeting with ID: {}", meetingId);
+            if (userDetails == null) {
+                redirectAttributes.addFlashAttribute("error", "Musisz być zalogowany");
+                return "redirect:/login";
+            }
+
             Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> {
-                        log.error("🔴 Meeting not found: {}", meetingId);
-                        return new RuntimeException("Spotkanie nie zostało znalezione");
-                    });
+                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
 
-            log.info("🟢 Meeting found: ID={}, Title={}, Visibility={}, Organizer={}",
-                    meeting.getId(), meeting.getTitle(), meeting.getVisibility(),
-                    meeting.getOrganizer() != null ? meeting.getOrganizer().getId() : "null");
-
-            // Sprawdź czy użytkownik już jest uczestnikiem
             boolean isParticipant = participantService.isParticipant(meetingId, userDetails.getId());
-            log.info("🟢 Is user already participant? {}", isParticipant);
 
             if (isParticipant) {
-                log.warn("🟡 User {} is already participant of meeting {}", userDetails.getId(), meetingId);
                 redirectAttributes.addFlashAttribute("info", "Już jesteś uczestnikiem tego spotkania");
                 return "redirect:/meetings/" + meetingId;
             }
 
             switch (meeting.getVisibility()) {
                 case PUBLIC:
-                    log.info("🟢 Public meeting - calling joinPublicMeeting");
                     participantService.joinPublicMeeting(meetingId, userDetails.getId());
                     redirectAttributes.addFlashAttribute("success", "Dołączono do spotkania publicznego");
                     break;
-
                 case PRIVATE:
-                    log.info("🟢 Private meeting - calling requestToJoinPrivateMeeting");
                     participantService.requestToJoinPrivateMeeting(meetingId, userDetails.getId());
                     redirectAttributes.addFlashAttribute("success", "Wysłano prośbę o dołączenie do spotkania prywatnego");
                     break;
-
                 case INVITE_ONLY:
-                    log.info("🟡 Meeting is INVITE_ONLY - access denied");
                     redirectAttributes.addFlashAttribute("error", "To spotkanie jest dostępne tylko dla zaproszonych");
                     break;
             }
 
         } catch (Exception e) {
-            log.error("🔴 ERROR in joinMeeting: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
         }
 
-        log.info("🟢 Redirecting to meeting details page");
         return "redirect:/meetings/" + meetingId;
     }
 
-
-
-
     @PostMapping("/{participantId}/approve")
-    public String approveJoinRequest(@PathVariable Long meetingId,
-                                     @PathVariable Long participantId,
+    @Operation(summary = "Akceptuj prośbę o dołączenie", description = "Pozwala organizatorowi zaakceptować prośbę o dołączenie uczestnika do spotkania.")
+    public String approveJoinRequest(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
+                                     @Parameter(description = "ID uczestnika") @PathVariable Long participantId,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      RedirectAttributes redirectAttributes) {
         try {
@@ -473,8 +334,9 @@ public class ParticipantController {
     }
 
     @PostMapping("/{participantId}/reject")
-    public String rejectJoinRequest(@PathVariable Long meetingId,
-                                    @PathVariable Long participantId,
+    @Operation(summary = "Odrzuć prośbę o dołączenie", description = "Pozwala organizatorowi odrzucić prośbę o dołączenie uczestnika do spotkania.")
+    public String rejectJoinRequest(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
+                                    @Parameter(description = "ID uczestnika") @PathVariable Long participantId,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     RedirectAttributes redirectAttributes) {
         try {
@@ -488,7 +350,8 @@ public class ParticipantController {
     }
 
     @PostMapping("/leave")
-    public String leaveMeeting(@PathVariable Long meetingId,
+    @Operation(summary = "Opuść spotkanie", description = "Pozwala uczestnikowi opuścić spotkanie.")
+    public String leaveMeeting(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                                @AuthenticationPrincipal CustomUserDetails userDetails,
                                RedirectAttributes redirectAttributes) {
         try {
@@ -501,15 +364,14 @@ public class ParticipantController {
         return "redirect:/meetings/" + meetingId;
     }
 
-
     @GetMapping("/export")
-    public ResponseEntity<Resource> exportParticipants(@PathVariable Long meetingId,
+    @Operation(summary = "Eksport uczestników", description = "Eksportuje listę uczestników spotkania w formacie CSV. Tylko dla organizatora.")
+    public ResponseEntity<Resource> exportParticipants(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (!participantService.isOrganizer(meetingId, userDetails.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        // Logika eksportu CSV/PDF
         ByteArrayResource resource = participantService.exportParticipantsToCsv(meetingId);
 
         return ResponseEntity.ok()
@@ -519,7 +381,8 @@ public class ParticipantController {
     }
 
     @GetMapping("/stats")
-    public String showStats(@PathVariable Long meetingId,
+    @Operation(summary = "Statystyki uczestników", description = "Wyświetla szczegółowe statystyki uczestników spotkania. Tylko dla organizatora.")
+    public String showStats(@Parameter(description = "ID spotkania") @PathVariable Long meetingId,
                             @AuthenticationPrincipal CustomUserDetails userDetails,
                             Model model) {
         if (!participantService.isOrganizer(meetingId, userDetails.getId())) {

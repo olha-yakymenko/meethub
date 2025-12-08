@@ -4,6 +4,8 @@ import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,11 +20,14 @@ import java.util.List;
 @Controller
 @RequestMapping("/invitations")
 @RequiredArgsConstructor
+@Tag(name = "Zaproszenia", description = "Zarządzanie zaproszeniami na spotkania")
 public class InvitationController {
 
     private final MeetingParticipantService participantService;
 
     @GetMapping
+    @Operation(summary = "Wyświetla moje zaproszenia",
+            description = "Pobiera listę wszystkich zaproszeń dla zalogowanego użytkownika i wyświetla je na stronie.")
     public String getMyInvitations(@AuthenticationPrincipal CustomUserDetails userDetails,
                                    Model model) {
         if (userDetails == null) {
@@ -46,6 +51,8 @@ public class InvitationController {
     }
 
     @PostMapping("/{participantId}/respond")
+    @Operation(summary = "Odpowiada na zaproszenie",
+            description = "Pozwala użytkownikowi zaakceptować lub odrzucić zaproszenie na spotkanie oraz opcjonalnie dodać komentarz.")
     public String respondToInvitation(@PathVariable Long participantId,
                                       @RequestParam String response,
                                       @RequestParam(required = false) String comment,

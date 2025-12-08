@@ -3,6 +3,10 @@ package com.meethub.controller.web;
 import com.meethub.domain.model.request.UserRegistrationRequest;
 import com.meethub.domain.model.response.UserResponse;
 import com.meethub.domain.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +18,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-@Slf4j // ✅ DODAJ to
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class RegisterController {
@@ -22,6 +26,10 @@ public class RegisterController {
     private final AuthService authService;
 
     @GetMapping("/register")
+    @Operation(summary = "Formularz rejestracji użytkownika", description = "Wyświetla formularz rejestracji nowego użytkownika.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Formularz rejestracji wyświetlony pomyślnie")
+    })
     public String showRegistrationForm(Model model) {
         log.info("🌐 GET /register - showing registration form");
         model.addAttribute("registrationRequest", new UserRegistrationRequest());
@@ -29,35 +37,40 @@ public class RegisterController {
     }
 
     @PostMapping("/register")
+    @Operation(summary = "Rejestracja nowego użytkownika", description = "Przetwarza dane z formularza rejestracji i tworzy nowego użytkownika.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Rejestracja udana, przekierowanie do logowania"),
+            @ApiResponse(responseCode = "200", description = "Błąd walidacji formularza, wyświetlenie formularza z błędami")
+    })
     public String registerUser(
-            @Valid @ModelAttribute("registrationRequest") UserRegistrationRequest request,
+            @Parameter(description = "Dane rejestracyjne użytkownika") @Valid @ModelAttribute("registrationRequest") UserRegistrationRequest request,
             BindingResult bindingResult,
             Model model,
             RedirectAttributes redirectAttributes) {
 
-        log.info("📝 POST /register - processing registration for: {}", request.getEmail());
+        log.info("POST /register - processing registration for: {}", request.getEmail());
         log.debug("Registration data: FirstName={}, LastName={}, Phone={}",
                 request.getFirstName(), request.getLastName(), request.getPhoneNumber());
 
         if (bindingResult.hasErrors()) {
-            log.warn("❌ Validation errors: {}", bindingResult.getAllErrors());
+            log.warn("Validation errors: {}", bindingResult.getAllErrors());
             return "auth/register";
         }
 
         try {
-            log.info("👤 Attempting to register user: {}", request.getEmail());
+            log.info("Attempting to register user: {}", request.getEmail());
             UserResponse user = authService.register(request);
-            log.info("✅ User registered successfully: {} (ID: {})",
+            log.info("User registered successfully: {} (ID: {})",
                     user.getEmail(), user.getId());
 
             redirectAttributes.addFlashAttribute("message",
                     "Rejestracja udana! Możesz się teraz zalogować.");
 
-            log.info("🔄 Redirecting to /login");
+            log.info("Redirecting to /login");
             return "redirect:/login";
 
         } catch (Exception e) {
-            log.error("💥 Registration failed for: {}", request.getEmail(), e);
+            log.error("Registration failed for: {}", request.getEmail(), e);
             model.addAttribute("error", e.getMessage());
             return "auth/register";
         }

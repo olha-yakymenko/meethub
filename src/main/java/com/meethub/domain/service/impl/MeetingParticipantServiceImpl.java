@@ -4,6 +4,7 @@ package com.meethub.domain.service.impl;
 
 import com.meethub.domain.model.dto.ParticipantCountDto;
 import com.meethub.domain.model.entity.*;
+import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
@@ -184,6 +185,10 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
 
+        if (meeting.getStatus() == MeetingStatus.COMPLETED) {
+            throw new IllegalStateException("Cannot join a meeting that has already been completed");
+        }
+
         // Sprawdź czy spotkanie jest publiczne
         if (meeting.getVisibility() != MeetingVisibility.PUBLIC) {
             throw new SecurityException("Meeting is not public");
@@ -233,6 +238,10 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+
+        if (meeting.getStatus() == MeetingStatus.COMPLETED) {
+            throw new IllegalStateException("Cannot join a meeting that has already been completed");
+        }
 
         // Sprawdź czy spotkanie jest prywatne
         if (meeting.getVisibility() != MeetingVisibility.PRIVATE) {
@@ -564,19 +573,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                 .collect(Collectors.toList());
     }
 
-    // PRIVATE METHODS - zachowaj istniejące implementacje
-
-//    private ParticipantResponse mapToResponse(MeetingParticipant participant) {
-//        ParticipantResponse response = new ParticipantResponse();
-//        response.setId(participant.getId());
-//        response.setStatus(participant.getStatus());
-//        response.setPermissionLevel(participant.getPermissionLevel());
-//        response.setCreatedAt(participant.getCreatedAt());
-//        // Dodaj informacje o użytkowniku
-//        response.setUser(mapToUserResponse(participant.getUser()));
-//
-//        return response;
-//    }
 
     private ParticipantResponse mapToResponse(MeetingParticipant participant) {
         ParticipantResponse response = new ParticipantResponse();

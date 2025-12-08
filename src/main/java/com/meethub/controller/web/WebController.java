@@ -1,867 +1,3 @@
-//
-//
-//
-//package com.meethub.controller.web;
-//
-//import com.meethub.domain.model.entity.*;
-//import com.meethub.domain.model.enums.MeetingStatus;
-//import com.meethub.domain.model.enums.UserRole;
-//import com.meethub.domain.model.request.CreateMeetingRequest;
-//import com.meethub.domain.model.request.UpdateMeetingRequest;
-//import com.meethub.domain.model.request.UserRegistrationRequest;
-//import com.meethub.domain.model.response.*;
-//import com.meethub.domain.repository.jpa.CategoryRepository;
-//import com.meethub.domain.service.*;
-//import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
-//import jakarta.validation.Valid;
-//import lombok.RequiredArgsConstructor;
-//import org.springframework.core.io.Resource;
-//import org.springframework.data.domain.Page;
-//import org.springframework.data.domain.PageImpl;
-//import org.springframework.data.domain.PageRequest;
-//import org.springframework.data.domain.Pageable;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.http.ResponseEntity;
-//import org.springframework.security.core.Authentication;
-//import org.springframework.security.core.annotation.AuthenticationPrincipal;
-//import org.springframework.stereotype.Controller;
-//import org.springframework.ui.Model;
-//import org.springframework.validation.BindingResult;
-//import org.springframework.web.bind.annotation.*;
-//import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-//
-//import lombok.extern.slf4j.Slf4j;
-//
-//import java.time.LocalDate;
-//import java.time.LocalDateTime;
-//import java.util.*;
-//import java.util.stream.Collectors;
-//
-//@Slf4j
-//@Controller
-//@RequiredArgsConstructor
-//public class WebController {
-//
-//    private final AuthService authService;
-//    private final MeetingService meetingService;
-//    private final MeetingAuthorizationService meetingAuthorizationService;
-//    private final UserService userService;
-//    private final MeetingParticipantService meetingParticipantService;
-//    private final MeetingVotingService meetingVotingService;
-//
-//
-//    private final FeedbackService feedbackService;
-//    private final MeetingResourceService resourceService;
-//    private final MeetingAnalyticsService meetingAnalyticsService; // DODAJ TEN SERWIS!
-//
-//    private final CategoryRepository categoryRepository;
-//
-//    @GetMapping("/")
-//    public String home(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
-//        if (userDetails != null) {
-//            model.addAttribute("user", userDetails);
-//            return "dashboard";
-//        }
-//
-//        // ✅ Dla niezalogowanych - pokaż publiczne spotkania na stronie głównej
-//        try {
-//            List<MeetingResponse> upcomingMeetings = meetingService.getUpcomingPublicMeetings();
-//            model.addAttribute("upcomingMeetings", upcomingMeetings);
-//            model.addAttribute("totalMeetings", upcomingMeetings.size());
-//        } catch (Exception e) {
-//            model.addAttribute("upcomingMeetings", Collections.emptyList());
-//            model.addAttribute("totalMeetings", 0);
-//        }
-//
-//        return "index";
-//    }
-//
-//
-//    @GetMapping("/meetings")
-//    public String meetings(
-//            @AuthenticationPrincipal CustomUserDetails userDetails,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "12") int size,
-//            @RequestParam(required = false) String search,
-//            @RequestParam(required = false) String type,
-//            @RequestParam(required = false) String status,
-//            Model model) {
-//
-//        log.info("🔍 meetings() called - page: {}, size: {}, search: {}, type: {}, status: {}",
-//                page, size, search, type, status);
-//
-//        try {
-//            Pageable pageable = PageRequest.of(page, size);
-//            Page<MeetingResponse> meetingsPage;
-//
-//            if (userDetails != null) {
-//                // ✅ Przekaż parametry filtrowania do service
-//                meetingsPage = meetingService.getFilteredMeetings(search, type, status, pageable);
-//
-//                // ✅ DODAJ KOMPLETNE DANE UCZESTNICTWA
-//                Long userId = userDetails.getId();
-//
-//                for (MeetingResponse meeting : meetingsPage.getContent()) {
-//                    try {
-//                        // ✅ 1. Sprawdź czy użytkownik jest organizatorem
-//                        boolean isOrganizer = meeting.getOrganizer() != null &&
-//                                meeting.getOrganizer().getId().equals(userId);
-//                        meeting.setUserIsOrganizer(isOrganizer);
-//
-//                        // ✅ 2. Sprawdź wszystkie statusy uczestnictwa
-//                        boolean isConfirmed = meetingParticipantService.isConfirmedParticipant(meeting.getId(), userId);
-//                        boolean isPending = meetingParticipantService.isPendingParticipant(meeting.getId(), userId);
-//                        boolean isInvited = meetingParticipantService.isInvitedParticipant(meeting.getId(), userId);
-//                        boolean isDeclined = meetingParticipantService.isDeclinedParticipant(meeting.getId(), userId);
-//                        boolean isWaiting = meetingParticipantService.isWaitingListParticipant(meeting.getId(), userId);
-//
-//                        // ✅ 3. Sprawdź ogólnie czy jest uczestnikiem (jakikolwiek status)
-//                        boolean isAnyParticipant = meetingParticipantService.isUserParticipant(meeting.getId(), userId);
-//
-//                        // ✅ 4. Sprawdź czy jest viewerem
-//                        boolean isViewer = meetingParticipantService.isViewer(meeting.getId(), userId);
-//
-//                        // ✅ 5. Sprawdź czy jest bez związku
-//                        boolean isUnrelated = meetingParticipantService.isUnrelatedUser(meeting.getId(), userId);
-//
-//                        // ✅ 6. Określ główną rolę użytkownika
-//                        String userRole = determineUserRole(
-//                                isOrganizer, isConfirmed, isPending, isInvited,
-//                                isDeclined, isWaiting, isViewer, isUnrelated
-//                        );
-//
-//                        // ✅ 7. Ustaw wszystkie pola statusu
-//                        meeting.setUserIsOrganizer(isOrganizer);
-//                        meeting.setUserIsConfirmed(isConfirmed);
-//                        meeting.setUserIsPending(isPending);
-//                        meeting.setUserIsInvited(isInvited);
-//                        meeting.setUserIsDeclined(isDeclined);
-//                        meeting.setUserIsWaiting(isWaiting);
-//                        meeting.setUserIsParticipant(isAnyParticipant);
-//                        meeting.setUserIsViewer(isViewer);
-//                        meeting.setUserIsUnrelated(isUnrelated);
-//                        meeting.setUserRole(userRole);
-//
-//                        // ✅ 8. Ustaw pola UI (canJoin, canLeave, etc.)
-//                        meeting.setCanJoin(isViewer && !isOrganizer && !isAnyParticipant);
-//                        meeting.setCanLeave(isConfirmed && !isOrganizer);
-//                        meeting.setCanEdit(isOrganizer);
-//                        meeting.setCanDelete(isOrganizer);
-//
-//                        // ✅ 9. Jeśli jest uczestnikiem, pobierz status uczestnictwa
-//                        if (isAnyParticipant) {
-//                            ParticipantResponse participant = meetingParticipantService.getParticipantInfo(userId, meeting.getId());
-//                            if (participant != null) {
-//                                meeting.setUserParticipationStatus(participant.getStatus());
-//                            }
-//                        }
-//
-//                    } catch (Exception e) {
-//                        // W razie błędu ustaw domyślne wartości
-//                        log.warn("Error checking participation for meeting {}: {}", meeting.getId(), e.getMessage());
-//
-//                        // Bezpieczne domyślne wartości
-//                        meeting.setUserIsOrganizer(false);
-//                        meeting.setUserIsConfirmed(false);
-//                        meeting.setUserIsPending(false);
-//                        meeting.setUserIsInvited(false);
-//                        meeting.setUserIsDeclined(false);
-//                        meeting.setUserIsWaiting(false);
-//                        meeting.setUserIsParticipant(false);
-//                        meeting.setUserIsViewer(true);
-//                        meeting.setUserIsUnrelated(false);
-//                        meeting.setUserRole("VIEWER");
-//                        meeting.setCanJoin(false);
-//                        meeting.setCanLeave(false);
-//                        meeting.setCanEdit(false);
-//                        meeting.setCanDelete(false);
-//                    }
-//                }
-//
-//            } else {
-//                // Dla niezalogowanych - pobierz publiczne spotkania
-//                List<MeetingResponse> publicMeetings = meetingService.getUpcomingPublicMeetings();
-//
-//                int start = (int) pageable.getOffset();
-//                int end = Math.min((start + pageable.getPageSize()), publicMeetings.size());
-//
-//                if (start > publicMeetings.size()) {
-//                    meetingsPage = Page.empty(pageable);
-//                } else {
-//                    List<MeetingResponse> pageContent = publicMeetings.subList(start, end);
-//
-//                    // Dla niezalogowanych ustaw wszystkie role na VIEWER
-//                    for (MeetingResponse meeting : pageContent) {
-//                        meeting.setUserRole("VIEWER");
-//                        meeting.setUserIsViewer(true);
-//                        meeting.setUserIsOrganizer(false);
-//                        meeting.setUserIsConfirmed(false);
-//                        meeting.setUserIsPending(false);
-//                        meeting.setUserIsInvited(false);
-//                        meeting.setUserIsDeclined(false);
-//                        meeting.setUserIsWaiting(false);
-//                        meeting.setUserIsParticipant(false);
-//                        meeting.setUserIsUnrelated(false);
-//                        meeting.setCanJoin(false); // Niezalogowany nie może dołączyć
-//                        meeting.setCanLeave(false);
-//                        meeting.setCanEdit(false);
-//                        meeting.setCanDelete(false);
-//                    }
-//
-//                    meetingsPage = new PageImpl<>(
-//                            pageContent,
-//                            pageable,
-//                            publicMeetings.size()
-//                    );
-//                }
-//            }
-//
-//            // ✅ Przekaż dane do modelu
-//            model.addAttribute("meetings", meetingsPage.getContent());
-//            model.addAttribute("currentPage", page);
-//            model.addAttribute("totalPages", meetingsPage.getTotalPages());
-//            model.addAttribute("totalItems", meetingsPage.getTotalElements());
-//
-//            // ✅ Przekaż parametry filtrowania do modelu
-//            model.addAttribute("searchParam", search);
-//            model.addAttribute("typeParam", type);
-//            model.addAttribute("statusParam", status);
-//
-//            // ✅ Przekaż userId i userDetails dla template
-//            if (userDetails != null) {
-//                model.addAttribute("userId", userDetails.getId());
-//                model.addAttribute("currentUserId", userDetails.getId());
-//                model.addAttribute("user", userDetails);
-//            } else {
-//                model.addAttribute("userId", null);
-//                model.addAttribute("currentUserId", null);
-//            }
-//
-//        } catch (Exception e) {
-//            log.error("Error loading meetings: {}", e.getMessage(), e);
-//            model.addAttribute("meetings", Collections.emptyList());
-//            model.addAttribute("currentPage", 0);
-//            model.addAttribute("totalPages", 0);
-//            model.addAttribute("totalItems", 0);
-//            model.addAttribute("warning", "Nie udało się załadować listy spotkań");
-//        }
-//
-//        return "meetings/list";
-//    }
-//
-//    // ✅ Metoda pomocnicza do określania roli użytkownika
-//    private String determineUserRole(boolean isOrganizer, boolean isConfirmed,
-//                                     boolean isPending, boolean isInvited,
-//                                     boolean isDeclined, boolean isWaiting,
-//                                     boolean isViewer, boolean isUnrelated) {
-//        if (isOrganizer) return "ORGANIZER";
-//        if (isConfirmed) return "CONFIRMED_PARTICIPANT";
-//        if (isPending) return "PENDING";
-//        if (isInvited) return "INVITED";
-//        if (isDeclined) return "DECLINED";
-//        if (isWaiting) return "WAITING_LIST";
-//        if (isViewer) return "VIEWER";
-//        if (isUnrelated) return "UNRELATED";
-//        return "VIEWER";
-//    }
-//
-//
-//
-//
-//    @GetMapping("/dashboard")
-//    public String dashboard(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
-//        if (userDetails == null) {
-//            return "redirect:/login";
-//        }
-//
-//        try {
-//            // ✅ Pobierz spotkania użytkownika dla dashboard
-//            Page<MeetingResponse> userMeetings = meetingService.getUserMeetings(
-//                    userDetails.getId(),
-//                    PageRequest.of(0, 5)
-//            );
-//            model.addAttribute("recentMeetings", userMeetings.getContent());
-//        } catch (Exception e) {
-//            model.addAttribute("recentMeetings", Collections.emptyList());
-//        }
-//
-//        model.addAttribute("user", userDetails);
-//        return "dashboard";
-//    }
-//
-//
-//    @GetMapping("/meetings/{id}")
-//    public String meetingDetails(
-//            @PathVariable Long id,
-//            @AuthenticationPrincipal CustomUserDetails userDetails,
-//            Model model) {
-//
-//        log.info("=== START meetingDetails ===");
-//        log.info("Meeting ID: {}", id);
-//        log.info("User Details: {}", userDetails != null ? "Present" : "Null");
-//
-//        if (userDetails != null) {
-//            log.info("User ID: {}", userDetails.getId());
-//            log.info("User Authorities: {}", userDetails.getAuthorities());
-//        }
-//
-//        try {
-//            MeetingResponse meeting = meetingService.getMeetingById(id);
-//            log.info("Meeting loaded: {}", meeting != null ? "Yes" : "No");
-//            log.info("Meeting Title: {}", meeting != null ? meeting.getTitle() : "null");
-//            log.info("Meeting Organizer ID: {}", meeting != null && meeting.getOrganizer() != null ?
-//                    meeting.getOrganizer().getId() : "null");
-//
-//            model.addAttribute("meeting", meeting);
-//            log.info("Attribute 'meeting' added to model: {}", meeting != null);
-//
-//            Long userId = userDetails != null ? userDetails.getId() : null;
-//            log.info("User ID for model: {}", userId);
-//
-//            // ✅ DODAJ: Sprawdź czy użytkownik jest adminem
-//            boolean isAdmin = false;
-//            if (userDetails != null) {
-//                isAdmin = userDetails.getAuthorities().stream()
-//                        .anyMatch(auth -> {
-//                            log.debug("Authority: {}", auth.getAuthority());
-//                            return auth.getAuthority().equals("ROLE_ADMIN");
-//                        });
-//            }
-//            log.info("Is Admin: {}", isAdmin);
-//            model.addAttribute("isAdmin", isAdmin);
-//
-//            // ✅ POBIERZ JEDNORAZOWO PERMISSIONS
-//            MeetingParticipationInfo participationInfo = null;
-//            if (userId != null) {
-//                try {
-//                    participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
-//                    log.info("Participation Info loaded: {}", participationInfo != null);
-//                    if (participationInfo != null) {
-//                        log.info("Is Organizer: {}", participationInfo.isOrganizer());
-//                    }
-//                } catch (Exception e) {
-//                    log.error("Error loading participation info: {}", e.getMessage());
-//                }
-//            }
-//
-//            // ✅ PODSTAWOWE ATTRYBUTY
-//            try {
-//                List<ParticipantResponse> participants = meetingParticipantService.getConfirmedParticipants(id);
-//                log.info("Confirmed participants count: {}", participants.size());
-//                model.addAttribute("participants", participants);
-//            } catch (Exception e) {
-//                log.error("Error loading participants: {}", e.getMessage());
-//                model.addAttribute("participants", Collections.emptyList());
-//            }
-//
-//            try {
-//                Map<String, Long> participantStats = meetingParticipantService.getParticipantStatistics(id);
-//                log.info("Participant stats: {}", participantStats);
-//                model.addAttribute("participantStats", participantStats);
-//            } catch (Exception e) {
-//                log.error("Error loading participant stats: {}", e.getMessage());
-//                model.addAttribute("participantStats", new HashMap<>());
-//            }
-//
-//            // ✅ DODAJ STATUSA UCZESTNICTWA
-//            if (userId != null) {
-//                try {
-//                    boolean isPending = meetingParticipantService.isPendingParticipant(id, userId);
-//                    boolean isDeclined = meetingParticipantService.isDeclinedParticipant(id, userId);
-//                    boolean isInvited = meetingParticipantService.isInvitedParticipant(id, userId);
-//                    boolean isConfirmed = meetingParticipantService.isConfirmedParticipant(id, userId);
-//
-//                    log.info("User status - Pending: {}, Declined: {}, Invited: {}, Confirmed: {}",
-//                            isPending, isDeclined, isInvited, isConfirmed);
-//
-//                    model.addAttribute("isPending", isPending);
-//                    model.addAttribute("isDeclined", isDeclined);
-//                    model.addAttribute("isInvited", isInvited);
-//                    model.addAttribute("isConfirmed", isConfirmed);
-//                } catch (Exception e) {
-//                    log.error("Error checking user status: {}", e.getMessage());
-//                }
-//            }
-//
-//            // ✅ PERMISSIONS UŻYTKOWNIKA
-//            if (participationInfo != null) {
-//                boolean isOrganizer = participationInfo.isOrganizer();
-//                log.info("Setting isOrganizer to: {}", isOrganizer);
-//
-//                model.addAttribute("isOrganizer", isOrganizer);
-//                model.addAttribute("isParticipant", participationInfo.isParticipant());
-//                model.addAttribute("isRelated", participationInfo.isRelated());
-//                model.addAttribute("participantRole", participationInfo.getParticipantRole());
-//                model.addAttribute("canEdit", participationInfo.isCanEdit());
-//                model.addAttribute("canDelete", participationInfo.isCanDelete());
-//                model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
-//                model.addAttribute("canJoin", participationInfo.isCanJoin());
-//
-//                // Log all permissions
-//                log.info("Permissions - Organizer: {}, Participant: {}, CanEdit: {}, CanDelete: {}",
-//                        isOrganizer, participationInfo.isParticipant(),
-//                        participationInfo.isCanEdit(), participationInfo.isCanDelete());
-//            } else {
-//                // Niezalogowany użytkownik
-//                boolean canJoin = meeting != null &&
-//                        meeting.getVisibility() != null &&
-//                        meeting.getVisibility().name().equals("PUBLIC");
-//
-//                log.info("Setting default values - isOrganizer: false, canJoin: {}", canJoin);
-//
-//                model.addAttribute("isOrganizer", false);
-//                model.addAttribute("isParticipant", false);
-//                model.addAttribute("isRelated", false);
-//                model.addAttribute("canJoin", canJoin);
-//            }
-//
-//            // ✅ STATYSTYKI (tylko dla organizatora/admina)
-//            if (userId != null && participationInfo != null &&
-//                    (participationInfo.isOrganizer() || isAdmin)) {
-//
-//                log.info("User is organizer or admin, loading statistics...");
-//
-//                try {
-//                    Optional<MeetingStatistics> statsOpt = meetingAnalyticsService.getMeetingStatistics(id);
-//                    boolean hasStats = statsOpt.isPresent();
-//                    log.info("Statistics loaded: {}", hasStats);
-//
-//                    model.addAttribute("meetingStatistics", statsOpt.orElse(null));
-//                } catch (Exception e) {
-//                    log.error("Error loading statistics: {}", e.getMessage());
-//                    model.addAttribute("meetingStatistics", null);
-//                }
-//            } else {
-//                log.info("User is NOT organizer or admin, statistics will be null");
-//                model.addAttribute("meetingStatistics", null);
-//            }
-//
-//            // ✅ GŁOSOWANIA
-//            if (userId != null) {
-//                try {
-//                    List<VotingResponse> allVotings = meetingVotingService.getMeetingVotings(id, userId);
-//                    Map<Boolean, List<VotingResponse>> votings = allVotings.stream()
-//                            .collect(Collectors.partitioningBy(v -> v.getStatus().name().equals("ACTIVE")));
-//
-//                    log.info("Votings loaded - Active: {}, Closed: {}",
-//                            votings.get(true).size(), votings.get(false).size());
-//
-//                    model.addAttribute("activeVotings", votings.get(true));
-//                    model.addAttribute("closedVotings", votings.get(false));
-//                } catch (Exception e) {
-//                    log.error("Error loading votings: {}", e.getMessage());
-//                    model.addAttribute("activeVotings", Collections.emptyList());
-//                    model.addAttribute("closedVotings", Collections.emptyList());
-//                }
-//            }
-//
-//            // ✅ FEEDBACK
-//            if (userId != null && participationInfo != null && participationInfo.isParticipant()) {
-//                try {
-//                    Feedback userFeedback = feedbackService.getUserFeedback(id, userId);
-//                    log.info("User feedback loaded: {}", userFeedback != null);
-//                    model.addAttribute("userFeedback", userFeedback);
-//                } catch (Exception e) {
-//                    log.info("No feedback found for user: {}", e.getMessage());
-//                    model.addAttribute("userFeedback", null);
-//                }
-//            }
-//
-//            // ✅ ZASOBY
-//            if (userId != null) {
-//                try {
-//                    List<MeetingResourceResponse> resources = resourceService.getMeetingResources(id, userId);
-//                    log.info("Resources loaded: {}", resources.size());
-//                    model.addAttribute("resources", resources);
-//                    model.addAttribute("resourcesCount", resources.size());
-//                } catch (Exception e) {
-//                    log.error("Error loading resources: {}", e.getMessage());
-//                    model.addAttribute("resources", Collections.emptyList());
-//                    model.addAttribute("resourcesCount", 0);
-//                }
-//            }
-//
-//            // ✅ UŻYTKOWNIK
-//            if (userDetails != null) {
-//                model.addAttribute("user", userDetails);
-//                model.addAttribute("userId", userId);
-//                log.info("Added user details to model");
-//            }
-//
-//            // ✅ LOG ALL MODEL ATTRIBUTES
-//            log.info("=== MODEL ATTRIBUTES ===");
-//            Map<String, Object> modelMap = model.asMap();
-//            for (Map.Entry<String, Object> entry : modelMap.entrySet()) {
-//                log.info("  {} = {}", entry.getKey(),
-//                        entry.getValue() != null ? entry.getValue().toString() : "null");
-//            }
-//            log.info("=== END MODEL ATTRIBUTES ===");
-//
-//            return "meetings/details";
-//
-//        } catch (Exception e) {
-//            log.error("ERROR in meetingDetails: {}", e.getMessage(), e);
-//
-//            if (userDetails != null) {
-//                model.addAttribute("user", userDetails);
-//                model.addAttribute("userId", userDetails.getId());
-//            }
-//            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania");
-//            return "redirect:/meetings";
-//        } finally {
-//            log.info("=== END meetingDetails ===");
-//        }
-//    }
-//
-//
-//
-//
-//
-//
-//
-//    @GetMapping("/meetings/create")
-//    public String showCreateMeetingForm(
-//            @AuthenticationPrincipal CustomUserDetails userDetails,
-//            Model model) {
-//
-//        if (userDetails == null) {
-//            return "redirect:/login";
-//        }
-//
-//        model.addAttribute("user", userDetails);
-//        // Dodaj pusty obiekt dla formularza
-//        model.addAttribute("createMeetingRequest", new com.meethub.domain.model.request.CreateMeetingRequest());
-//        return "meetings/create"; // nazwa twojego template
-//    }
-//
-//
-//    @PostMapping("/meetings/create")
-//    public String createMeeting(
-//            @Valid @ModelAttribute("createMeetingRequest") CreateMeetingRequest request,
-//            BindingResult result,
-//            @AuthenticationPrincipal CustomUserDetails userDetails,
-//            Model model,
-//            RedirectAttributes redirectAttributes) {
-//
-//        if (userDetails == null) {
-//            return "redirect:/login";
-//        }
-//
-//        if (result.hasErrors()) {
-//            model.addAttribute("user", userDetails);
-//            return "meetings/create";
-//        }
-//
-//        try {
-//            MeetingResponse meeting = meetingService.createMeeting(request, userDetails.getId());
-//            redirectAttributes.addFlashAttribute("message",
-//                    "Spotkanie '" + meeting.getTitle() + "' zostało utworzone pomyślnie!");
-//            return "redirect:/meetings/" + meeting.getId();
-//
-//        } catch (Exception e) {
-//            model.addAttribute("user", userDetails);
-//            model.addAttribute("error", "Błąd podczas tworzenia spotkania: " + e.getMessage());
-//            return "meetings/create";
-//        }
-//    }
-//
-//    @GetMapping("/api/users/search")
-//    @ResponseBody
-//    public ResponseEntity<List<UserResponse>> searchUsers(
-//            @RequestParam String query,
-//            @AuthenticationPrincipal CustomUserDetails userDetails) {
-//
-//        if (userDetails == null) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
-//
-//        try {
-//            List<UserResponse> users = userService.searchUsers(query);
-//            return ResponseEntity.ok(users);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-//        }
-//    }
-//
-//
-//
-//
-//        @GetMapping("/meetings/{id}/edit")
-//        public String showEditMeetingForm(@PathVariable Long id,
-//                                          @AuthenticationPrincipal CustomUserDetails userDetails,
-//                                          Model model) {
-//            if (userDetails == null) {
-//                return "redirect:/login";
-//            }
-//
-//            try {
-//                MeetingResponse meeting = meetingService.getMeetingById(id);
-//                Long userId = userDetails.getId();
-//
-//                // Sprawdź czy użytkownik jest organizatorem
-//                if (!meeting.getOrganizer().getId().equals(userId)) {
-//                    return "redirect:/meetings/" + id + "?error=Nie masz uprawnień do edycji tego spotkania";
-//                }
-//
-//                UpdateMeetingRequest updateRequest = UpdateMeetingRequest.builder()
-//                        .title(meeting.getTitle())
-//                        .description(meeting.getDescription())
-//                        .agenda(meeting.getAgenda())
-//                        .type(meeting.getType())
-//                        .visibility(meeting.getVisibility())
-//                        .startDate(meeting.getStartDate())
-//                        .endDate(meeting.getEndDate())
-//                        .maxParticipants(meeting.getMaxParticipants())
-//                        .tags(meeting.getTags())
-//                        .build();
-//
-//                model.addAttribute("updateMeetingRequest", updateRequest);
-//                model.addAttribute("meetingId", id);
-//                return "meetings/edit";
-//
-//            } catch (Exception e) {
-//                return "redirect:/meetings?error=Spotkanie nie zostało znalezione";
-//            }
-//        }
-//
-//        @PostMapping("/meetings/{id}/edit")
-//        public String updateMeeting(
-//                @PathVariable Long id,
-//                @Valid @ModelAttribute("updateMeetingRequest") UpdateMeetingRequest request,
-//                BindingResult result,
-//                @AuthenticationPrincipal CustomUserDetails userDetails,
-//                Model model,
-//                RedirectAttributes redirectAttributes) {
-//
-//            if (userDetails == null) {
-//                return "redirect:/login";
-//            }
-//
-//            if (result.hasErrors()) {
-//                model.addAttribute("meetingId", id);
-//                return "meetings/edit";
-//            }
-//
-//            try {
-//                MeetingResponse meeting = meetingService.updateMeeting(id, request, userDetails.getId());
-//                redirectAttributes.addFlashAttribute("message",
-//                        "Spotkanie '" + meeting.getTitle() + "' zostało zaktualizowane pomyślnie!");
-//                return "redirect:/meetings/" + meeting.getId();
-//
-//            } catch (Exception e) {
-//                model.addAttribute("error", "Błąd podczas aktualizacji spotkania: " + e.getMessage());
-//                model.addAttribute("meetingId", id);
-//                return "meetings/edit";
-//            }
-//        }
-//
-//        @PostMapping("/meetings/{id}/delete")
-//        public String deleteMeeting(
-//                @PathVariable Long id,
-//                @AuthenticationPrincipal CustomUserDetails userDetails,
-//                RedirectAttributes redirectAttributes) {
-//
-//            if (userDetails == null) {
-//                return "redirect:/login";
-//            }
-//
-//            try {
-//                meetingService.deleteMeeting(id, userDetails.getId());
-//                redirectAttributes.addFlashAttribute("message", "Spotkanie zostało usunięte pomyślnie!");
-//                return "redirect:/meetings";
-//
-//            } catch (Exception e) {
-//                redirectAttributes.addFlashAttribute("error", "Błąd podczas usuwania spotkania: " + e.getMessage());
-//                return "redirect:/meetings/" + id;
-//            }
-//        }
-//
-//        @GetMapping("/meetings/{id}/duplicate")
-//        public String duplicateMeeting(
-//                @PathVariable Long id,
-//                @AuthenticationPrincipal CustomUserDetails userDetails,
-//                RedirectAttributes redirectAttributes) {
-//
-//            if (userDetails == null) {
-//                return "redirect:/login";
-//            }
-//
-//            try {
-//                MeetingResponse duplicatedMeeting = meetingService.duplicateMeeting(id, userDetails.getId());
-//                redirectAttributes.addFlashAttribute("message",
-//                        "Spotkanie zostało skopiowane pomyślnie!");
-//                return "redirect:/meetings/" + duplicatedMeeting.getId();
-//
-//            } catch (Exception e) {
-//                redirectAttributes.addFlashAttribute("error", "Błąd podczas kopiowania spotkania: " + e.getMessage());
-//                return "redirect:/meetings/" + id;
-//            }
-//        }
-//
-//        @PostMapping("/meetings/{id}/join")
-//        public String joinMeeting(
-//                @PathVariable Long id,
-//                @AuthenticationPrincipal CustomUserDetails userDetails,
-//                RedirectAttributes redirectAttributes) {
-//
-//            if (userDetails == null) {
-//                return "redirect:/login";
-//            }
-//
-//            try {
-//                meetingParticipantService.joinMeeting(userDetails.getId(), id);
-//                redirectAttributes.addFlashAttribute("message", "Dołączyłeś do spotkania pomyślnie!");
-//                return "redirect:/meetings/" + id;
-//
-//            } catch (Exception e) {
-//                redirectAttributes.addFlashAttribute("error", "Błąd podczas dołączania do spotkania: " + e.getMessage());
-//                return "redirect:/meetings/" + id;
-//            }
-//        }
-//
-//        @PostMapping("/meetings/{id}/leave")
-//        public String leaveMeeting(
-//                @PathVariable Long id,
-//                @AuthenticationPrincipal CustomUserDetails userDetails,
-//                RedirectAttributes redirectAttributes) {
-//
-//            if (userDetails == null) {
-//                return "redirect:/login";
-//            }
-//
-//            try {
-//                meetingParticipantService.leaveMeeting(userDetails.getId(), id);
-//                redirectAttributes.addFlashAttribute("message", "Opuszczono spotkanie pomyślnie!");
-//                return "redirect:/meetings/" + id;
-//
-//            } catch (Exception e) {
-//                redirectAttributes.addFlashAttribute("error", "Błąd podczas opuszczania spotkania: " + e.getMessage());
-//                return "redirect:/meetings/" + id;
-//            }
-//        }
-//
-//
-//
-//
-//    @GetMapping("/meetings/create-from-template/{templateId}")
-//    public String createFromTemplate(@PathVariable Long templateId,
-//                                     @AuthenticationPrincipal CustomUserDetails userDetails,
-//                                     Model model) {
-//        if (userDetails == null) return "redirect:/login";
-//
-//        MeetingResponse template = meetingService.getMeetingById(templateId);
-//        model.addAttribute("template", template);
-//        model.addAttribute("user", userDetails);
-//        model.addAttribute("today", LocalDate.now());
-//
-//        return "meetings/create-from-template";
-//    }
-//
-//    @PostMapping("/meetings/create-from-template/{templateId}")
-//    public String createFromTemplatePost(@PathVariable Long templateId,
-//                                         @RequestParam LocalDateTime startDate,
-//                                         @AuthenticationPrincipal CustomUserDetails userDetails,
-//                                         RedirectAttributes redirectAttributes) {
-//
-//        try {
-//            MeetingResponse meeting = meetingService.createFromTemplate(templateId,
-//                    userDetails.getId(),
-//                    startDate);
-//            redirectAttributes.addFlashAttribute("message",
-//                    "Spotkanie utworzone z szablonu pomyślnie!");
-//            return "redirect:/meetings/" + meeting.getId();
-//        } catch (Exception e) {
-//            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
-//            return "redirect:/meetings/templates";
-//        }
-//    }
-//
-//    // Lista szablonów
-//    @GetMapping("/meetings/templates")
-//    public String templates(@AuthenticationPrincipal CustomUserDetails userDetails,
-//                            Model model) {
-//        if (userDetails == null) return "redirect:/login";
-//
-//        List<MeetingResponse> templates = meetingService.getMeetingTemplates(userDetails.getId());
-//        model.addAttribute("templates", templates);
-//        model.addAttribute("user", userDetails);
-//
-//        return "meetings/templates";
-//    }
-//
-//    // Historia zmian statusu
-//    @GetMapping("/meetings/{id}/status-history")
-//    public String statusHistory(@PathVariable Long id,
-//                                @AuthenticationPrincipal CustomUserDetails userDetails,
-//                                Model model) {
-//        MeetingResponse meeting = meetingService.getMeetingById(id);
-//        model.addAttribute("meeting", meeting);
-//        model.addAttribute("user", userDetails);
-//
-//        return "meetings/status-history";
-//    }
-//
-//    // Zmiana statusu
-//    @PostMapping("/meetings/{id}/change-status")
-//    public String changeStatus(@PathVariable Long id,
-//                               @RequestParam String status,
-//                               @RequestParam(required = false) String reason,
-//                               @AuthenticationPrincipal CustomUserDetails userDetails,
-//                               RedirectAttributes redirectAttributes) {
-//
-//        try {
-//            // Musisz dodać metodę changeStatus w serwisie
-//            UpdateMeetingRequest request = new UpdateMeetingRequest();
-//            request.setStatus(MeetingStatus.valueOf(status));
-//            request.setStatusChangeReason(reason);
-//
-//            meetingService.updateMeeting(id, request, userDetails.getId());
-//
-//            redirectAttributes.addFlashAttribute("message",
-//                    "Status zmieniony na: " + status);
-//        } catch (Exception e) {
-//            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
-//        }
-//
-//        return "redirect:/meetings/" + id;
-//    }
-//
-//    // Generuj następne wystąpienia
-//    @PostMapping("/meetings/{id}/generate-occurrences")
-//    public String generateOccurrences(@PathVariable Long id,
-//                                      @RequestParam(defaultValue = "5") int count,
-//                                      @AuthenticationPrincipal CustomUserDetails userDetails,
-//                                      RedirectAttributes redirectAttributes) {
-//
-//        try {
-//            List<MeetingResponse> occurrences = meetingService.generateNextRecurrence(id, count);
-//            redirectAttributes.addFlashAttribute("message",
-//                    "Wygenerowano " + occurrences.size() + " następnych wystąpień");
-//        } catch (Exception e) {
-//            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
-//        }
-//
-//        return "redirect:/meetings/" + id;
-//    }
-//
-//    // ✅ DODAJ KATEGORIE DO MODELU DLA FORMULARZY
-//    @ModelAttribute("categories")
-//    public List<Category> getCategories(@AuthenticationPrincipal CustomUserDetails userDetails) {
-//        if (userDetails == null) return Collections.emptyList();
-//        return categoryRepository.findByCreatedById(userDetails.getId());
-//    }
-//
-//
-//}
-
-
-
-
-
-
-
-
-
 
 package com.meethub.controller.web;
 
@@ -883,6 +19,8 @@ import com.meethub.domain.repository.jpa.UserRepository;
 import com.meethub.domain.service.*;
 import com.meethub.exception.BusinessException;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -907,6 +45,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 @Slf4j
 @Controller
 @RequiredArgsConstructor
@@ -927,7 +68,12 @@ public class WebController {
     private final LocationService locationService;
 
     @GetMapping("/")
-    public String home(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
+    @Operation(summary = "Strona główna lub panel użytkownika",
+            description = "Zwraca panel użytkownika dla zalogowanych użytkowników, publiczną stronę główną z nadchodzącymi spotkaniami dla gości")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona HTML (panel lub strona główna)"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania jeśli wymagana autentykacja")
+    })    public String home(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         if (userDetails != null) {
             model.addAttribute("user", userDetails);
             return "dashboard";
@@ -946,6 +92,12 @@ public class WebController {
     }
 
     @GetMapping("/meetings")
+    @Operation(summary = "Lista spotkań z filtrowaniem i paginacją",
+            description = "Dla zalogowanych użytkowników: zwraca filtrowane spotkania z informacją o uczestnictwie. Dla gości: zwraca tylko publiczne spotkania. Obsługuje paginację, wyszukiwanie po tekście, typie i statusie.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z listą spotkań"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania jeśli wymagana autentykacja")
+    })
     public String meetings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
@@ -966,7 +118,6 @@ public class WebController {
                 meetingsPage = meetingService.getFilteredMeetings(search, type, status, pageable);
                 Long userId = userDetails.getId();
 
-                // ✅ Wzbogać spotkania o informacje o użytkowniku
                 List<MeetingResponse> enrichedMeetings = new ArrayList<>();
                 for (MeetingResponse meeting : meetingsPage.getContent()) {
                     enrichedMeetings.add(enrichMeetingWithUserInfo(meeting, userId));
@@ -986,7 +137,6 @@ public class WebController {
                 } else {
                     List<MeetingResponse> pageContent = publicMeetings.subList(start, end);
 
-                    // ✅ Dla niezalogowanych ustaw podstawowe wartości
                     List<MeetingResponse> enrichedPageContent = pageContent.stream()
                             .map(meeting -> MeetingResponse.builder()
                                     .id(meeting.getId())
@@ -1051,7 +201,6 @@ public class WebController {
         return "meetings/list";
     }
 
-    // ✅ Dodaj tę metodę pomocniczą w WebController:
     private MeetingResponse enrichMeetingWithUserInfo(MeetingResponse meeting, Long userId) {
         try {
             boolean isOrganizer = meeting.getOrganizer() != null &&
@@ -1135,6 +284,12 @@ public class WebController {
     }
 
     @GetMapping("/dashboard")
+    @Operation(summary = "Panel użytkownika",
+            description = "Zwraca panel użytkownika z ostatnimi spotkaniami. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona panelu użytkownika"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania jeśli nie zalogowany")
+    })
     public String dashboard(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         if (userDetails == null) {
             return "redirect:/login";
@@ -1155,6 +310,13 @@ public class WebController {
     }
 
     @GetMapping("/meetings/{id}")
+    @Operation(summary = "Szczegóły spotkania",
+            description = "Zwraca szczegółowe informacje o spotkaniu wraz z informacjami o uczestnictwie, zasobach, głosowaniach i statystykach.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona ze szczegółami spotkania"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy spotkań w przypadku błędu")
+    })
     public String meetingDetails(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1306,21 +468,14 @@ public class WebController {
         }
     }
 
-//    @GetMapping("/meetings/create")
-//    public String showCreateMeetingForm(
-//            @AuthenticationPrincipal CustomUserDetails userDetails,
-//            Model model) {
-//
-//        if (userDetails == null) {
-//            return "redirect:/login";
-//        }
-//
-//        model.addAttribute("user", userDetails);
-//        model.addAttribute("createMeetingRequest", new CreateMeetingRequest());
-//        return "meetings/create";
-//    }
 
     @GetMapping("/meetings/create")
+    @Operation(summary = "Formularz tworzenia spotkania",
+            description = "Wyświetla formularz do tworzenia nowego spotkania. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Formularz tworzenia spotkania"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania jeśli nie zalogowany")
+    })
     public String showCreateMeetingForm(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
@@ -1339,38 +494,14 @@ public class WebController {
         return "meetings/create";
     }
 
-//    @PostMapping("/meetings/create")
-//    public String createMeeting(
-//            @Valid @ModelAttribute("createMeetingRequest") CreateMeetingRequest request,
-//            BindingResult result,
-//            @AuthenticationPrincipal CustomUserDetails userDetails,
-//            Model model,
-//            RedirectAttributes redirectAttributes) {
-//
-//        if (userDetails == null) {
-//            return "redirect:/login";
-//        }
-//
-//        if (result.hasErrors()) {
-//            model.addAttribute("user", userDetails);
-//            return "meetings/create";
-//        }
-//
-//        try {
-//            MeetingResponse meeting = meetingService.createMeeting(request, userDetails.getId());
-//            redirectAttributes.addFlashAttribute("message",
-//                    "Spotkanie '" + meeting.getTitle() + "' zostało utworzone pomyślnie!");
-//            return "redirect:/meetings/" + meeting.getId();
-//
-//        } catch (Exception e) {
-//            model.addAttribute("user", userDetails);
-//            model.addAttribute("error", "Błąd podczas tworzenia spotkania: " + e.getMessage());
-//            return "meetings/create";
-//        }
-//    }
-
-
     @PostMapping("/meetings/create")
+    @Operation(summary = "Utwórz nowe spotkanie",
+            description = "Tworzy nowe spotkanie na podstawie danych z formularza. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania po utworzeniu"),
+            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do formularza w przypadku błędu")
+    })
     public String createMeeting(
             @Valid @ModelAttribute("createMeetingRequest") CreateMeetingRequest request,
             BindingResult result,
@@ -1404,7 +535,7 @@ public class WebController {
         }
 
         if (result.hasErrors()) {
-            // ✅ Ponownie załaduj listę lokalizacji w przypadku błędów walidacji
+            // Ponownie załaduj listę lokalizacji w przypadku błędów walidacji
             List<LocationBasicInfo> locations = locationService.getLocationsForSelect();
             model.addAttribute("locations", locations);
             model.addAttribute("user", userDetails);
@@ -1418,7 +549,7 @@ public class WebController {
             return "redirect:/meetings/" + meeting.getId();
 
         } catch (Exception e) {
-            // ✅ Ponownie załaduj listę lokalizacji w przypadku błędu serwisu
+            // Ponownie załaduj listę lokalizacji w przypadku błędu serwisu
             List<LocationBasicInfo> locations = locationService.getLocationsForSelect();
             model.addAttribute("locations", locations);
             model.addAttribute("user", userDetails);
@@ -1429,6 +560,13 @@ public class WebController {
 
     @GetMapping("/api/users/search")
     @ResponseBody
+    @Operation(summary = "Wyszukiwanie użytkowników",
+            description = "Wyszukuje użytkowników na podstawie zapytania tekstowego. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista użytkowników w formacie JSON"),
+            @ApiResponse(responseCode = "401", description = "Nieautoryzowany dostęp"),
+            @ApiResponse(responseCode = "500", description = "Błąd serwera")
+    })
     public ResponseEntity<List<UserResponse>> searchUsers(
             @RequestParam String query,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -1446,6 +584,13 @@ public class WebController {
     }
 
     @GetMapping("/meetings/{id}/edit")
+    @Operation(summary = "Formularz edycji spotkania",
+            description = "Wyświetla formularz do edycji istniejącego spotkania. Tylko organizator może edytować.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Formularz edycji spotkania"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie jeśli brak uprawnień"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione")
+    })
     public String showEditMeetingForm(@PathVariable Long id,
                                       @AuthenticationPrincipal CustomUserDetails userDetails,
                                       Model model) {
@@ -1488,6 +633,13 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/edit")
+    @Operation(summary = "Aktualizuj spotkanie",
+            description = "Aktualizuje istniejące spotkanie. Tylko organizator może aktualizować.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania po aktualizacji"),
+            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji")
+    })
     public String updateMeeting(
             @PathVariable Long id,
             @Valid @ModelAttribute("updateMeetingRequest") UpdateMeetingRequest request,
@@ -1521,6 +673,13 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/delete")
+    @Operation(summary = "Usuń spotkanie",
+            description = "Usuwa istniejące spotkanie. Tylko organizator może usunąć.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy spotkań po usunięciu"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do usunięcia"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione")
+    })
     public String deleteMeeting(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1542,6 +701,12 @@ public class WebController {
     }
 
     @GetMapping("/meetings/{id}/duplicate")
+    @Operation(summary = "Duplikuj spotkanie",
+            description = "Tworzy kopię istniejącego spotkania. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do nowo utworzonej kopii"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione")
+    })
     public String duplicateMeeting(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1564,6 +729,13 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/join")
+    @Operation(summary = "Dołącz do spotkania",
+            description = "Użytkownik dołącza do spotkania. Tylko dla publicznych/private spotkań.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania"),
+            @ApiResponse(responseCode = "403", description = "Brak możliwości dołączenia"),
+            @ApiResponse(responseCode = "409", description = "Brak wolnych miejsc")
+    })
     public String joinMeeting(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1585,6 +757,12 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/leave")
+    @Operation(summary = "Opuść spotkanie",
+            description = "Użytkownik opuszcza spotkanie. Tylko dla uczestników.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania"),
+            @ApiResponse(responseCode = "403", description = "Nie jesteś uczestnikiem")
+    })
     public String leaveMeeting(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1605,22 +783,13 @@ public class WebController {
         }
     }
 
-    // ✅ NOWE ENDPOINTY DLA SZABLONÓW
-
-//    @GetMapping("/meetings/templates")
-//    public String templates(@AuthenticationPrincipal CustomUserDetails userDetails,
-//                            Model model) {
-//        if (userDetails == null) return "redirect:/login";
-//
-//        List<MeetingResponse> templates = meetingService.getMeetingTemplates(userDetails.getId());
-//        model.addAttribute("templates", templates);
-//        model.addAttribute("user", userDetails);
-//
-//        return "meetings/templates";
-//    }
-
-
     @GetMapping("/meetings/templates")
+    @Operation(summary = "Lista szablonów spotkań",
+            description = "Wyświetla listę szablonów spotkań użytkownika. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z listą szablonów"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+    })
     public String templates(@AuthenticationPrincipal CustomUserDetails userDetails,
                             Model model) {
         if (userDetails == null) return "redirect:/login";
@@ -1651,36 +820,27 @@ public class WebController {
         }
     }
 
-//    @GetMapping("/meetings/create-from-template/{templateId}")
-//    public String createFromTemplate(@PathVariable Long templateId,
-//                                     @AuthenticationPrincipal CustomUserDetails userDetails,
-//                                     Model model) {
-//        if (userDetails == null) return "redirect:/login";
-//
-//        MeetingResponse template = meetingService.getMeetingById(templateId);
-//        model.addAttribute("template", template);
-//        model.addAttribute("user", userDetails);
-//        model.addAttribute("today", LocalDate.now());
-//
-//        return "meetings/create-from-template";
-//    }
-
     @GetMapping("/meetings/create-from-template/{templateId}")
+    @Operation(summary = "Tworzenie spotkania z szablonu",
+            description = "Wyświetla formularz wypełniony danymi z szablonu. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Formularz tworzenia spotkania z danymi szablonu"),
+            @ApiResponse(responseCode = "404", description = "Szablon nie znaleziony"),
+            @ApiResponse(responseCode = "400", description = "To nie jest szablon")
+    })
     public String createFromTemplate(@PathVariable Long templateId,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      Model model) {
         if (userDetails == null) return "redirect:/login";
 
         try {
-            // Pobierz szablon
             MeetingResponse template = meetingService.getMeetingById(templateId);
 
-            // Sprawdź czy to szablon
             if (!template.isTemplate()) {
                 throw new BusinessException("To nie jest szablon");
             }
 
-            // ✅ STWÓRZ CreateMeetingRequest WYPEŁNIONY WARTOŚCIAMI Z SZABLONU
+            // STWÓRZ CreateMeetingRequest WYPEŁNIONY WARTOŚCIAMI Z SZABLONU
             CreateMeetingRequest request = CreateMeetingRequest.builder()
                     .title(template.getTitle() + " (z szablonu)")
                     .description(template.getDescription())
@@ -1694,7 +854,7 @@ public class WebController {
                     .endDate(getNextOccurrenceEndDate(template))
                     .build();
 
-            // ✅ PRZEKAŻ DO ISTNIEJĄCEGO FORMULARZA
+            // PRZEKAŻ DO ISTNIEJĄCEGO FORMULARZA
             model.addAttribute("createMeetingRequest", request);
             model.addAttribute("user", userDetails);
             model.addAttribute("locations", locationService.getLocationsForSelect());
@@ -1710,7 +870,7 @@ public class WebController {
         }
     }
 
-    // ✅ NOWA METODA: Znajdź następne wystąpienie tego samego dnia tygodnia/godziny
+    // NOWA METODA: Znajdź następne wystąpienie tego samego dnia tygodnia/godziny
     private LocalDateTime getNextOccurrenceDate(MeetingResponse template) {
         if (template.getStartDate() == null) {
             // Jeśli szablon nie ma daty, ustaw domyślną: za tydzień 10:00
@@ -1731,12 +891,11 @@ public class WebController {
         return nextDate;
     }
 
-    // ✅ NOWA METODA: Oblicz datę zakończenia z zachowaniem czasu trwania
+    // NOWA METODA: Oblicz datę zakończenia z zachowaniem czasu trwania
     private LocalDateTime getNextOccurrenceEndDate(MeetingResponse template) {
         LocalDateTime startDate = getNextOccurrenceDate(template);
 
         if (template.getStartDate() != null && template.getEndDate() != null) {
-            // Zachowaj taki sam czas trwania jak w szablonie
             long durationMinutes = Duration.between(
                     template.getStartDate(),
                     template.getEndDate()
@@ -1748,7 +907,14 @@ public class WebController {
         return startDate.plusHours(1);
     }
 
-    @PostMapping("/meetings/create-from-template/{templateId}")
+    @GetMapping("/meetings/create-from-template/{templateId}")
+    @Operation(summary = "Tworzenie spotkania z szablonu",
+            description = "Wyświetla formularz wypełniony danymi z szablonu. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Formularz tworzenia spotkania z danymi szablonu"),
+            @ApiResponse(responseCode = "404", description = "Szablon nie znaleziony"),
+            @ApiResponse(responseCode = "400", description = "To nie jest szablon")
+    })
     public String createFromTemplatePost(@PathVariable Long templateId,
                                          @RequestParam LocalDateTime startDate,
                                          @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1768,6 +934,13 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/save-as-template")
+    @Operation(summary = "Zapisz spotkanie jako szablon",
+            description = "Tworzy szablon na podstawie istniejącego spotkania. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy szablonów"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień")
+    })
     public String saveAsTemplate(@PathVariable Long id,
                                  @RequestParam String templateName,
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1783,9 +956,14 @@ public class WebController {
         }
     }
 
-    // ✅ NOWE ENDPOINTY DLA POWTARZAJĄCYCH SIĘ SPOTKAŃ
 
     @GetMapping("/meetings/{id}/recurrence")
+    @Operation(summary = "Szczegóły cyklu powtarzania",
+            description = "Wyświetla szczegóły cyklu powtarzania dla spotkań cyklicznych.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona ze szczegółami cyklu"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione")
+    })
     public String recurrenceDetails(@PathVariable Long id,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     Model model) {
@@ -1804,6 +982,12 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/generate-occurrences")
+    @Operation(summary = "Generuj następne wystąpienia",
+            description = "Generuje kolejne wystąpienia dla spotkań cyklicznych.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie z powrotem do szczegółów cyklu"),
+            @ApiResponse(responseCode = "400", description = "Spotkanie nie jest cykliczne")
+    })
     public String generateOccurrences(@PathVariable Long id,
                                       @RequestParam(defaultValue = "5") int count,
                                       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1821,6 +1005,12 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/add-exception")
+    @Operation(summary = "Dodaj wyjątek cyklu",
+            description = "Dodaje wyjątek dla spotkania cyklicznego (np. odwołanie konkretnego terminu).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie z powrotem do szczegółów cyklu"),
+            @ApiResponse(responseCode = "400", description = "Nieprawidłowa data wyjątku")
+    })
     public String addRecurrenceException(@PathVariable Long id,
                                          @RequestParam String exceptionDate,
                                          @RequestParam(required = false) String reason,
@@ -1838,9 +1028,14 @@ public class WebController {
         return "redirect:/meetings/" + id + "/recurrence";
     }
 
-    // ✅ NOWE ENDPOINTY DLA KATEGORII
 
     @GetMapping("/categories")
+    @Operation(summary = "Lista kategorii użytkownika",
+            description = "Wyświetla listę kategorii utworzonych przez użytkownika. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z listą kategorii"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+    })
     public String categories(@AuthenticationPrincipal CustomUserDetails userDetails,
                              Model model) {
         if (userDetails == null) return "redirect:/login";
@@ -1853,6 +1048,12 @@ public class WebController {
     }
 
     @GetMapping("/categories/create")
+    @Operation(summary = "Formularz tworzenia kategorii",
+            description = "Wyświetla formularz do tworzenia nowej kategorii. Wymaga autentykacji.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Formularz tworzenia kategorii"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+    })
     public String showCreateCategoryForm(@AuthenticationPrincipal CustomUserDetails userDetails,
                                          Model model) {
         if (userDetails == null) return "redirect:/login";
@@ -1864,6 +1065,12 @@ public class WebController {
     }
 
     @PostMapping("/categories/create")
+    @Operation(summary = "Utwórz nową kategorię",
+            description = "Tworzy nową kategorię na podstawie danych z formularza.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
+            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza")
+    })
     public String createCategory(@Valid @ModelAttribute("category") Category category,
                                  BindingResult result,
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -1889,6 +1096,13 @@ public class WebController {
     }
 
     @GetMapping("/categories/{id}/edit")
+    @Operation(summary = "Formularz edycji kategorii",
+            description = "Wyświetla formularz do edycji istniejącej kategorii. Tylko właściciel może edytować.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Formularz edycji kategorii"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji"),
+            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
+    })
     public String showEditCategoryForm(@PathVariable Long id,
                                        @AuthenticationPrincipal CustomUserDetails userDetails,
                                        RedirectAttributes redirectAttributes,
@@ -1910,6 +1124,13 @@ public class WebController {
     }
 
     @PostMapping("/categories/{id}/edit")
+    @Operation(summary = "Aktualizuj kategorię",
+            description = "Aktualizuje istniejącą kategorię. Tylko właściciel może aktualizować.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
+            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji")
+    })
     public String updateCategory(@PathVariable Long id,
                                  @Valid @ModelAttribute("category") Category category,
                                  BindingResult result,
@@ -1947,6 +1168,13 @@ public class WebController {
     }
 
     @PostMapping("/categories/{id}/delete")
+    @Operation(summary = "Usuń kategorię",
+            description = "Usuwa istniejącą kategorię. Tylko właściciel może usunąć.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do usunięcia"),
+            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
+    })
     public String deleteCategory(@PathVariable Long id,
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
                                  RedirectAttributes redirectAttributes) {
@@ -1973,9 +1201,14 @@ public class WebController {
         }
     }
 
-    // ✅ ENDPOINTY DLA HISTORII STATUSÓW
 
     @GetMapping("/meetings/{id}/status-history")
+    @Operation(summary = "Historia zmian statusu",
+            description = "Wyświetla historię zmian statusu dla spotkania.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z historią zmian"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione")
+    })
     public String statusHistory(@PathVariable Long id,
                                 @AuthenticationPrincipal CustomUserDetails userDetails,
                                 Model model) {
@@ -1987,6 +1220,13 @@ public class WebController {
     }
 
     @PostMapping("/meetings/{id}/change-status")
+    @Operation(summary = "Zmień status spotkania",
+            description = "Zmienia status spotkania. Tylko organizator może zmieniać status.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania"),
+            @ApiResponse(responseCode = "400", description = "Nieprawidłowy status"),
+            @ApiResponse(responseCode = "403", description = "Brak uprawnień do zmiany statusu")
+    })
     public String changeStatus(@PathVariable Long id,
                                @RequestParam String status,
                                @RequestParam(required = false) String reason,
@@ -2010,9 +1250,14 @@ public class WebController {
         return "redirect:/meetings/" + id;
     }
 
-    // ✅ ZAAWANSOWANE FILTROWANIE
 
     @GetMapping("/meetings/advanced")
+    @Operation(summary = "Zaawansowane wyszukiwanie spotkań",
+            description = "Zaawansowane wyszukiwanie spotkań z wieloma kryteriami filtrowania, sortowaniem i paginacją.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z wynikami wyszukiwania"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+    })
     public String advancedMeetings(@AuthenticationPrincipal CustomUserDetails userDetails,
                                    @RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "12") int size,
@@ -2122,9 +1367,14 @@ public class WebController {
         }
     }
 
-    // ✅ ENDPOINT DLA SPOTKAŃ Z KATEGORIĄ
 
     @GetMapping("/meetings/category/{categoryId}")
+    @Operation(summary = "Spotkania według kategorii",
+            description = "Wyświetla spotkania przypisane do określonej kategorii.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z spotkaniami w kategorii"),
+            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
+    })
     public String meetingsByCategory(@PathVariable Long categoryId,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      @RequestParam(defaultValue = "0") int page,
@@ -2153,9 +1403,14 @@ public class WebController {
         return "meetings/by-category";
     }
 
-    // ✅ ENDPOINT DLA SPOTKAŃ Z TAGIEM
 
     @GetMapping("/meetings/tag/{tag}")
+    @Operation(summary = "Spotkania według tagu",
+            description = "Wyświetla spotkania oznaczone określonym tagiem.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z spotkaniami z tagiem"),
+            @ApiResponse(responseCode = "404", description = "Brak spotkań z tym tagiem")
+    })
     public String meetingsByTag(@PathVariable String tag,
                                 @AuthenticationPrincipal CustomUserDetails userDetails,
                                 @RequestParam(defaultValue = "0") int page,
@@ -2182,9 +1437,14 @@ public class WebController {
         return "meetings/by-tag";
     }
 
-    // ✅ ENDPOINT DLA POWTARZAJĄCYCH SIĘ SPOTKAŃ UŻYTKOWNIKA
 
     @GetMapping("/meetings/recurring")
+    @Operation(summary = "Cykliczne spotkania",
+            description = "Wyświetla nadchodzące cykliczne spotkania użytkownika.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z cyklicznymi spotkaniami"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+    })
     public String recurringMeetings(@AuthenticationPrincipal CustomUserDetails userDetails,
                                     Model model) {
         if (userDetails == null) return "redirect:/login";
@@ -2202,7 +1462,6 @@ public class WebController {
         return "meetings/recurring";
     }
 
-    // ✅ MODEL ATTRIBUTE DLA KATEGORII (dla formularzy)
 
     @ModelAttribute("userCategories")
     public List<CategoryResponse> getUserCategories(@AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -2227,6 +1486,13 @@ public class WebController {
 
 
     @GetMapping("/meetings/search")
+    @Operation(summary = "Wyszukiwanie spotkań",
+            description = "Zaawansowane wyszukiwanie spotkań z wieloma parametrami filtrowania.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Strona z wynikami wyszukiwania"),
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania"),
+            @ApiResponse(responseCode = "400", description = "Nieprawidłowe parametry wyszukiwania")
+    })
     public String searchMeetings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) String keywords,
@@ -2255,7 +1521,6 @@ public class WebController {
         }
 
         try {
-            // ✅ KONWERSJA TYPÓW
             MeetingType meetingType = null;
             if (type != null && !type.isEmpty()) {
                 try {
@@ -2274,15 +1539,14 @@ public class WebController {
                 }
             }
 
-            // ✅ Przygotuj kryteria wyszukiwania z poprawnymi typami
             SearchCriteria criteria = SearchCriteria.builder()
                     .keywords(keywords)
                     .tags(tags)
                     .searchFields(searchFields != null ? searchFields : Arrays.asList("TITLE", "DESCRIPTION"))
                     .dateFrom(dateFrom)
                     .dateTo(dateTo)
-                    .type(meetingType)  // ✅ MeetingType zamiast String
-                    .statuses(status)    // ✅ Uwaga: statuses zamiast status
+                    .type(meetingType)
+                    .statuses(status)
                     .minParticipants(minParticipants)
                     .maxParticipants(maxParticipants)
                     .organizerName(organizerName)
@@ -2298,13 +1562,10 @@ public class WebController {
                     .includePublic(true)
                     .build();
 
-            // ✅ Utwórz Pageable z sortowaniem
             Pageable pageable = createSortedPageable(page, size, sortBy);
 
-            // ✅ Wykonaj wyszukiwanie
             Page<MeetingResponse> meetingsPage = meetingService.searchMeetings(criteria, pageable);
 
-            // ✅ Wzbogać spotkania o informacje o użytkowniku
             List<MeetingResponse> enrichedMeetings = new ArrayList<>();
             for (MeetingResponse meeting : meetingsPage.getContent()) {
                 enrichedMeetings.add(enrichMeetingWithUserInfo(meeting, userDetails.getId()));
@@ -2316,7 +1577,6 @@ public class WebController {
                     meetingsPage.getTotalElements()
             );
 
-            // ✅ Dodaj do modelu
             model.addAttribute("meetings", finalPage.getContent());
             model.addAttribute("currentPage", page);
             model.addAttribute("totalPages", finalPage.getTotalPages());
@@ -2327,7 +1587,6 @@ public class WebController {
             model.addAttribute("isSearchResults", true);
             model.addAttribute("resultsCount", finalPage.getTotalElements());
 
-            // ✅ Przekaż parametry dla paginacji
             Map<String, String> searchParams = new LinkedHashMap<>(); // LinkedHashMap zachowuje kolejność
             if (keywords != null) searchParams.put("keywords", keywords);
             if (tags != null) searchParams.put("tags", tags);
@@ -2352,7 +1611,6 @@ public class WebController {
 
             model.addAttribute("searchParams", searchParams);
 
-            // ✅ Dodaj listę kategorii użytkownika do wyboru w formularzu
             List<Category> userCategories = categoryRepository.findByCreatedById(userDetails.getId());
             model.addAttribute("userCategories", userCategories);
 
@@ -2367,7 +1625,6 @@ public class WebController {
         }
     }
 
-    // ✅ Metoda pomocnicza do tworzenia Pageable z sortowaniem
     private Pageable createSortedPageable(int page, int size, String sortBy) {
         Sort sort;
 
@@ -2403,6 +1660,13 @@ public class WebController {
 
 
     @PostMapping("/{meetingId}/join-with-token")
+    @Operation(summary = "Dołącz do spotkania z tokenem",
+            description = "Dołącza użytkownika do spotkania za pomocą tokenu uczestnictwa.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania"),
+            @ApiResponse(responseCode = "400", description = "Nieprawidłowy token"),
+            @ApiResponse(responseCode = "404", description = "Spotkanie lub uczestnik nie znaleziony")
+    })
     public String joinMeetingWithToken(
             @PathVariable Long meetingId,
             @RequestParam Long participantId,
@@ -2419,68 +1683,4 @@ public class WebController {
         return "redirect:/meetings/" + meetingId;
     }
 
-    // ✅ LOGIN I REGISTER ENDPOINTY (jeśli nie masz)
-//
-//    @GetMapping("/login")
-//    public String login(
-//            @RequestParam(value = "error", required = false) String error,
-//            @RequestParam(value = "logout", required = false) String logout,
-//            Model model) {
-//
-//        if (error != null) {
-//            model.addAttribute("error", "Nieprawidłowy email lub hasło");
-//        }
-//        if (logout != null) {
-//            model.addAttribute("message", "Zostałeś pomyślnie wylogowany");
-//        }
-//
-//        return "auth/login";
-//    }
-//
-//    @GetMapping("/register")
-//    public String showRegistrationForm(Model model) {
-//        model.addAttribute("registrationRequest", new UserRegistrationRequest());
-//        return "auth/register";
-//    }
-//
-//    @PostMapping("/register")
-//    public String registerUser(
-//            @Valid @ModelAttribute("registrationRequest") UserRegistrationRequest request,
-//            BindingResult result,
-//            Model model,
-//            RedirectAttributes redirectAttributes) {
-//
-//        if (result.hasErrors()) {
-//            return "auth/register";
-//        }
-//
-//        if (!request.getPassword().equals(request.getConfirmPassword())) {
-//            model.addAttribute("error", "Hasła nie są identyczne");
-//            return "auth/register";
-//        }
-//
-//        try {
-//            UserResponse user = authService.register(request);
-//            redirectAttributes.addFlashAttribute("message",
-//                    "Rejestracja zakończona sukcesem! Możesz się teraz zalogować.");
-//            return "redirect:/login";
-//
-//        } catch (Exception e) {
-//            model.addAttribute("error", "Błąd rejestracji: " + e.getMessage());
-//            return "auth/register";
-//        }
-//    }
-
-    // ✅ PROFILE ENDPOINT
-
-//    @GetMapping("/profile")
-//    public String profile(@AuthenticationPrincipal CustomUserDetails userDetails,
-//                          Model model) {
-//        if (userDetails == null) {
-//            return "redirect:/login";
-//        }
-//
-//        model.addAttribute("user", userDetails);
-//        return "user/profile";
-//    }
 }

@@ -32,103 +32,10 @@ import java.util.List;
 public class FeedbackController {
 
     private final FeedbackService feedbackService;
-    private final UserRepository userRepository;
-
-//    @PostMapping("/meetings/{meetingId}")
-//    @Operation(summary = "Submit feedback")
-//    public ResponseEntity<ApiResponse<Feedback>> submitFeedback(
-//            @PathVariable Long meetingId,
-//            @Valid @RequestBody SubmitFeedbackRequest request) {
-//
-//        try {
-//            log.info("Submitting feedback for meeting: {}, rating: {}", meetingId, request.getRating());
-//
-//            // Pobierz aktualnie zalogowanego użytkownika
-//            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//
-//            if (authentication == null || !authentication.isAuthenticated()) {
-//                log.warn("User not authenticated");
-//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                        .body(ApiResponse.error("Musisz być zalogowany aby dodać opinię"));
-//            }
-//
-//            Object principal = authentication.getPrincipal();
-//
-//            // Dla form-based auth, principal to zazwyczaj UserDetails lub String (email)
-//            String email;
-//
-//            if (principal instanceof CustomUserDetailsService.CustomUserDetails) {
-//                email = ((CustomUserDetailsService.CustomUserDetails) principal).getUsername();
-//            } else if (principal instanceof String) {
-//                email = (String) principal;
-//                if ("anonymousUser".equals(email)) {
-//                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                            .body(ApiResponse.error("Musisz być zalogowany"));
-//                }
-//            } else {
-//                log.error("Unknown principal type: {}", principal.getClass());
-//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                        .body(ApiResponse.error("Błąd autentykacji"));
-//            }
-//
-//            // Znajdź użytkownika
-//            User user = userRepository.findByEmail(email)
-//                    .orElseThrow(() -> new RuntimeException("User not found: " + email));
-//
-//            log.info("User found: {} (ID: {})", email, user.getId());
-//
-//            Feedback feedback = feedbackService.submitFeedback(meetingId, user.getId(), request);
-//            return ResponseEntity.ok(ApiResponse.success("Opinia została dodana", feedback));
-//
-//        } catch (Exception e) {
-//            log.error("Error submitting feedback", e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(ApiResponse.error("Błąd: " + e.getMessage()));
-//        }
-//    }
-
-
-
-
-//    @PostMapping("/meetings/{meetingId}")
-//    @Operation(summary = "Submit feedback")
-//    public ResponseEntity<ApiResponse<Feedback>> submitFeedback(
-//            @PathVariable Long meetingId,
-//            @Valid @RequestBody SubmitFeedbackRequest request,
-//            @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails userDetails) {  // DODAJ TEN PARAMETR
-//
-//        try {
-//            log.info("Submitting feedback for meeting: {}, rating: {}", meetingId, request.getRating());
-//
-//            // Walidacja meetingId
-//            if (meetingId == null || meetingId <= 0) {
-//                log.error("Invalid meetingId: {}", meetingId);
-//                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                        .body(ApiResponse.error("Nieprawidłowe ID spotkania: " + meetingId));
-//            }
-//
-//            // Walidacja użytkownika
-//            if (userDetails == null) {
-//                log.warn("User not authenticated");
-//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                        .body(ApiResponse.error("Musisz być zalogowany"));
-//            }
-//
-//            log.info("User ID: {}, Email: {}", userDetails.getId(), userDetails.getUsername());
-//
-//            Feedback feedback = feedbackService.submitFeedback(meetingId, userDetails.getId(), request);
-//            return ResponseEntity.ok(ApiResponse.success("Opinia została dodana", feedback));
-//
-//        } catch (Exception e) {
-//            log.error("Error submitting feedback", e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                    .body(ApiResponse.error("Błąd: " + e.getMessage()));
-//        }
-//    }
-
 
     @PostMapping(value = "/meetings/{meetingId}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    @Operation(summary = "Submit feedback")
+    @Operation(summary = "Składa opinię o spotkaniu",
+            description = "Dodaje opinię (ocenę i komentarz) o spotkaniu. Tylko uczestnicy mogą dodawać opinie.")
     public ResponseEntity<ApiResponse<Void>> submitFeedback(
             @PathVariable Long meetingId,
             @RequestParam Integer rating,
@@ -178,7 +85,8 @@ public class FeedbackController {
 
 
     @GetMapping("/meetings/{meetingId}")
-    @Operation(summary = "Get meeting feedbacks")
+    @Operation(summary = "Pobiera opinie o spotkaniu",
+            description = "Zwraca wszystkie opinie dodane do spotkania.")
     public ResponseEntity<ApiResponse<List<Feedback>>> getMeetingFeedbacks(
             @PathVariable Long meetingId) {
         List<Feedback> feedbacks = feedbackService.getMeetingFeedbacks(meetingId);

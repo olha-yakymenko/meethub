@@ -22,7 +22,10 @@ public class ParticipationController {
     private final ParticipationService participationService;
 
     @PostMapping("/meetings/{meetingId}/confirm")
-    @Operation(summary = "Confirm participation in a meeting")
+    @Operation(
+            summary = "Potwierdza udział w spotkaniu",
+            description = "Potwierdza udział użytkownika w spotkaniu."
+    )
     public ResponseEntity<ApiResponse<MeetingParticipant>> confirmParticipation(
             @PathVariable Long meetingId,
             @AuthenticationPrincipal Long userId) {
@@ -32,7 +35,10 @@ public class ParticipationController {
     }
 
     @PostMapping("/meetings/{meetingId}/decline")
-    @Operation(summary = "Decline participation in a meeting")
+    @Operation(
+            summary = "Odrzuca udział w spotkaniu",
+            description = "Odrzuca udział użytkownika w spotkaniu."
+    )
     public ResponseEntity<ApiResponse<MeetingParticipant>> declineParticipation(
             @PathVariable Long meetingId,
             @AuthenticationPrincipal Long userId) {
@@ -42,14 +48,16 @@ public class ParticipationController {
     }
 
     @GetMapping("/meetings/{meetingId}/response-stats")
-    @Operation(summary = "Get response statistics for a meeting")
+    @Operation(
+            summary = "Pobiera statystyki odpowiedzi",
+            description = "Zwraca statystyki odpowiedzi na zaproszenia do spotkania."
+    )
     public ResponseEntity<ApiResponse<Map<String, Long>>> getResponseStatistics(
             @PathVariable Long meetingId) {
 
         Map<com.meethub.domain.model.enums.ParticipationStatus, Long> stats =
                 participationService.getResponseStatistics(meetingId);
 
-        // Konwertuj enum na string dla lepszej odpowiedzi JSON
         Map<String, Long> responseStats = stats.entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> e.getKey().name(),
@@ -60,7 +68,10 @@ public class ParticipationController {
     }
 
     @GetMapping("/meetings/{meetingId}/avg-response-time")
-    @Operation(summary = "Get average response time")
+    @Operation(
+            summary = "Pobiera średni czas odpowiedzi",
+            description = "Zwraca średni czas odpowiedzi na zaproszenia do spotkania."
+    )
     public ResponseEntity<ApiResponse<Double>> getAverageResponseTime(
             @PathVariable Long meetingId) {
 

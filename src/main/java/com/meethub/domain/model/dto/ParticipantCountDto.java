@@ -12,28 +12,19 @@ import java.math.RoundingMode;
 @AllArgsConstructor
 public class ParticipantCountDto {
     private Long total;
-    private Long confirmed;  // CONFIRMED + ATTENDED
-    private Long attended;   // tylko ATTENDED
+    private Long confirmed;
+    private Long attended;
     private Long declined;
     private Long cancelled;
     private Long invited;
     private Long pending;
 
-    // Obliczone wartości
     public BigDecimal getAttendanceRate() {
         return calculateRate(attended, total);
     }
 
     public BigDecimal getConfirmationRate() {
         return calculateRate(confirmed, total);
-    }
-
-    public BigDecimal getDeclineRate() {
-        return calculateRate(declined, total);
-    }
-
-    public BigDecimal getCancellationRate() {
-        return calculateRate(cancelled, total);
     }
 
     private BigDecimal calculateRate(Long part, Long total) {

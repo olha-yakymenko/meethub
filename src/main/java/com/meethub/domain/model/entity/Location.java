@@ -77,7 +77,6 @@ public class Location {
         this.accessCode = location.accessCode;
         this.drivingInstructions = location.drivingInstructions;
         this.timezone = location.timezone;
-        // meetings nie kopiujemy - to jest lista spotkań, powinna pozostać pusta w kopii
         this.meetings = new ArrayList<>();
     }
 
