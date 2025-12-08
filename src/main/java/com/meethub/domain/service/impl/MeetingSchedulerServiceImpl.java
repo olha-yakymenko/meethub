@@ -62,6 +62,21 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
             log.info("✅ Scheduler: sprawdzono {} spotkań, zaplanowano powiadomienia",
                     upcomingMeetings.size());
 
+
+            List<Meeting> meetingsToClose =
+                    meetingRepository.findByStatusAndEndDateBefore(MeetingStatus.ONGOING, now);
+
+            for (Meeting meeting : meetingsToClose) {
+                meeting.setStatus(MeetingStatus.COMPLETED);
+                meetingRepository.save(meeting);
+                log.info("🏁 Spotkanie {} zostało zakończone (status → COMPLETED)", meeting.getId());
+            }
+
+            log.info("✅ Scheduler: zaplanowano {}, zamknięto {} spotkań",
+                    upcomingMeetings.size(),
+                    meetingsToClose.size()
+            );
+
         } catch (Exception e) {
             log.error("❌ Błąd podczas planowania spotkań: {}", e.getMessage(), e);
         }

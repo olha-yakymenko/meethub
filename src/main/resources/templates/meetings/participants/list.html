@@ -159,6 +159,7 @@
 <body>
 <div th:fragment="content">
     <div class="container-fluid">
+        <!-- Nagłówek -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Zarządzanie uczestnikami spotkania</h1>
             <a th:href="@{/meetings/{meetingId}/participants/invite(meetingId=${meetingId})}"
@@ -199,10 +200,13 @@
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Lista uczestników</h5>
-                <span class="badge bg-secondary" th:text="${participants.size() + ' uczestników'}"></span>
+                <span class="badge bg-secondary"
+                      th:text="${participants != null ? participants.size() : 0} + ' uczestników'">
+                </span>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
+                <!-- Tabela uczestników -->
+                <div class="table-responsive" th:if="${participants != null && !participants.empty}">
                     <table class="table table-striped table-hover">
                         <thead>
                         <tr>
@@ -216,40 +220,54 @@
                         </thead>
                         <tbody>
                         <tr th:each="participant : ${participants}">
+                            <!-- Imię i nazwisko -->
                             <td>
-                                <strong th:text="${participant.user.firstName + ' ' + participant.user.lastName}"></strong>
+                                <strong th:text="${participant.getFullName()}">Nieznany</strong>
                             </td>
-                            <td th:text="${participant.user.email}"></td>
+
+                            <!-- Email -->
+                            <td th:text="${participant.email}">brak@email.com</td>
+
+                            <!-- Status -->
                             <td>
-                                <span th:classappend="${participant.status.name() == 'CONFIRMED'} ? 'badge bg-success' :
-                                                      (${participant.status.name() == 'INVITED'} ? 'badge bg-primary' :
-                                                      (${participant.status.name() == 'DECLINED'} ? 'badge bg-danger' :
-                                                      (${participant.status.name() == 'TENTATIVE'} ? 'badge bg-warning' :
-                                                      'badge bg-secondary')))"
-                                      th:text="${participant.status.displayName ?: participant.status}">
+                            <td>
+    <span th:switch="${participant.status}">
+        <span th:case="'CONFIRMED'" class="badge bg-success">Potwierdzony</span>
+        <span th:case="'ATTENDED'" class="badge bg-info">Uczestniczył</span>
+        <span th:case="'PENDING'" class="badge bg-warning">Oczekujący</span>
+        <span th:case="'INVITED'" class="badge bg-primary">Zaproszony</span>
+        <span th:case="'DECLINED'" class="badge bg-danger">Odrzucony</span>
+        <span th:case="*" class="badge bg-secondary" th:text="${participant.status}">Nieznany</span>
+    </span>
+                            </td>
+
+                            </td>
+
+                            <!-- Uprawnienia - ukryj lub pokaż informację o braku -->
+                            <td>
+                                <span class="badge bg-secondary" title="Brak danych o uprawnieniach">
+                                    N/D
                                 </span>
                             </td>
+
+                            <!-- Data odpowiedzi - ukryj lub pokaż informację o braku -->
                             <td>
-                                <span th:classappend="${participant.permissionLevel.name() == 'MODERATOR'} ? 'badge bg-danger' :
-                                                      (${participant.permissionLevel.name() == 'CONTRIBUTOR'} ? 'badge bg-info' :
-                                                      'badge bg-secondary')"
-                                      th:text="${participant.permissionLevel.displayName ?: participant.permissionLevel}">
+                                <span class="text-muted" title="Brak danych o dacie odpowiedzi">
+                                    -
                                 </span>
                             </td>
-                            <td>
-                                <span th:if="${participant.responseDate}"
-                                      th:text="${#temporals.format(participant.responseDate, 'dd.MM.yyyy HH:mm')}">
-                                </span>
-                                <span th:unless="${participant.responseDate}" class="text-muted">-</span>
-                            </td>
+
+                            <!-- Akcje -->
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    <!-- Edycja (jeśli endpoint istnieje) -->
                                     <a th:href="@{/meetings/{meetingId}/participants/{participantId}/edit(meetingId=${meetingId}, participantId=${participant.id})}"
-                                       class="btn btn-outline-primary" title="Edytuj">
+                                       class="btn btn-outline-primary" title="Edytuj" th:if="${false}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    <!-- Usuwanie -->
                                     <button th:if="${isOrganizer}"
-                                            th:data-user-name="${participant.user.firstName}"
+                                            th:data-user-name="${participant.getFullName()}"
                                             th:data-participant-id="${participant.id}"
                                             onclick="confirmDelete(this.getAttribute('data-user-name'), this.getAttribute('data-participant-id'))"
                                             class="btn btn-outline-danger" title="Usuń">
@@ -262,72 +280,8 @@
                     </table>
                 </div>
 
-                <!-- W pliku participants/list.html, w tabeli uczestników: -->
-
-                <tr th:each="participant : ${participants}">
-                    <td>
-                        <strong th:text="${participant.user.firstName + ' ' + participant.user.lastName}"></strong>
-                    </td>
-                    <td th:text="${participant.user.email}"></td>
-                    <td>
-        <span th:classappend="${participant.status.name() == 'CONFIRMED'} ? 'badge bg-success' :
-                              (${participant.status.name() == 'PENDING'} ? 'badge bg-warning' :
-                              (${participant.status.name() == 'INVITED'} ? 'badge bg-primary' :
-                              (${participant.status.name() == 'DECLINED'} ? 'badge bg-danger' :
-                              (${participant.status.name() == 'TENTATIVE'} ? 'badge bg-info' : 'badge bg-secondary'))))"
-              th:text="${participant.status.displayName}">
-        </span>
-                    </td>
-                    <td>
-        <span th:classappend="${participant.permissionLevel.name() == 'MODERATOR'} ? 'badge bg-danger' :
-                              (${participant.permissionLevel.name() == 'CONTRIBUTOR'} ? 'badge bg-info' : 'badge bg-secondary')"
-              th:text="${participant.permissionLevel.displayName}">
-        </span>
-                    </td>
-                    <td>
-        <span th:if="${participant.responseDate}"
-              th:text="${#temporals.format(participant.responseDate, 'dd.MM.yyyy HH:mm')}">
-        </span>
-                        <span th:unless="${participant.responseDate}" class="text-muted">-</span>
-                    </td>
-                    <td>
-                        <div class="btn-group btn-group-sm">
-                            <!-- Akcje dla oczekujących (tylko organizator) -->
-                            <div th:if="${isOrganizer and participant.status.name() == 'PENDING'}">
-                                <form th:action="@{/meetings/{meetingId}/participants/{participantId}/approve(meetingId=${meetingId}, participantId=${participant.id})}"
-                                      method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-success btn-sm" title="Zaakceptuj">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </form>
-                                <form th:action="@{/meetings/{meetingId}/participants/{participantId}/reject(meetingId=${meetingId}, participantId=${participant.id})}"
-                                      method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Odrzuć">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </form>
-                            </div>
-
-                            <!-- Edycja -->
-                            <a th:href="@{/meetings/{meetingId}/participants/{participantId}/edit(meetingId=${meetingId}, participantId=${participant.id})}"
-                               class="btn btn-outline-primary" title="Edytuj">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-
-                            <!-- Usuwanie -->
-                            <button th:if="${isOrganizer}"
-                                    th:data-user-name="${participant.user.firstName}"
-                                    th:data-participant-id="${participant.id}"
-                                    onclick="confirmDelete(this.getAttribute('data-user-name'), this.getAttribute('data-participant-id'))"
-                                    class="btn btn-outline-danger" title="Usuń">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-
                 <!-- Pusta lista -->
-                <div th:if="${participants.empty}" class="text-center py-4">
+                <div th:if="${participants == null || participants.empty}" class="text-center py-4">
                     <i class="bi bi-people display-1 text-muted"></i>
                     <h4 class="text-muted mt-3">Brak uczestników</h4>
                     <p class="text-muted">Zaproś pierwszych uczestników do tego spotkania</p>
@@ -340,14 +294,19 @@
         </div>
     </div>
 
-    <script>
+    <!-- Skrypt usuwania uczestnika -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
         function confirmDelete(userName, participantId) {
             if (confirm('Czy na pewno chcesz usunąć uczestnika ' + userName + '?')) {
-                fetch('/meetings/' + [[${meetingId}]] + '/participants/' + participantId, {
-                    method: 'DELETE',
+                const meetingId = /*[[${meetingId}]]*/ '';
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || '';
+
+                fetch('/meetings/' + meetingId + '/participants/' + participantId + '/remove', {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+                        'X-CSRF-TOKEN': csrfToken
                     }
                 }).then(response => {
                     if (response.ok) {
@@ -355,9 +314,13 @@
                     } else {
                         alert('Błąd podczas usuwania uczestnika');
                     }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    alert('Błąd podczas usuwania uczestnika');
                 });
             }
         }
+        /*]]>*/
     </script>
 </div>
 </body>

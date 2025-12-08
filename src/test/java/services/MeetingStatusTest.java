@@ -26,9 +26,7 @@ class MeetingStatusTest {
         assertThat(MeetingStatus.values())
                 .containsExactly(
                         MeetingStatus.PLANNED,
-                        MeetingStatus.CONFIRMED,
                         MeetingStatus.CANCELLED,
-                        MeetingStatus.POSTPONED,
                         MeetingStatus.COMPLETED,
                         MeetingStatus.ONGOING
                 );

@@ -352,8 +352,79 @@
 
                             <!-- Przyciski akcji -->
                             <div class="d-flex gap-1">
-                                <!-- Dołączanie -->
-                                <!-- ✅ POPRAWIONE: Bezpieczny dostęp -->
+<!--                                &lt;!&ndash; Dołączanie &ndash;&gt;-->
+<!--                                &lt;!&ndash; ✅ POPRAWIONE: Bezpieczny dostęp &ndash;&gt;-->
+<!--                                <div th:if="${meeting.status.name() == 'ONGOING'}">-->
+<!--                                    <button class="btn btn-success btn-sm"-->
+<!--                                            data-bs-toggle="modal"-->
+<!--                                            th:data-bs-target="'#joinModal-' + ${meeting.id}">-->
+<!--                                        <i class="bi bi-camera-video"></i> Dołącz-->
+<!--                                    </button>-->
+<!--                                </div>-->
+
+
+                                <div class="row" th:unless="${meetings.empty}">
+                                    <div th:each="meeting : ${meetings}" th:if="${meeting != null}" class="col-lg-6 mb-4">
+                                        <div class="card h-100 meeting-card"
+                                             th:classappend="${(meeting.template ? 'template ' : '') +
+                              (meeting.recurring ? 'recurring ' : '') +
+                              (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">
+                                            <div class="card-body">
+                                                <h5 class="card-title" th:text="${meeting.title}"></h5>
+
+                                                <!-- Status spotkania i metadane -->
+                                                <p class="text-muted mb-3">
+                                                    <span th:text="${meeting.description ?: 'Brak opisu'}"></span>
+                                                </p>
+
+                                                <div class="d-flex justify-content-between">
+                    <span>
+                        <i class="bi bi-calendar me-1"></i>
+                        <span th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
+                    </span>
+                                                    <span th:text="${meeting.status.displayName ?: meeting.status.name()}"></span>
+                                                </div>
+
+                                                <!-- Przycisk Dołącz dla spotkań ONGOING -->
+                                                <div class="mt-3" th:if="${meeting.status.name() == 'ONGOING'}">
+                                                    <button class="btn btn-success btn-sm"
+                                                            data-bs-toggle="modal"
+                                                            th:data-bs-target="'#joinModal-' + ${meeting.id}">
+                                                        <i class="bi bi-camera-video"></i> Dołącz
+                                                    </button>
+                                                </div>
+
+                                                <!-- Modal z formularzem tokenu -->
+                                                <div class="modal fade" th:id="'joinModal-' + ${meeting.id}" tabindex="-1">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" th:text="'Dołącz do spotkania: ' + ${meeting.title}"></h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <form th:action="@{/meetings/{id}/join(id=${meeting.id})}" method="post">
+                                                                    <div class="mb-3">
+                                                                        <label for="tokenInput" class="form-label">Wprowadź token</label>
+                                                                        <input type="text" name="token" class="form-control" id="tokenInput" placeholder="Token uczestnika" required>
+                                                                    </div>
+                                                                    <div class="text-end">
+                                                                        <button type="submit" class="btn btn-primary">Dołącz</button>
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Koniec modal -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
                                 <div th:if="${meeting?.canJoin and not meeting?.userIsOrganizer}">
                                     <form th:action="@{/meetings/{id}/join(id=${meeting.id})}"
                                           method="post" class="d-inline">

@@ -17,6 +17,43 @@ public class ParticipantResponse {
     private Long id;
     private UserResponse user;
     private MeetingResponse meeting;
+
+    public Long getId() {
+        return id;
+    }
+
+    public UserResponse getUser() {
+        return user;
+    }
+
+    public MeetingResponse getMeeting() {
+        return meeting;
+    }
+
+    public ParticipationStatus getStatus() {
+        return status;
+    }
+
+    public PermissionLevel getPermissionLevel() {
+        return permissionLevel;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public LocalDateTime getResponseDate() {
+        return responseDate;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
     private ParticipationStatus status;
     private PermissionLevel permissionLevel;
     private String comment;

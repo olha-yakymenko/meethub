@@ -2,9 +2,7 @@ package com.meethub.domain.model.enums;
 
 public enum MeetingStatus {
     PLANNED("Planned"),
-    CONFIRMED("Confirmed"),
     CANCELLED("Cancelled"),
-    POSTPONED("Postponed"),
     COMPLETED("Completed"),
     ONGOING("Ongoing");
 

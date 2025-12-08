@@ -95,36 +95,32 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 //    """)
 //    List<MeetingParticipant> findAttendedParticipants(@Param("meetingId") Long meetingId);
 
+//    @Query("""
+//SELECT p
+//FROM MeetingParticipant p
+//JOIN p.user u
+//WHERE p.meeting.id = :meetingId
+//""")
+//    List<ParticipantProjection> findParticipantsProjection(@Param("meetingId") Long meetingId);
+
+
     @Query("""
-    SELECT new com.meethub.domain.model.response.ParticipantResponse(
-        p.id,
-        u.id,
-        u.firstName,
-        u.lastName,
-        u.email,
-        m.id,
-        m.title,
-        m.startDate,
-        m.endDate,
-        m.location,
-        p.status,
-        p.permissionLevel,
-        p.comment,
-        p.responseDate,
-        p.createdAt,
-        p.updatedAt
-    )
+    SELECT
+        p.id AS id,
+        u.email AS email,
+        p.status AS status,
+        u.firstName AS firstName,
+        u.lastName AS lastName
     FROM MeetingParticipant p
     JOIN p.user u
-    JOIN p.meeting m
     WHERE p.meeting.id = :meetingId
     ORDER BY u.lastName, u.firstName
 """)
-    List<ParticipantResponse> findParticipantsProjection(@Param("meetingId") Long meetingId);
+    List<ParticipantProjection> findParticipantsProjection(@Param("meetingId") Long meetingId);
 
 
     @Query("""
-        SELECT 
+        SELECT
             p.id as id,
             u.id as userId,
             u.firstName as firstName,
@@ -170,6 +166,7 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     """)
     ParticipantCountDto getParticipantCounts(@Param("meetingId") Long meetingId);
 
+    Optional<MeetingParticipant> findByIdAndInvitationToken(Long participantId, String invitationToken);
 
 //    @Query("""
 //        SELECT AVG(EXTRACT(EPOCH FROM (p.respondedAt - p.invitedAt)) / 60)

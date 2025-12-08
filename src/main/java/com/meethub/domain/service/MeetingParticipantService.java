@@ -40,17 +40,19 @@ import com.meethub.domain.model.entity.MeetingParticipant;
 import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
+import com.meethub.domain.model.projection.ParticipantProjection;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
 
 public interface MeetingParticipantService {
-    List<ParticipantResponse> getMeetingParticipants(Long meetingId);
+    List<ParticipantProjection> getMeetingParticipants(Long meetingId);
 
     ParticipantCountDto getParticipantCounts(Long meetingId);
 
@@ -119,6 +121,9 @@ public interface MeetingParticipantService {
     ByteArrayResource exportParticipantsToCsv(Long meetingId);
 
     void addOrganizerAsParticipant(Meeting meeting, User organizer);
+
+    @Transactional
+    void confirmAttendance(Long participantId, String inputToken);
 
     // Klasa dla statystyk
     interface ParticipantStats {

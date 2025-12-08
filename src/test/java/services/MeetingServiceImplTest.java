@@ -1271,7 +1271,7 @@ class MeetingServiceImplTest {
     void updateMeeting_StatusChange_SavesStatusHistory() {
         // Given
         UpdateMeetingRequest request = UpdateMeetingRequest.builder()
-                .status(MeetingStatus.CONFIRMED)
+                .status(MeetingStatus.PLANNED)
                 .statusChangeReason("Confirmed by manager")
                 .build();
 
@@ -1423,7 +1423,7 @@ class MeetingServiceImplTest {
         when(meetingRepository.save(any(Meeting.class))).thenReturn(meetingToUpdate);
 
         // When
-        meetingService.changeMeetingStatus(1L, MeetingStatus.CONFIRMED, 1L);
+        meetingService.changeMeetingStatus(1L, MeetingStatus.PLANNED, 1L);
 
         // Then
         assertAll(
@@ -1440,7 +1440,7 @@ class MeetingServiceImplTest {
 
         // When & Then
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> meetingService.changeMeetingStatus(1L, MeetingStatus.CONFIRMED, 1L));
+                () -> meetingService.changeMeetingStatus(1L, MeetingStatus.PLANNED, 1L));
 
         assertEquals("No permission to change status of this meeting", exception.getMessage());
     }

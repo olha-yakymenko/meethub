@@ -8,6 +8,7 @@ import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.mapper.MeetingMapper;
+import com.meethub.domain.model.projection.ParticipantProjection;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
@@ -47,8 +48,10 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     private final MeetingMapper meetingMapper;
 
     @Override
-    public List<ParticipantResponse> getMeetingParticipants(Long meetingId) {
-        return participantRepository.findParticipantsProjection(meetingId);
+    public List<ParticipantProjection> getMeetingParticipants(Long meetingId) {
+        List<ParticipantProjection> participants = participantRepository.findParticipantsProjection(meetingId);
+        log.info("UWAGA LISTA UŻYTKOWNIKÓW: {}", participants);
+        return participants;
     }
 
     @Override
@@ -91,7 +94,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         MeetingParticipant savedParticipant = participantRepository.save(participant);
 
         // Wyślij zaproszenie
-        sendInvitationEmail(savedParticipant);
+//        sendInvitationEmail(savedParticipant);
 
         return savedParticipant;
     }
@@ -414,35 +417,64 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
     // POZOSTAŁE METODY (zachowaj istniejące)
 
+//    @Override
+//    public MeetingParticipant acceptInvitationByToken(String token) {
+//        // Zachowaj istniejącą implementację
+//        MeetingParticipant participant = participantRepository.findByInvitationToken(token)
+//                .orElseThrow(() -> new ResourceNotFoundException("Invalid invitation token"));
+//
+//        if (participant.getTokenExpiresAt() != null &&
+//                participant.getTokenExpiresAt().isBefore(LocalDateTime.now())) {
+//            throw new IllegalArgumentException("Invitation token has expired");
+//        }
+//
+//        if (isMeetingFull(participant.getMeeting().getId())) {
+//            if (!isOnWaitlist(participant.getMeeting().getId(), participant.getUser().getId())) {
+//                addToWaitlist(participant.getMeeting(), participant.getUser());
+//            }
+//            throw new IllegalArgumentException("Meeting is full. You have been added to waitlist.");
+//        }
+//
+//        ParticipationStatus oldStatus = participant.getStatus();
+//        participant.setStatus(ParticipationStatus.CONFIRMED);
+//        participant.setResponseDate(LocalDateTime.now());
+//        participant.setInvitationToken(null);
+//
+//        MeetingParticipant updatedParticipant = participantRepository.save(participant);
+//
+//        saveStatusHistory(participant, oldStatus, ParticipationStatus.CONFIRMED,
+//                "Accepted via invitation token", participant.getUser().getId());
+//
+//        return updatedParticipant;
+//    }
+
+
     @Override
     public MeetingParticipant acceptInvitationByToken(String token) {
-        // Zachowaj istniejącą implementację
         MeetingParticipant participant = participantRepository.findByInvitationToken(token)
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid invitation token"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid attendance token"));
 
-        if (participant.getTokenExpiresAt() != null &&
-                participant.getTokenExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Invitation token has expired");
+        LocalDateTime now = LocalDateTime.now();
+
+        // ✅ SPRAWDŹ CZY SPOTKANIE AKTUALNIE TRWA
+        Meeting meeting = participant.getMeeting();
+        if (!meeting.isOngoing()) {
+            throw new IllegalArgumentException("Token can only be used during the meeting");
         }
 
-        if (isMeetingFull(participant.getMeeting().getId())) {
-            if (!isOnWaitlist(participant.getMeeting().getId(), participant.getUser().getId())) {
-                addToWaitlist(participant.getMeeting(), participant.getUser());
-            }
-            throw new IllegalArgumentException("Meeting is full. You have been added to waitlist.");
+        // ✅ SPRAWDŹ CZY JUŻ POTWIERDZONO
+        if (participant.getAttendanceConfirmedAt() != null) {
+            throw new IllegalArgumentException("Attendance already confirmed");
         }
 
-        ParticipationStatus oldStatus = participant.getStatus();
-        participant.setStatus(ParticipationStatus.CONFIRMED);
-        participant.setResponseDate(LocalDateTime.now());
-        participant.setInvitationToken(null);
+        // ✅ POTWIERDŹ FREKWENCJĘ
+        participant.setStatus(ParticipationStatus.ATTENDED);
+        participant.setAttendanceConfirmedAt(now);
+        participant.setInvitationToken(null); // Zużyj token
+        participant.setTokenExpiresAt(null);
+        participant.setResponseDate(now); // Opcjonalnie
 
-        MeetingParticipant updatedParticipant = participantRepository.save(participant);
-
-        saveStatusHistory(participant, oldStatus, ParticipationStatus.CONFIRMED,
-                "Accepted via invitation token", participant.getUser().getId());
-
-        return updatedParticipant;
+        return participantRepository.save(participant);
     }
 
 //    @Override
@@ -1234,7 +1266,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     @Override
     public Map<String, Object> getDetailedStats(Long meetingId) {
         Map<String, Long> basicStats = getParticipantStatistics(meetingId);
-        List<ParticipantResponse> participants = getMeetingParticipants(meetingId);
+        List<ParticipantProjection> participants = getMeetingParticipants(meetingId);
 
         Map<String, Object> detailedStats = new HashMap<>(basicStats);
         detailedStats.put("participants", participants);
@@ -1243,28 +1275,54 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return detailedStats;
     }
 
+//    @Override
+//    public ByteArrayResource exportParticipantsToCsv(Long meetingId) {
+//        // Implementacja eksportu do CSV
+//        List<ParticipantResponse> participants = getMeetingParticipants(meetingId);
+//        StringBuilder csv = new StringBuilder();
+//
+//        // Nagłówek
+//        csv.append("ID,Imię,Nazwisko,Email,Status,Uprawnienia,Data odpowiedzi\n");
+//
+//        // Dane
+//        for (ParticipantResponse p : participants) {
+//            csv.append(p.getId()).append(",");
+//            csv.append(p.getUser().getFirstName()).append(",");
+//            csv.append(p.getUser().getLastName()).append(",");
+//            csv.append(p.getUser().getEmail()).append(",");
+//            csv.append(p.getStatus()).append(",");
+//            csv.append(p.getPermissionLevel()).append(",");
+//            csv.append(p.getResponseDate() != null ? p.getResponseDate().toString() : "").append("\n");
+//        }
+//
+//        return new ByteArrayResource(csv.toString().getBytes());
+//    }
+
+
     @Override
     public ByteArrayResource exportParticipantsToCsv(Long meetingId) {
-        // Implementacja eksportu do CSV
-        List<ParticipantResponse> participants = getMeetingParticipants(meetingId);
+        List<ParticipantProjection> participants = participantRepository.findParticipantsProjection(meetingId);
         StringBuilder csv = new StringBuilder();
 
         // Nagłówek
-        csv.append("ID,Imię,Nazwisko,Email,Status,Uprawnienia,Data odpowiedzi\n");
+        csv.append("ID,Imię i Nazwisko,Email,Status,Data zaproszenia,Data odpowiedzi,Data uczestnictwa,Data opuszczenia\n");
 
         // Dane
-        for (ParticipantResponse p : participants) {
+        for (ParticipantProjection p : participants) {
             csv.append(p.getId()).append(",");
-            csv.append(p.getUser().getFirstName()).append(",");
-            csv.append(p.getUser().getLastName()).append(",");
-            csv.append(p.getUser().getEmail()).append(",");
-            csv.append(p.getStatus()).append(",");
-            csv.append(p.getPermissionLevel()).append(",");
-            csv.append(p.getResponseDate() != null ? p.getResponseDate().toString() : "").append("\n");
+            csv.append(p.getFullName()).append(",");
+//            csv.append(p.getLastName()).append(",");
+            csv.append(p.getEmail()).append(",");
+//            csv.append(p.getStatus() != null ? p.getStatus().name() : "").append(",");
+//            csv.append(p.getInvitedAt() != null ? p.getInvitedAt().toString() : "").append(",");
+//            csv.append(p.getRespondedAt() != null ? p.getRespondedAt().toString() : "").append(",");
+//            csv.append(p.getAttendedAt() != null ? p.getAttendedAt().toString() : "").append(",");
+//            csv.append(p.getLeftAt() != null ? p.getLeftAt().toString() : "").append("\n");
         }
 
         return new ByteArrayResource(csv.toString().getBytes());
     }
+
 
     private Long getCurrentUserId() {
         // Implementacja pobierania ID aktualnego użytkownika
@@ -1514,7 +1572,18 @@ public void addOrganizerAsParticipant(Meeting meeting, User organizer) {
         participantRepository.save(organizerParticipant);
     }
 
+@Transactional
+@Override
+public void confirmAttendance(Long participantId, String inputToken) {
 
+        MeetingParticipant participant = participantRepository
+                .findByIdAndInvitationToken(participantId, inputToken)
+                .orElseThrow(() -> new RuntimeException("Nieprawidłowy token lub uczestnik nie istnieje"));
+
+        participant.setStatus(ParticipationStatus.ATTENDED);
+
+        participantRepository.save(participant);
+    }
 
 
 

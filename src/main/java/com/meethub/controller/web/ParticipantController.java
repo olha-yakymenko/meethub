@@ -3,6 +3,7 @@ package com.meethub.controller.web;
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
+import com.meethub.domain.model.projection.ParticipantProjection;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
@@ -51,7 +52,7 @@ public class ParticipantController {
                 return "error/403";
             }
 
-            List<ParticipantResponse> participants = participantService.getMeetingParticipants(meetingId);
+            List<ParticipantProjection> participants = participantService.getMeetingParticipants(meetingId);
             MeetingParticipantService.ParticipantStats stats = participantService.getMeetingStats(meetingId);
 
             model.addAttribute("participants", participants);

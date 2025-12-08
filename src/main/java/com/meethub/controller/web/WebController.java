@@ -2401,6 +2401,24 @@ public class WebController {
         return PageRequest.of(page, size, sort);
     }
 
+
+    @PostMapping("/{meetingId}/join-with-token")
+    public String joinMeetingWithToken(
+            @PathVariable Long meetingId,
+            @RequestParam Long participantId,
+            @RequestParam String token,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            meetingParticipantService.confirmAttendance(participantId, token);
+            redirectAttributes.addFlashAttribute("success", "Dołączono pomyślnie!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Nieprawidłowy token!");
+        }
+
+        return "redirect:/meetings/" + meetingId;
+    }
+
     // ✅ LOGIN I REGISTER ENDPOINTY (jeśli nie masz)
 //
 //    @GetMapping("/login")

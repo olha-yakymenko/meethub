@@ -1,0 +1,17 @@
+<!-- attendance_confirmation.html -->
+<h2>{{#if meetingInProgress}}Potwierdź obecność{{else}}Potwierdź uczestnictwo{{/if}}</h2>
+
+{{#if meetingInProgress}}
+<p>Spotkanie <strong>{{meetingTitle}}</strong> aktualnie trwa.</p>
+<p>Użyj poniższego tokena aby potwierdzić swoją obecność:</p>
+{{else}}
+<p>Zostałeś zaproszony na spotkanie <strong>{{meetingTitle}}</strong>.</p>
+<p>Użyj tokena aby potwierdzić uczestnictwo:</p>
+{{/if}}
+
+<form action="/api/meetings/confirm-token" method="POST">
+    <input type="hidden" name="token" value="{{token}}">
+    <button type="submit">
+        {{#if meetingInProgress}}Potwierdź obecność{{else}}Potwierdź uczestnictwo{{/if}}
+    </button>
+</form>

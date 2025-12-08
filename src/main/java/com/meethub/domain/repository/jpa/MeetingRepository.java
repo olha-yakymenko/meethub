@@ -78,6 +78,8 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
 
 
 
+    List<Meeting> findByStatusAndEndDateBefore(MeetingStatus status, LocalDateTime time);
+
 
 
     @Query("SELECT m FROM Meeting m " +

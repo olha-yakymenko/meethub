@@ -2,6 +2,7 @@ package com.meethub.controller.api;
 
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
+import com.meethub.domain.model.projection.ParticipantProjection;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
 import com.meethub.domain.model.response.ApiResponse;
 import com.meethub.domain.model.response.ParticipantResponse;
@@ -27,8 +28,16 @@ public class MeetingParticipantController {
 
     @GetMapping
     @Operation(summary = "Get meeting participants")
-    public ResponseEntity<ApiResponse<List<ParticipantResponse>>> getParticipants(@PathVariable Long meetingId) {
-        List<ParticipantResponse> participants = participantService.getMeetingParticipants(meetingId);
+    public ResponseEntity<ApiResponse<List<ParticipantProjection>>> getParticipants(@PathVariable Long meetingId) {
+        List<ParticipantProjection> participants = participantService.getMeetingParticipants(meetingId);
+        System.out.println("UWAGA LISTA UZYTKOWNIKOW:");
+
+        for (ParticipantProjection p : participants) {
+            System.out.println("ID: " + p.getId()
+//                    + ", email: " + p.getEmail()
+                    + ", Status: " + p.getStatus()) ;
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Participants retrieved successfully", participants));
     }
 
