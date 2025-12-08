@@ -10,11 +10,9 @@ public interface ParticipationService {
     // Status uczestnictwa
     MeetingParticipant confirmParticipation(Long meetingId, Long userId);
     MeetingParticipant declineParticipation(Long meetingId, Long userId);
-    MeetingParticipant markAsTentative(Long meetingId, Long userId);
 
     // Obecność
     MeetingParticipant markAsAttended(Long meetingId, Long userId);
-    MeetingParticipant markAsNoShow(Long meetingId, Long userId);
 
     // Statystyki
     Map<ParticipationStatus, Long> getResponseStatistics(Long meetingId);

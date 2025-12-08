@@ -81,8 +81,6 @@ public class InvitationController {
                 return "Zaakceptowano zaproszenie do spotkania";
             case DECLINED:
                 return "Odrzucono zaproszenie do spotkania";
-            case TENTATIVE:
-                return "Ustawiono status 'Wstrzymany' dla spotkania";
             default:
                 return "Zaktualizowano status zaproszenia";
         }

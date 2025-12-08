@@ -212,13 +212,11 @@ public class MeetingResource {
         }
 
         if (accessLevel == AccessLevel.PARTICIPANTS) {
-            // ✅ ORGANIZATOR MA DOSTĘP DO WSZYSTKICH ZASOBÓW PARTICIPANTS
             boolean isOrganizer = meeting.getOrganizer().equals(user);
             if (isOrganizer) {
                 return true;
             }
 
-            // ✅ SPRAWDŹ CZY JEST UCZESTNIKIEM
             return meeting.getParticipants().stream()
                     .anyMatch(p -> p.getUser().equals(user) && p.isConfirmed());
         }

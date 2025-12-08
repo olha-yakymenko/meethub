@@ -7,6 +7,7 @@ import com.meethub.domain.model.request.NotificationPreferencesRequest;
 import com.meethub.domain.model.response.NotificationResponse;
 import com.meethub.domain.model.response.UserProfileResponse;
 import com.meethub.domain.repository.jpa.*;
+import com.meethub.domain.service.AttendanceTokenService;
 import com.meethub.domain.service.EmailService;
 import com.meethub.domain.service.MeetingSchedulerService;
 import com.meethub.domain.service.NotificationService;
@@ -39,6 +40,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final MeetingRepository meetingRepository;
     private final MeetingParticipantRepository participantRepository;
     private final EmailService emailService;
+
+    private final AttendanceTokenService attendanceTokenService;
+    private final AttendanceTokenRepository attendanceTokenRepository;
 
     @Override
     public Notification createNotification(Notification notification) {
@@ -512,73 +516,8 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    // ========== METODY POMOCNICZE ==========
 
-    private Notification createInAppNotification(User user, String templateKey,
-                                                 Map<String, String> variables,
-                                                 NotificationType type) {
-        log.debug("🛠️ Tworzenie IN_APP dla użytkownika {}, szablon: {}", user.getId(), templateKey);
 
-        try {
-            // Szukaj szablonu - jeśli nie ma, użyj domyślnego
-            Optional<EmailTemplate> templateOpt = emailTemplateRepository
-                    .findByTemplateKeyAndLanguage(templateKey, user.getLanguage());
-
-            String personalizedTitle;
-            String personalizedMessage;
-
-            if (templateOpt.isPresent()) {
-                EmailTemplate template = templateOpt.get();
-                personalizedMessage = personalizeTemplate(template.getBodyTemplate(), variables);
-                personalizedTitle = personalizeTemplate(template.getSubject(), variables);
-            } else {
-                log.warn("⚠️ Template {} not found for language {}. Using default title/message.",
-                        templateKey, user.getLanguage());
-
-                // Użyj domyślnych tytułów i wiadomości
-                personalizedTitle = getDefaultNotificationTitle(type, variables);
-                personalizedMessage = getDefaultNotificationMessage(type, variables);
-            }
-
-            Notification notification = Notification.builder()
-                    .user(user)
-                    .title(personalizedTitle)
-                    .message(personalizedMessage)
-                    .type(type)
-                    .channel(NotificationChannel.IN_APP)
-                    .templateKey(templateKey)
-                    .templateVariables(variables)
-                    .status(NotificationStatus.PENDING)
-                    .build();
-
-            // ZAPISZ DO BAZY
-            Notification savedNotification = notificationRepository.save(notification);
-
-            log.info("💾 ZAPISANO powiadomienie IN_APP ID={} do bazy dla użytkownika {}",
-                    savedNotification.getId(), user.getId());
-
-            return savedNotification;
-
-        } catch (Exception e) {
-            log.error("❌ Critical error in createInAppNotification: {}. Creating minimal notification.",
-                    e.getMessage(), e);
-
-            // Awaryjne tworzenie bardzo podstawowego powiadomienia
-            Notification fallbackNotification = Notification.builder()
-                    .user(user)
-                    .title("Powiadomienie")
-                    .message("Nowe powiadomienie z systemu")
-                    .type(type)
-                    .channel(NotificationChannel.IN_APP)
-                    .status(NotificationStatus.PENDING)
-                    .build();
-
-            Notification savedFallback = notificationRepository.save(fallbackNotification);
-            log.warn("⚠️ Utworzono fallback notification ID={}", savedFallback.getId());
-
-            return savedFallback;
-        }
-    }
 
 
 //    @Override
@@ -725,6 +664,87 @@ public class NotificationServiceImpl implements NotificationService {
 
 
 
+//dziala ale bez tokenu
+//    @Override
+//    public Notification createNotificationFromTemplate(Long userId, String templateKey,
+//                                                       Map<String, String> variables,
+//                                                       NotificationType type,
+//                                                       NotificationChannel channel) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+//
+//        // Sprawdź preferencje użytkownika
+//        if (!isNotificationAllowed(user, type, channel)) {
+//            log.debug("Notification not allowed for user {}: type={}, channel={}", userId, type, channel);
+//            return null;
+//        }
+//
+//        EmailTemplate template = emailTemplateRepository.findByTemplateKeyAndLanguage(templateKey, user.getLanguage())
+//                .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
+//
+//        // Personalizuj wiadomość
+//        String personalizedMessage = personalizeTemplate(template.getBodyTemplate(), variables);
+//        String personalizedTitle = personalizeTemplate(template.getSubject(), variables);
+//
+//        Notification notification = Notification.builder()
+//                .user(user)
+//                .title(personalizedTitle)
+//                .message(personalizedMessage)
+//                .type(type)
+//                .channel(channel)
+//                .templateKey(templateKey)
+//                .templateVariables(variables)
+//                .status(NotificationStatus.PENDING)
+//                .build();
+//
+//        Notification savedNotification = notificationRepository.save(notification);
+//
+//        // WYSYŁANIE EMAILA JEŚLI TO KANAŁ EMAIL
+//        if (channel == NotificationChannel.EMAIL) {
+//            sendEmailForNotification(savedNotification, user, personalizedTitle, personalizedMessage);
+//        }
+//
+//        return savedNotification;
+//    }
+//
+//    /**
+//     * Wysyła email dla notyfikacji
+//     */
+//    private void sendEmailForNotification(Notification notification,
+//                                          User user,
+//                                          String subject,
+//                                          String htmlContent) {
+//        try {
+//            // WYWOŁAJ NOWĄ METODĘ Z EmailService
+//            emailService.sendHtmlEmail(
+//                    user.getEmail(),
+//                    subject,
+//                    htmlContent  // To jest już spersonalizowany HTML z bazy
+//            );
+//
+//            // Aktualizuj status notyfikacji
+//            notification.setStatus(NotificationStatus.SENT);
+//            notification.setSentAt(LocalDateTime.now());
+//            notificationRepository.save(notification);
+//
+//            log.info("📧 Email wysłany do {} (user ID: {})",
+//                    user.getEmail(), user.getId());
+//
+//        } catch (Exception e) {
+//            log.error("❌ Błąd wysyłki email do {}: {}",
+//                    user.getEmail(), e.getMessage());
+//
+//            // Aktualizuj status notyfikacji na FAILED
+//            notification.setStatus(NotificationStatus.FAILED);
+//            notificationRepository.save(notification);
+//
+//            // Rzuć wyjątek tylko jeśli chcesz żeby cała operacja się wycofała
+//            // throw new RuntimeException("Failed to send email", e);
+//        }
+//    }
+//
+//
+
 
     @Override
     public Notification createNotificationFromTemplate(Long userId, String templateKey,
@@ -762,116 +782,177 @@ public class NotificationServiceImpl implements NotificationService {
 
         // WYSYŁANIE EMAILA JEŚLI TO KANAŁ EMAIL
         if (channel == NotificationChannel.EMAIL) {
-            sendEmailForNotification(savedNotification, user, personalizedTitle, personalizedMessage);
+            // PRZEKAŻ ZMIENNE DO METODY
+            sendEmailForNotification(savedNotification, user, personalizedTitle, personalizedMessage, variables);
         }
 
         return savedNotification;
     }
 
-    /**
-     * Wysyła email dla notyfikacji
-     */
     private void sendEmailForNotification(Notification notification,
                                           User user,
                                           String subject,
-                                          String htmlContent) {
+                                          String htmlContent,
+                                          Map<String, String> templateVariables) {
         try {
-            // WYWOŁAJ NOWĄ METODĘ Z EmailService
+            // ========== 1. PRZYGOTUJ ZMIENNE ==========
+            Map<String, String> emailVariables = new HashMap<>();
+
+            // Skopiuj oryginalne zmienne
+            if (templateVariables != null) {
+                emailVariables.putAll(templateVariables);
+            }
+
+            // Dodaj standardowe zmienne
+            emailVariables.put("userName", user.getFirstName());
+            emailVariables.put("userEmail", user.getEmail());
+            emailVariables.put("currentYear", String.valueOf(LocalDateTime.now().getYear()));
+            emailVariables.put("companyName", "MeetHub");
+
+            // ========== 2. DODAJ TOKEN TYLKO DLA WYMAGANYCH SZABLONÓW ==========
+            String token = null;
+//            if (isTokenRequiredTemplate(notification.getTemplateKey())) {
+                token = generateTokenIfMeetingExists(user, templateVariables);
+                log.info("Aktualny token 1,", token);
+
+                if (token != null) {
+                    // Dodaj zmienne tokenu (szablon z bazy użyje {{#if attendanceToken}})
+                    emailVariables.put("attendanceToken", token);
+                    emailVariables.put("attendanceTokenFormatted", formatTokenForDisplay(token));
+                    emailVariables.put("confirmationLink", buildConfirmationLink(
+                            extractMeetingIdFromVariables(templateVariables), token));
+                    emailVariables.put("token", token); // alias
+
+                    log.info("🔐 Dodano token do emaila dla {}: {}",
+                            user.getEmail(), formatTokenForDisplay(token));
+                }
+//            }
+
+            // ========== 3. ZNAJDŹ I PERSONALIZUJ SZABLON Z BAZY ==========
+            EmailTemplate emailTemplate = emailTemplateRepository
+                    .findByTemplateKeyAndLanguage(notification.getTemplateKey(), user.getLanguage())
+                    .orElseGet(() -> emailTemplateRepository
+                            .findByTemplateKeyAndLanguage(notification.getTemplateKey(), "pl")
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Template not found: " + notification.getTemplateKey())));
+
+            // Personalizuj używając zmiennych (w tym token jeśli istnieje)
+            String personalizedSubject = personalizeTemplate(emailTemplate.getSubject(), emailVariables);
+            String personalizedBody = personalizeTemplate(emailTemplate.getBodyTemplate(), emailVariables);
+
+            // ========== 4. WYŚLIJ EMAIL ==========
             emailService.sendHtmlEmail(
                     user.getEmail(),
-                    subject,
-                    htmlContent  // To jest już spersonalizowany HTML z bazy
+                    personalizedSubject,
+                    personalizedBody // Szablon z bazy już obsługuje token przez {{#if attendanceToken}}
             );
 
-            // Aktualizuj status notyfikacji
+            // ========== 5. AKTUALIZUJ STATUS ==========
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
 
-            log.info("📧 Email wysłany do {} (user ID: {})",
-                    user.getEmail(), user.getId());
+            log.info("📧 Email wysłany do {} (szablon: {})",
+                    user.getEmail(), notification.getTemplateKey());
 
         } catch (Exception e) {
             log.error("❌ Błąd wysyłki email do {}: {}",
-                    user.getEmail(), e.getMessage());
+                    user.getEmail(), e.getMessage(), e);
 
-            // Aktualizuj status notyfikacji na FAILED
             notification.setStatus(NotificationStatus.FAILED);
             notificationRepository.save(notification);
-
-            // Rzuć wyjątek tylko jeśli chcesz żeby cała operacja się wycofała
-            // throw new RuntimeException("Failed to send email", e);
         }
     }
 
 
+    /**
+     * Sprawdza czy szablon wymaga tokenu
+     */
+    private boolean isTokenRequiredTemplate(String templateKey) {
+        return "meeting_started".equals(templateKey) ||
+                "meeting_started_participant".equals(templateKey);
+    }
 
+    /**
+     * Generuje token tylko jeśli to spotkanie i mamy meetingId
+     */
+    private String generateTokenIfMeetingExists(User user, Map<String, String> variables) {
+        if (variables == null) return null;
 
+        Long meetingId = extractMeetingIdFromVariables(variables);
+        if (meetingId == null) {
+            log.warn("⚠️ Brak meetingId dla generacji tokenu");
+            return null;
+        }
 
-    // DODAJ TĘ METODĘ POMOCNICZĄ (jeśli jej nie ma):
-    private String getDefaultNotificationTitle(NotificationType type, Map<String, String> variables) {
-        switch (type) {
-            case MEETING_REMINDER:
-                return "🔔 Przypomnienie: " + variables.getOrDefault("meetingTitle", "Spotkanie");
-            case MEETING_UPDATE:
-                return "🔄 Aktualizacja spotkania";
-            case MEETING_INVITATION:
-                return "📨 Zaproszenie do spotkania";
-            default:
-                return "📢 Powiadomienie";
+        try {
+            // Sprawdź czy serwis tokenów jest dostępny
+            if (attendanceTokenService == null) {
+                log.warn("⚠️ AttendanceTokenService nie jest dostępny");
+                return null;
+            }
+
+            // Znajdź istniejący token lub stwórz nowy
+            Optional<AttendanceToken> existingToken = attendanceTokenService
+                    .getTokenForUserAndMeeting(user.getId(), meetingId);
+
+            if (existingToken.isPresent()) {
+                return existingToken.get().getToken();
+            }
+
+            // Stwórz nowy token
+            Meeting meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+
+            AttendanceToken newToken = attendanceTokenService.createToken(user, meeting);
+            return newToken.getToken();
+
+        } catch (Exception e) {
+            log.error("❌ Błąd generowania tokenu: {}", e.getMessage());
+            return null;
         }
     }
 
-    private String getDefaultNotificationMessage(NotificationType type, Map<String, String> variables) {
-        switch (type) {
-            case MEETING_REMINDER:
-                return "Przypomnienie o spotkaniu '" +
-                        variables.getOrDefault("meetingTitle", "") +
-                        "' za " + variables.getOrDefault("minutesBefore", "0") + " minut.";
-            case MEETING_UPDATE:
-                return "Spotkanie '" + variables.getOrDefault("meetingTitle", "") + "' się rozpoczęło.";
-            case MEETING_INVITATION:
-                return "Zostałeś zaproszony do spotkania '" +
-                        variables.getOrDefault("meetingTitle", "") + "'.";
-            default:
-                return "Masz nowe powiadomienie w systemie MeetHub.";
+    /**
+     * Wyciąga meetingId z zmiennych
+     */
+    private Long extractMeetingIdFromVariables(Map<String, String> variables) {
+        if (variables == null) return null;
+
+        try {
+            // Spróbuj różne klucze
+            if (variables.containsKey("meetingId")) {
+                return Long.parseLong(variables.get("meetingId"));
+            }
+            if (variables.containsKey("referenceId")) {
+                return Long.parseLong(variables.get("referenceId"));
+            }
+        } catch (NumberFormatException e) {
+            log.warn("❌ Nieprawidłowy format meetingId: {}", e.getMessage());
         }
+        return null;
     }
 
-//    private void sendEmailFromTemplate(User user, String templateKey,
-//                                       Map<String, String> variables,
-//                                       NotificationType type) {
-//        try {
-//            EmailTemplate template = emailTemplateRepository
-//                    .findByTemplateKeyAndLanguage(templateKey, user.getLanguage())
-//                    .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
-//
-//            String subject = personalizeTemplate(template.getSubject(), variables);
-//            String body = personalizeTemplate(template.getBodyTemplate(), variables);
-//
-//            // Przygotuj zmienne dla szablonu email
-//            Map<String, Object> emailVariables = new HashMap<>(variables);
-//            emailVariables.put("userName", user.getFirstName());
-//            emailVariables.put("userEmail", user.getEmail());
-//            emailVariables.put("content", body);
-//
-//            // Wyślij email
-//            emailService.sendTemplateEmail(
-//                    user.getEmail(),
-//                    subject,
-//                    "meeting_started", // podstawowy szablon email
-//                    emailVariables
-//            );
-//
-//            log.info("📧 Email wysłany do {}: {}", user.getEmail(), subject);
-//
-//        } catch (Exception e) {
-//            log.error("❌ Błąd podczas wysyłki email do {}: {}",
-//                    user.getEmail(), e.getMessage(), e);
-//        }
-//    }
+    /**
+     * Formatuje token do czytelnej postaci
+     */
+    private String formatTokenForDisplay(String token) {
+        if (token == null || token.length() < 12) return token;
+        // Format: XXXX-XXXX-XXXX
+        return token.substring(0, 4) + "-" +
+                token.substring(4, 8) + "-" +
+                token.substring(8, 12);
+    }
 
-
+    /**
+     * Buduje link potwierdzający
+     */
+    private String buildConfirmationLink(Long meetingId, String token) {
+        // Możesz dodać konfigurację z application.properties
+        String baseUrl = "http://localhost:8080";
+        return baseUrl + "/api/v1/meetings/" + meetingId +
+                "/confirm-attendance?token=" + token;
+    }
 
 
     private void sendEmailFromTemplate(User user, String templateKey,

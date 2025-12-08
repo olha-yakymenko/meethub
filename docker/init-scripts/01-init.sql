@@ -2271,3 +2271,48 @@ VALUES
      subject = '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
      updated_at = NOW()
  WHERE template_key = 'meeting_started' AND language = 'pl';
+
+
+ -- Aktualizuj szablon meeting_started w bazie
+ UPDATE email_templates
+ SET body_template = body_template || '
+
+ {{#if attendanceToken}}
+ <div style="background-color: #f8f9fa; padding: 20px; margin: 25px 0;">
+     <h3>🔐 Potwierdź obecność</h3>
+     <p>Twój kod potwierdzający: <strong>{{attendanceTokenFormatted}}</strong></p>
+     <p><a href="{{confirmationLink}}">Kliknij tutaj aby potwierdzić</a></p>
+ </div>
+ {{/if}}'
+ WHERE template_key IN ('meeting_started', 'meeting_started_participant');
+
+
+
+
+ -- Dla PostgreSQL
+ CREATE TABLE attendance_tokens (
+     id BIGSERIAL PRIMARY KEY,
+     token VARCHAR(255) NOT NULL UNIQUE,
+     user_id BIGINT NOT NULL,
+     meeting_id BIGINT NOT NULL,
+     expires_at TIMESTAMP NOT NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     used_at TIMESTAMP,
+     status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+
+     CONSTRAINT fk_attendance_token_user
+         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+     CONSTRAINT fk_attendance_token_meeting
+         FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
+ );
+
+ -- Dodaj indeksy dla szybkiego wyszukiwania
+ CREATE INDEX idx_attendance_tokens_token ON attendance_tokens(token);
+ CREATE INDEX idx_attendance_tokens_user_meeting ON attendance_tokens(user_id, meeting_id);
+ CREATE INDEX idx_attendance_tokens_status ON attendance_tokens(status);
+ CREATE INDEX idx_attendance_tokens_expires ON attendance_tokens(expires_at);
+
+
+ ALTER TABLE meeting_participants
+ ADD COLUMN attendance_confirmed_at TIMESTAMP,
+ ADD COLUMN attendance_token_used VARCHAR(255);

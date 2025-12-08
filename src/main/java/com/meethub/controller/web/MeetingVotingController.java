@@ -5,6 +5,7 @@ import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.request.*;
 import com.meethub.domain.model.response.*;
 import com.meethub.domain.repository.jpa.MeetingRepository;
+import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.domain.service.MeetingVotingService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ public class MeetingVotingController {
 
     private final MeetingVotingService votingService;
     private final MeetingRepository meetingRepository;
+    private final MeetingParticipantService meetingParticipantService;
 
     // POPRAWIONE: Upewnij się, że ta metoda jest przed metodami z {votingId}
     @GetMapping
@@ -161,8 +163,10 @@ public class MeetingVotingController {
             Meeting meeting = meetingRepository.findById(meetingId)
                     .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
 
-            boolean isParticipant = meeting.getParticipants().stream()
-                    .anyMatch(participant -> participant.getId().equals(userDetails.getId()));
+//            boolean isParticipant = meeting.getParticipants().stream()
+//                    .anyMatch(participant -> participant.getId().equals(userDetails.getId()));
+            boolean isParticipant = meetingParticipantService
+                    .isParticipant(meetingId, userDetails.getId());
             boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
 
             if (!isParticipant && !isOrganizer) {
@@ -207,8 +211,10 @@ public class MeetingVotingController {
             Meeting meeting = meetingRepository.findById(meetingId)
                     .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
 
-            boolean isParticipant = meeting.getParticipants().stream()
-                    .anyMatch(participant -> participant.getId().equals(userDetails.getId()));
+//            boolean isParticipant = meeting.getParticipants().stream()
+//                    .anyMatch(participant -> participant.getId().equals(userDetails.getId()));
+            boolean isParticipant = meetingParticipantService
+                    .isParticipant(meetingId, userDetails.getId());
             boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
 
             if (!isParticipant && !isOrganizer) {

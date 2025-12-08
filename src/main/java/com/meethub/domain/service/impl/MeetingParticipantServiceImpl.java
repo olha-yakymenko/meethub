@@ -2,6 +2,7 @@
 
 package com.meethub.domain.service.impl;
 
+import com.meethub.domain.model.dto.ParticipantCountDto;
 import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.enums.ParticipationStatus;
@@ -47,11 +48,18 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
     @Override
     public List<ParticipantResponse> getMeetingParticipants(Long meetingId) {
-        List<MeetingParticipant> participants = participantRepository.findByMeetingId(meetingId);
-        return participants.stream()
-                .map(this::mapToResponse)
-                .toList();
+        return participantRepository.findParticipantsProjection(meetingId);
     }
+
+    @Override
+    public ParticipantCountDto getParticipantCounts(Long meetingId){
+        return participantRepository.getParticipantCounts(meetingId);
+    }
+
+//    @Override
+//    public Double getAverageResponseTimeMinutes(Long meetingId){
+//        return participantRepository.getAverageResponseTimeMinutes(meetingId);
+//    }
 
     @Override
     public MeetingParticipant inviteParticipant(Long meetingId, Long userId, Long organizerId) {
@@ -1110,11 +1118,8 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
             // - INVITED (zaproszony)
             // - PENDING (oczekujący na akceptację - dla prywatnych spotkań)
             // - WAITING_LIST (na liście oczekujących)
-            boolean isParticipant = status == ParticipationStatus.CONFIRMED ||
-                    status == ParticipationStatus.INVITED ||
-                    status == ParticipationStatus.PENDING ||
-                    status == ParticipationStatus.WAITING_LIST ||
-                    status == ParticipationStatus.TENTATIVE;
+            boolean isParticipant = status == ParticipationStatus.CONFIRMED;
+
 
             log.debug("User {} participant status in meeting {}: {} (status: {})",
                     userId, meetingId, isParticipant, status);
@@ -1198,18 +1203,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return mapToResponse(updated);
     }
 
-    @Override
-    public ParticipantResponse setTentative(String token, String comment) {
-        MeetingParticipant participant = participantRepository.findByInvitationToken(token)
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid invitation token"));
-
-        participant.setStatus(ParticipationStatus.TENTATIVE);
-        participant.setComment(comment);
-        participant.setResponseDate(LocalDateTime.now());
-
-        MeetingParticipant updated = participantRepository.save(participant);
-        return mapToResponse(updated);
-    }
 
     @Override
     public MeetingParticipantService.ParticipantStats getMeetingStats(Long meetingId) {
@@ -1509,7 +1502,17 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                 .build();
     }
 
+@Override
+public void addOrganizerAsParticipant(Meeting meeting, User organizer) {
+        MeetingParticipant organizerParticipant = new MeetingParticipant();
+        organizerParticipant.setMeeting(meeting);
+        organizerParticipant.setUser(organizer);
+        organizerParticipant.setStatus(ParticipationStatus.CONFIRMED);
+        organizerParticipant.setPermissionLevel(PermissionLevel.ORGANIZER);
+        organizerParticipant.setResponseDate(LocalDateTime.now());
 
+        participantRepository.save(organizerParticipant);
+    }
 
 
 

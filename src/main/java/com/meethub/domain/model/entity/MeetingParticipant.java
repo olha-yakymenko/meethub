@@ -305,6 +305,12 @@ public class MeetingParticipant {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "attendance_confirmed_at")
+    private LocalDateTime attendanceConfirmedAt;
+
+    @Column(name = "attendance_token_used")
+    private String attendanceTokenUsed;
+
     // Konstruktory
     public MeetingParticipant(Meeting meeting, User user) {
         this.meeting = meeting;
@@ -331,10 +337,6 @@ public class MeetingParticipant {
         this.responseDate = LocalDateTime.now();
     }
 
-    public void setTentative() {
-        this.status = ParticipationStatus.TENTATIVE;
-        this.responseDate = LocalDateTime.now();
-    }
 
     public boolean isConfirmed() {
         return ParticipationStatus.CONFIRMED.equals(status);

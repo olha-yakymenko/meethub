@@ -13,6 +13,7 @@ import com.meethub.domain.model.response.UserResponse;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.repository.jpa.MeetingResourceRepository;
 import com.meethub.domain.repository.jpa.UserRepository;
+import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.domain.service.MeetingResourceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     private final MeetingResourceRepository meetingResourceRepository;
     private final MeetingRepository meetingRepository;
     private final UserRepository userRepository;
+    private final MeetingParticipantService meetingParticipantService;
 
     @Value("${file.upload-dir:uploads/resources}")
     private String uploadDir;
@@ -251,7 +253,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
 
         // Sprawdź czy użytkownik ma dostęp do spotkania
         if (!meeting.getOrganizer().getId().equals(userId) &&
-                meeting.getParticipants().stream().noneMatch(p -> p.getUser().getId().equals(userId) && p.isConfirmed())) {
+                meetingParticipantService.isParticipant(meetingId, userId)) {
             throw new RuntimeException("No access to meeting statistics");
         }
 
@@ -387,8 +389,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     // Pozostałe metody pomocnicze
     boolean hasPermissionToAddResource(Meeting meeting, User user) {
         return meeting.getOrganizer().equals(user) ||
-                meeting.getParticipants().stream()
-                        .anyMatch(p -> p.getUser().equals(user) && p.isConfirmed());
+                meetingParticipantService.isParticipant(meeting.getId(), user.getId());
     }
 
     private String generateUniqueFilename(String extension) {

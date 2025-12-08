@@ -209,10 +209,7 @@ public class MeetingSpecification implements Specification<Meeting> {
                             participantAccessRoot.get("participationStatus").in(
                                     ParticipationStatus.CONFIRMED,
                                     ParticipationStatus.PENDING,
-                                    ParticipationStatus.INVITED,
-                                    ParticipationStatus.TENTATIVE,
-                                    ParticipationStatus.ORGANIZER,
-                                    ParticipationStatus.CO_ORGANIZER
+                                    ParticipationStatus.INVITED
                             )
                     ));
 

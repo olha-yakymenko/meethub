@@ -1,9 +1,12 @@
 
 package com.meethub.domain.repository.jpa;
 
+import com.meethub.domain.model.dto.ParticipantCountDto;
 import com.meethub.domain.model.entity.MeetingParticipant;
 import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.ParticipationStatus;
+import com.meethub.domain.model.projection.ParticipantProjection;
+import com.meethub.domain.model.response.ParticipantResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -61,4 +65,117 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
             "WHERE p.meeting.id = :meetingId " +
             "AND p.status = 'CONFIRMED' AND p.status = 'ORGANIZER'")
     List<MeetingParticipant> findConfirmedParticipantsByMeetingId(@Param("meetingId") Long meetingId);
+
+    @Query("""
+        SELECT COUNT(p) 
+        FROM MeetingParticipant p 
+        WHERE p.meeting.id = :meetingId 
+        AND p.status IN ('CONFIRMED', 'ATTENDED')
+    """)
+    long countActiveParticipants(@Param("meetingId") Long meetingId);
+
+    @Query("SELECT COUNT(p) FROM MeetingParticipant p WHERE p.meeting.id = :meetingId AND p.status = 'ATTENDED'")
+    long countAttendedParticipants(@Param("meetingId") Long meetingId);
+
+
+//    @Query("""
+//        SELECT p
+//        FROM MeetingParticipant p
+//        WHERE p.meeting.id = :meetingId
+//        AND p.status IN ('CONFIRMED', 'ATTENDED')
+//        ORDER BY p.user.lastName, p.user.firstName
+//    """)
+//    List<MeetingParticipant> findActiveParticipants(@Param("meetingId") Long meetingId);
+//    @Query("""
+//        SELECT p
+//        FROM MeetingParticipant p
+//        WHERE p.meeting.id = :meetingId
+//        AND p.status = 'ATTENDED'
+//        ORDER BY p.attendedAt DESC
+//    """)
+//    List<MeetingParticipant> findAttendedParticipants(@Param("meetingId") Long meetingId);
+
+    @Query("""
+    SELECT new com.meethub.domain.model.response.ParticipantResponse(
+        p.id,
+        u.id,
+        u.firstName,
+        u.lastName,
+        u.email,
+        m.id,
+        m.title,
+        m.startDate,
+        m.endDate,
+        m.location,
+        p.status,
+        p.permissionLevel,
+        p.comment,
+        p.responseDate,
+        p.createdAt,
+        p.updatedAt
+    )
+    FROM MeetingParticipant p
+    JOIN p.user u
+    JOIN p.meeting m
+    WHERE p.meeting.id = :meetingId
+    ORDER BY u.lastName, u.firstName
+""")
+    List<ParticipantResponse> findParticipantsProjection(@Param("meetingId") Long meetingId);
+
+
+    @Query("""
+        SELECT 
+            p.id as id,
+            u.id as userId,
+            u.firstName as firstName,
+            u.lastName as lastName,
+            u.email as email,
+            p.status as status
+        FROM MeetingParticipant p
+        JOIN p.user u
+        WHERE p.meeting.id = :meetingId
+        AND p.status IN ('CONFIRMED', 'ATTENDED')
+        ORDER BY u.lastName, u.firstName
+    """)
+    List<ParticipantProjection> findActiveParticipantsProjection(@Param("meetingId") Long meetingId);
+
+
+    @Query("""
+        SELECT 
+            COUNT(p) as total,
+            COUNT(CASE WHEN p.status IN ('CONFIRMED', 'ATTENDED') THEN 1 END) as confirmed,
+            COUNT(CASE WHEN p.status = 'ATTENDED' THEN 1 END) as attended,
+            COUNT(CASE WHEN p.status = 'DECLINED' THEN 1 END) as declined,
+            COUNT(CASE WHEN p.status = 'CANCELLED' THEN 1 END) as cancelled,
+            COUNT(CASE WHEN p.status = 'INVITED' THEN 1 END) as invited,
+            COUNT(CASE WHEN p.status = 'PENDING' THEN 1 END) as pending
+        FROM MeetingParticipant p
+        WHERE p.meeting.id = :meetingId
+    """)
+    Map<String, Long> countParticipantsByStatus(@Param("meetingId") Long meetingId);
+
+
+    @Query("""
+        SELECT new com.meethub.domain.model.dto.ParticipantCountDto(
+            COUNT(p),
+            SUM(CASE WHEN p.status IN ('CONFIRMED', 'ATTENDED') THEN 1 ELSE 0 END),
+            SUM(CASE WHEN p.status = 'ATTENDED' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN p.status = 'DECLINED' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN p.status = 'CANCELLED' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN p.status = 'INVITED' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN p.status = 'PENDING' OR p.status IS NULL THEN 1 ELSE 0 END)
+        )
+        FROM MeetingParticipant p
+        WHERE p.meeting.id = :meetingId
+    """)
+    ParticipantCountDto getParticipantCounts(@Param("meetingId") Long meetingId);
+
+
+//    @Query("""
+//        SELECT AVG(EXTRACT(EPOCH FROM (p.respondedAt - p.invitedAt)) / 60)
+//        FROM MeetingParticipant p
+//        WHERE p.meeting.id = :meetingId
+//        AND p.respondedAt IS NOT NULL
+//    """)
+//    Double getAverageResponseTimeMinutes(@Param("meetingId") Long meetingId);
 }

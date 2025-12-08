@@ -81,18 +81,6 @@ public class ParticipationServiceImpl implements ParticipationService {
         return participantRepository.save(participant);
     }
 
-    @Override
-    @Transactional
-    public MeetingParticipant markAsTentative(Long meetingId, Long userId) {
-        log.info("Marking as tentative for meeting: {}, user: {}", meetingId, userId);
-
-        MeetingParticipant participant = getParticipant(meetingId, userId);
-
-        participant.setStatus(ParticipationStatus.TENTATIVE);
-//        participant.setResponseAt(LocalDateTime.now());
-
-        return participantRepository.save(participant);
-    }
 
     // ========== OBECNOŚĆ ==========
 
@@ -103,29 +91,12 @@ public class ParticipationServiceImpl implements ParticipationService {
 
         MeetingParticipant participant = getParticipant(meetingId, userId);
 
-        if (participant.getStatus() != ParticipationStatus.CONFIRMED &&
-                participant.getStatus() != ParticipationStatus.TENTATIVE) {
+        if (participant.getStatus() != ParticipationStatus.CONFIRMED) {
             throw new BusinessException("Only confirmed or tentative participants can be marked as attended");
         }
 
         participant.setStatus(ParticipationStatus.ATTENDED);
 //        participant.setJoinedAt(LocalDateTime.now());
-
-        return participantRepository.save(participant);
-    }
-
-    @Override
-    @Transactional
-    public MeetingParticipant markAsNoShow(Long meetingId, Long userId) {
-        log.info("Marking as no-show for meeting: {}, user: {}", meetingId, userId);
-
-        MeetingParticipant participant = getParticipant(meetingId, userId);
-
-        if (participant.getStatus() != ParticipationStatus.CONFIRMED) {
-            throw new BusinessException("Only confirmed participants can be marked as no-show");
-        }
-
-        participant.setStatus(ParticipationStatus.NO_SHOW);
 
         return participantRepository.save(participant);
     }
@@ -208,8 +179,7 @@ public class ParticipationServiceImpl implements ParticipationService {
 
         // Ustaw responseAt jeśli status to potwierdzenie/odrzucenie
         if (status == ParticipationStatus.CONFIRMED ||
-                status == ParticipationStatus.DECLINED ||
-                status == ParticipationStatus.TENTATIVE) {
+                status == ParticipationStatus.DECLINED) {
 //            participant.setResponseAt(LocalDateTime.now());
         }
 

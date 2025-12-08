@@ -287,22 +287,22 @@ public class ParticipantController {
             return "meetings/participants/confirmation-error";
         }
     }
-
-    @GetMapping("/tentative/{token}")
-    public String setTentative(@PathVariable String token,
-                               @RequestParam(required = false) String comment,
-                               Model model) {
-        try {
-            ParticipantResponse participant = participantService.setTentative(token, comment);
-            model.addAttribute("success", "Ustawiono status 'Tentative' dla spotkania");
-            model.addAttribute("participant", participant);
-            return "meetings/participants/confirmation-success";
-        } catch (Exception e) {
-            log.error("Błąd podczas ustawiania statusu tentative z tokenem: {}", token, e);
-            model.addAttribute("error", "Błąd podczas ustawiania statusu: " + e.getMessage());
-            return "meetings/participants/confirmation-error";
-        }
-    }
+//
+//    @GetMapping("/tentative/{token}")
+//    public String setTentative(@PathVariable String token,
+//                               @RequestParam(required = false) String comment,
+//                               Model model) {
+//        try {
+//            ParticipantResponse participant = participantService.setTentative(token, comment);
+//            model.addAttribute("success", "Ustawiono status 'Tentative' dla spotkania");
+//            model.addAttribute("participant", participant);
+//            return "meetings/participants/confirmation-success";
+//        } catch (Exception e) {
+//            log.error("Błąd podczas ustawiania statusu tentative z tokenem: {}", token, e);
+//            model.addAttribute("error", "Błąd podczas ustawiania statusu: " + e.getMessage());
+//            return "meetings/participants/confirmation-error";
+//        }
+//    }
 
 
     // W ParticipantController.java dodaj:

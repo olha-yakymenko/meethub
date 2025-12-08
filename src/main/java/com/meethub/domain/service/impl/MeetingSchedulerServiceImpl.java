@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
@@ -268,101 +269,200 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         cleanupScheduledTasks(meeting.getId());
     }
 
-    @Transactional
-    protected void sendMeetingStartedNotifications(Meeting meeting) {
-        log.info("📨 Wysyłam powiadomienia o rozpoczęciu spotkania {}", meeting.getId());
-
-        int notifiedCount = 0;
-
-        // ========== 1. ZAWSZE POWIADOM ORGANIZATORA ==========
-        try {
-            Map<String, String> organizerVars = createMeetingStartedVariables(meeting);
-            organizerVars.put("userName", meeting.getOrganizer().getFirstName());
-
-            // EMAIL (jeśli ma włączone)
-//            if (isNotificationEnabled(meeting.getOrganizer(), "meeting_updates")) {
-                notificationService.createNotificationFromTemplate(
-                        meeting.getOrganizer().getId(),
-                        "meeting_started",
-                        organizerVars,
-                        NotificationType.MEETING_UPDATE,
-                        NotificationChannel.EMAIL
-                );
-
-            notificationService.createNotificationFromTemplate(
-                    meeting.getOrganizer().getId(),
-                    "meeting_started",
-                    organizerVars,
-                    NotificationType.MEETING_UPDATE,
-                    NotificationChannel.IN_APP
-            );
-                log.debug("✅ Wysłano EMAIL o rozpoczęciu do organizatora {}",
-                        meeting.getOrganizer().getId());
+//    @Transactional
+//    protected void sendMeetingStartedNotifications(Meeting meeting) {
+//        log.info("📨 Wysyłam powiadomienia o rozpoczęciu spotkania {}", meeting.getId());
+//
+//        int notifiedCount = 0;
+//
+//        // ========== 1. ZAWSZE POWIADOM ORGANIZATORA ==========
+//        try {
+//            Map<String, String> organizerVars = createMeetingStartedVariables(meeting);
+//            organizerVars.put("userName", meeting.getOrganizer().getFirstName());
+//
+//            // EMAIL (jeśli ma włączone)
+////            if (isNotificationEnabled(meeting.getOrganizer(), "meeting_updates")) {
+//                notificationService.createNotificationFromTemplate(
+//                        meeting.getOrganizer().getId(),
+//                        "meeting_started",
+//                        organizerVars,
+//                        NotificationType.MEETING_UPDATE,
+//                        NotificationChannel.EMAIL
+//                );
+//
+//            notificationService.createNotificationFromTemplate(
+//                    meeting.getOrganizer().getId(),
+//                    "meeting_started",
+//                    organizerVars,
+//                    NotificationType.MEETING_UPDATE,
+//                    NotificationChannel.IN_APP
+//            );
+//                log.debug("✅ Wysłano EMAIL o rozpoczęciu do organizatora {}",
+//                        meeting.getOrganizer().getId());
+////            }
+//
+//            notifiedCount++;
+//            log.info("✅ Wysłano powiadomienia IN_APP o rozpoczęciu do organizatora {}",
+//                    meeting.getOrganizer().getId());
+//
+//        } catch (Exception e) {
+//            log.error("❌ Błąd wysyłania powiadomień do organizatora: {}", e.getMessage());
+//        }
+//
+//        // ========== 2. POWIADOM UCZESTNIKÓW (jeśli istnieją) ==========
+//        List<MeetingParticipant> confirmedParticipants = participantRepository
+//                .findByMeetingIdAndStatus(meeting.getId(), ParticipationStatus.CONFIRMED);
+//
+//        if (confirmedParticipants.isEmpty()) {
+//            log.info("ℹ️ Spotkanie {} nie ma potwierdzonych uczestników", meeting.getId());
+//        } else {
+//            for (MeetingParticipant participant : confirmedParticipants) {
+//                User user = participant.getUser();
+//
+//                if (isNotificationEnabled(user, "meeting_updates")) {
+//                    try {
+//                        Map<String, String> participantVars = createMeetingStartedVariables(meeting);
+//                        participantVars.put("userName", user.getFirstName());
+//
+//                        // Jeśli spotkanie jest wirtualne, dodaj link
+//                        if (meeting.getLocation() != null &&
+//                                meeting.getLocation().getType() == LocationType.VIRTUAL &&
+//                                meeting.getLocation().getVirtualMeetingUrl() != null) {
+//                            participantVars.put("meetingLink", meeting.getLocation().getVirtualMeetingUrl());
+//                        }
+//
+//                        // EMAIL
+//                        notificationService.createNotificationFromTemplate(
+//                                user.getId(),
+//                                "meeting_started_participant",
+//                                participantVars,
+//                                NotificationType.MEETING_UPDATE,
+//                                NotificationChannel.EMAIL
+//                        );
+//
+//                        // IN_APP
+//                        notificationService.createNotificationFromTemplate(
+//                                user.getId(),
+//                                "meeting_started_participant",
+//                                participantVars,
+//                                NotificationType.MEETING_UPDATE,
+//                                NotificationChannel.IN_APP
+//                        );
+//
+//                        notifiedCount++;
+//                        log.debug("✅ Wysłano powiadomienia o rozpoczęciu do użytkownika {}",
+//                                user.getId());
+//
+//                    } catch (Exception e) {
+//                        log.error("❌ Błąd wysyłania powiadomień do użytkownika {}: {}",
+//                                user.getId(), e.getMessage());
+//                    }
+//                }
 //            }
+//        }
+//
+//        log.info("📨 Wysłano powiadomienia o rozpoczęciu dla {} osób (w tym organizator) spotkania {}",
+//                notifiedCount, meeting.getId());
+//    }
 
-            notifiedCount++;
-            log.info("✅ Wysłano powiadomienia IN_APP o rozpoczęciu do organizatora {}",
-                    meeting.getOrganizer().getId());
 
-        } catch (Exception e) {
-            log.error("❌ Błąd wysyłania powiadomień do organizatora: {}", e.getMessage());
-        }
+@Transactional
+protected void sendMeetingStartedNotifications(Meeting meeting) {
+    log.info("📨 Wysyłam powiadomienia o rozpoczęciu spotkania {}", meeting.getId());
 
-        // ========== 2. POWIADOM UCZESTNIKÓW (jeśli istnieją) ==========
-        List<MeetingParticipant> confirmedParticipants = participantRepository
-                .findByMeetingIdAndStatus(meeting.getId(), ParticipationStatus.CONFIRMED);
+    int notifiedCount = 0;
 
-        if (confirmedParticipants.isEmpty()) {
-            log.info("ℹ️ Spotkanie {} nie ma potwierdzonych uczestników", meeting.getId());
-        } else {
-            for (MeetingParticipant participant : confirmedParticipants) {
-                User user = participant.getUser();
+    // ========== 1. ZAWSZE POWIADOM ORGANIZATORA ==========
+    try {
+        Map<String, String> organizerVars = createMeetingStartedVariables(meeting);
+        organizerVars.put("userName", meeting.getOrganizer().getFirstName());
 
-                if (isNotificationEnabled(user, "meeting_updates")) {
-                    try {
-                        Map<String, String> participantVars = createMeetingStartedVariables(meeting);
-                        participantVars.put("userName", user.getFirstName());
+        // DODAJ meetingId DLA ORGANIZATORA
+        organizerVars.put("meetingId", meeting.getId().toString()); // ← KLUCZOWE!
 
-                        // Jeśli spotkanie jest wirtualne, dodaj link
-                        if (meeting.getLocation() != null &&
-                                meeting.getLocation().getType() == LocationType.VIRTUAL &&
-                                meeting.getLocation().getVirtualMeetingUrl() != null) {
-                            participantVars.put("meetingLink", meeting.getLocation().getVirtualMeetingUrl());
-                        }
+        // EMAIL (jeśli ma włączone)
+        notificationService.createNotificationFromTemplate(
+                meeting.getOrganizer().getId(),
+                "meeting_started",
+                organizerVars, // ← TERAZ ZAWIERA meetingId
+                NotificationType.MEETING_UPDATE,
+                NotificationChannel.EMAIL
+        );
 
-                        // EMAIL
-                        notificationService.createNotificationFromTemplate(
-                                user.getId(),
-                                "meeting_started_participant",
-                                participantVars,
-                                NotificationType.MEETING_UPDATE,
-                                NotificationChannel.EMAIL
-                        );
+        notificationService.createNotificationFromTemplate(
+                meeting.getOrganizer().getId(),
+                "meeting_started",
+                organizerVars, // ← TERAZ ZAWIERA meetingId
+                NotificationType.MEETING_UPDATE,
+                NotificationChannel.IN_APP
+        );
 
-                        // IN_APP
-                        notificationService.createNotificationFromTemplate(
-                                user.getId(),
-                                "meeting_started_participant",
-                                participantVars,
-                                NotificationType.MEETING_UPDATE,
-                                NotificationChannel.IN_APP
-                        );
+        notifiedCount++;
+        log.info("✅ Wysłano powiadomienia do organizatora {} (meetingId: {})",
+                meeting.getOrganizer().getId(), meeting.getId());
 
-                        notifiedCount++;
-                        log.debug("✅ Wysłano powiadomienia o rozpoczęciu do użytkownika {}",
-                                user.getId());
+    } catch (Exception e) {
+        log.error("❌ Błąd wysyłania powiadomień do organizatora: {}", e.getMessage());
+    }
 
-                    } catch (Exception e) {
-                        log.error("❌ Błąd wysyłania powiadomień do użytkownika {}: {}",
-                                user.getId(), e.getMessage());
+    // ========== 2. POWIADOM UCZESTNIKÓW (jeśli istnieją) ==========
+    List<MeetingParticipant> confirmedParticipants = participantRepository
+            .findByMeetingIdAndStatus(meeting.getId(), ParticipationStatus.CONFIRMED);
+
+    if (confirmedParticipants.isEmpty()) {
+        log.info("ℹ️ Spotkanie {} nie ma potwierdzonych uczestników", meeting.getId());
+    } else {
+        for (MeetingParticipant participant : confirmedParticipants) {
+            User user = participant.getUser();
+
+            if (isNotificationEnabled(user, "meeting_updates")) {
+                try {
+                    Map<String, String> participantVars = createMeetingStartedVariables(meeting);
+                    participantVars.put("userName", user.getFirstName());
+
+                    // DODAJ meetingId DLA UCZESTNIKA
+                    participantVars.put("meetingId", meeting.getId().toString()); // ← KLUCZOWE!
+
+                    // Jeśli spotkanie jest wirtualne, dodaj link
+                    if (meeting.getLocation() != null &&
+                            meeting.getLocation().getType() == LocationType.VIRTUAL &&
+                            meeting.getLocation().getVirtualMeetingUrl() != null) {
+                        participantVars.put("meetingLink", meeting.getLocation().getVirtualMeetingUrl());
                     }
+
+                    // EMAIL
+                    notificationService.createNotificationFromTemplate(
+                            user.getId(),
+                            "meeting_started_participant",
+                            participantVars, // ← TERAZ ZAWIERA meetingId
+                            NotificationType.MEETING_UPDATE,
+                            NotificationChannel.EMAIL
+                    );
+
+                    // IN_APP
+                    notificationService.createNotificationFromTemplate(
+                            user.getId(),
+                            "meeting_started_participant",
+                            participantVars, // ← TERAZ ZAWIERA meetingId
+                            NotificationType.MEETING_UPDATE,
+                            NotificationChannel.IN_APP
+                    );
+
+                    notifiedCount++;
+                    log.debug("✅ Wysłano powiadomienia o rozpoczęciu do użytkownika {} (meetingId: {})",
+                            user.getId(), meeting.getId());
+
+                } catch (Exception e) {
+                    log.error("❌ Błąd wysyłania powiadomień do użytkownika {}: {}",
+                            user.getId(), e.getMessage());
                 }
             }
         }
-
-        log.info("📨 Wysłano powiadomienia o rozpoczęciu dla {} osób (w tym organizator) spotkania {}",
-                notifiedCount, meeting.getId());
     }
+
+    log.info("📨 Wysłano powiadomienia o rozpoczęciu dla {} osób spotkania {}",
+            notifiedCount, meeting.getId());
+}
 
     @Transactional
     protected void checkMeetingStatus(Meeting meeting) {
@@ -555,11 +655,40 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         return vars;
     }
 
+//    private Map<String, String> createMeetingStartedVariables(Meeting meeting) {
+//        Map<String, String> vars = new HashMap<>();
+//        vars.put("meetingTitle", meeting.getTitle());
+//        vars.put("meetingTime", meeting.getStartDate().toString());
+//        vars.put("organizerName", meeting.getOrganizer().getFirstName());
+//
+//        if (meeting.getLocation() != null) {
+//            vars.put("location", meeting.getLocation().getName());
+//            if (meeting.getLocation().getType() == LocationType.VIRTUAL &&
+//                    meeting.getLocation().getVirtualMeetingUrl() != null) {
+//                vars.put("meetingLink", meeting.getLocation().getVirtualMeetingUrl());
+//            }
+//        }
+//
+//        if (meeting.getDescription() != null) {
+//            vars.put("meetingDescription", meeting.getDescription());
+//        }
+//
+//        return vars;
+//    }
+
+
     private Map<String, String> createMeetingStartedVariables(Meeting meeting) {
         Map<String, String> vars = new HashMap<>();
         vars.put("meetingTitle", meeting.getTitle());
         vars.put("meetingTime", meeting.getStartDate().toString());
         vars.put("organizerName", meeting.getOrganizer().getFirstName());
+
+        // DODAJ meetingId DO PODSTAWOWYCH ZMIENNYCH
+        vars.put("meetingId", meeting.getId().toString()); // ← DODAJ TUTAJ
+
+        // Dodaj sformatowaną datę dla lepszej czytelności
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+        vars.put("meetingDate", meeting.getStartDate().format(formatter));
 
         if (meeting.getLocation() != null) {
             vars.put("location", meeting.getLocation().getName());

@@ -287,6 +287,8 @@ package com.meethub.domain.service.impl;
 
 import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.enums.MeetingStatus;
+import com.meethub.domain.model.enums.ParticipationStatus;
+import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.SearchCriteria;
 import com.meethub.domain.model.request.UpdateMeetingRequest;
@@ -373,6 +375,8 @@ public class MeetingServiceImpl implements MeetingService {
 
         try {
             Meeting savedMeeting = meetingRepository.save(meeting);
+            meetingParticipantService.addOrganizerAsParticipant(savedMeeting, organizer);
+
 
             // ✅ ZAPISZ POCZĄTKOWY STATUS W HISTORII
             saveStatusChange(savedMeeting, null, savedMeeting.getStatus().name(),

@@ -34,7 +34,10 @@
 
 package com.meethub.domain.service;
 
+import com.meethub.domain.model.dto.ParticipantCountDto;
+import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.MeetingParticipant;
+import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.request.InviteParticipantsRequest;
@@ -48,6 +51,11 @@ import java.util.Map;
 
 public interface MeetingParticipantService {
     List<ParticipantResponse> getMeetingParticipants(Long meetingId);
+
+    ParticipantCountDto getParticipantCounts(Long meetingId);
+
+//    Double getAverageResponseTimeMinutes(Long meetingId);
+
     MeetingParticipant inviteParticipant(Long meetingId, Long userId, Long organizerId);
     List<MeetingParticipant> inviteMultipleParticipants(Long meetingId, InviteParticipantsRequest request, Long organizerId);
     MeetingParticipant updateParticipantStatus(Long meetingId, Long participantId, ParticipationStatus status, String comment, Long userId);
@@ -104,12 +112,13 @@ public interface MeetingParticipantService {
     // Metody dla tokenów (web)
     ParticipantResponse confirmParticipation(String token, String comment);
     ParticipantResponse declineParticipation(String token, String comment);
-    ParticipantResponse setTentative(String token, String comment);
 
     // Statystyki dla web
     ParticipantStats getMeetingStats(Long meetingId);
     Map<String, Object> getDetailedStats(Long meetingId);
     ByteArrayResource exportParticipantsToCsv(Long meetingId);
+
+    void addOrganizerAsParticipant(Meeting meeting, User organizer);
 
     // Klasa dla statystyk
     interface ParticipantStats {
