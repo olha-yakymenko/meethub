@@ -1,9 +1,7 @@
 
 package com.meethub.controller.web;
 
-import com.meethub.domain.model.entity.Category;
-import com.meethub.domain.model.entity.Feedback;
-import com.meethub.domain.model.entity.MeetingStatistics;
+import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
@@ -15,8 +13,11 @@ import com.meethub.domain.model.request.UserRegistrationRequest;
 import com.meethub.domain.model.response.*;
 import com.meethub.domain.repository.jpa.CategoryRepository;
 import com.meethub.domain.repository.jpa.LocationRepository;
+import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.repository.jpa.UserRepository;
+import com.meethub.domain.repository.specification.MeetingSpecification;
 import com.meethub.domain.service.*;
+import com.meethub.domain.service.impl.AttendanceTokenServiceImpl;
 import com.meethub.exception.BusinessException;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,14 +41,17 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.security.Principal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @Controller
@@ -62,10 +67,12 @@ public class WebController {
     private final FeedbackService feedbackService;
     private final MeetingResourceService resourceService;
     private final MeetingAnalyticsService meetingAnalyticsService;
-    private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
-    private final LocationRepository locationRepository;
+//    private final CategoryRepository categoryRepository;
+//    private final UserRepository userRepository;
+//    private final LocationRepository locationRepository;
     private final LocationService locationService;
+
+    private final AttendanceTokenService attendanceTokenService;
 
     @GetMapping("/")
     @Operation(summary = "Strona główna lub panel użytkownika",
@@ -520,19 +527,28 @@ public class WebController {
         }
 
         // ✅ WALIDACJA: Sprawdź czy lokalizacja istnieje (jeśli wybrana)
+//        if (request.getLocationId() != null) {
+//            try {
+//                // Sprawdź czy lokalizacja istnieje w bazie
+//                boolean locationExists = locationRepository.existsById(request.getLocationId());
+//                if (!locationExists) {
+//                    result.rejectValue("locationId", "Invalid",
+//                            "Wybrana lokalizacja nie istnieje");
+//                }
+//            } catch (Exception e) {
+//                result.rejectValue("locationId", "Invalid",
+//                        "Błąd podczas weryfikacji lokalizacji");
+//            }
+//        }
+
         if (request.getLocationId() != null) {
             try {
-                // Sprawdź czy lokalizacja istnieje w bazie
-                boolean locationExists = locationRepository.existsById(request.getLocationId());
-                if (!locationExists) {
-                    result.rejectValue("locationId", "Invalid",
-                            "Wybrana lokalizacja nie istnieje");
-                }
-            } catch (Exception e) {
-                result.rejectValue("locationId", "Invalid",
-                        "Błąd podczas weryfikacji lokalizacji");
+                locationService.validateLocationExists(request.getLocationId());
+            } catch (IllegalArgumentException e) {
+                result.rejectValue("locationId", "Invalid", e.getMessage());
             }
         }
+
 
         if (result.hasErrors()) {
             // Ponownie załaduj listę lokalizacji w przypadku błędów walidacji
@@ -870,10 +886,10 @@ public class WebController {
         }
     }
 
+
     // NOWA METODA: Znajdź następne wystąpienie tego samego dnia tygodnia/godziny
     private LocalDateTime getNextOccurrenceDate(MeetingResponse template) {
         if (template.getStartDate() == null) {
-            // Jeśli szablon nie ma daty, ustaw domyślną: za tydzień 10:00
             return LocalDateTime.now().plusWeeks(1).withHour(10).withMinute(0).withSecond(0);
         }
 
@@ -907,7 +923,39 @@ public class WebController {
         return startDate.plusHours(1);
     }
 
-    @GetMapping("/meetings/create-from-template/{templateId}")
+
+    @PostMapping("/meetings/{id}/attend")
+    public String attendMeeting(
+            @PathVariable Long id,
+            @RequestParam String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            RedirectAttributes redirectAttributes) {
+
+        // 1. Pobierz ID użytkownika
+        Long userId = userDetails.getId();
+
+        // 2. Walidacja tokenu
+        boolean tokenValid = attendanceTokenService.validateAndUseToken(token, id);
+        if (!tokenValid) {
+            redirectAttributes.addFlashAttribute("error", "Nieprawidłowy lub wygasły token");
+            return "redirect:/meetings/" + id;
+        }
+
+        // 3. Oznacz jako obecny
+        try {
+            meetingParticipantService.markAsAttended(id, userId);
+            redirectAttributes.addFlashAttribute("success", "Twoja obecność została odnotowana");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Błąd podczas oznaczania obecności: " + e.getMessage());
+        }
+
+        // 4. Powrót do strony spotkania
+        return "redirect:/meetings/" + id;
+    }
+
+
+
+    @PostMapping("/meetings/create-from-template/{templateId}")
     @Operation(summary = "Tworzenie spotkania z szablonu",
             description = "Wyświetla formularz wypełniony danymi z szablonu. Wymaga autentykacji.")
     @ApiResponses({
@@ -1029,23 +1077,23 @@ public class WebController {
     }
 
 
-    @GetMapping("/categories")
-    @Operation(summary = "Lista kategorii użytkownika",
-            description = "Wyświetla listę kategorii utworzonych przez użytkownika. Wymaga autentykacji.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Strona z listą kategorii"),
-            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
-    })
-    public String categories(@AuthenticationPrincipal CustomUserDetails userDetails,
-                             Model model) {
-        if (userDetails == null) return "redirect:/login";
-
-        List<Category> categories = categoryRepository.findByCreatedById(userDetails.getId());
-        model.addAttribute("categories", categories);
-        model.addAttribute("user", userDetails);
-
-        return "categories/list";
-    }
+//    @GetMapping("/categories")
+//    @Operation(summary = "Lista kategorii użytkownika",
+//            description = "Wyświetla listę kategorii utworzonych przez użytkownika. Wymaga autentykacji.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "Strona z listą kategorii"),
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+//    })
+//    public String categories(@AuthenticationPrincipal CustomUserDetails userDetails,
+//                             Model model) {
+//        if (userDetails == null) return "redirect:/login";
+//
+//        List<Category> categories = categoryRepository.findByCreatedById(userDetails.getId());
+//        model.addAttribute("categories", categories);
+//        model.addAttribute("user", userDetails);
+//
+//        return "categories/list";
+//    }
 
     @GetMapping("/categories/create")
     @Operation(summary = "Formularz tworzenia kategorii",
@@ -1063,143 +1111,143 @@ public class WebController {
 
         return "categories/create";
     }
-
-    @PostMapping("/categories/create")
-    @Operation(summary = "Utwórz nową kategorię",
-            description = "Tworzy nową kategorię na podstawie danych z formularza.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
-            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza")
-    })
-    public String createCategory(@Valid @ModelAttribute("category") Category category,
-                                 BindingResult result,
-                                 @AuthenticationPrincipal CustomUserDetails userDetails,
-                                 RedirectAttributes redirectAttributes) {
-        if (userDetails == null) return "redirect:/login";
-
-        if (result.hasErrors()) {
-            return "categories/create";
-        }
-
-        try {
-            category.setCreatedBy(userRepository.findById(userDetails.getId()).orElseThrow());
-            categoryRepository.save(category);
-
-            redirectAttributes.addFlashAttribute("message",
-                    "Kategoria '" + category.getName() + "' została utworzona!");
-            return "redirect:/categories";
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
-            return "redirect:/categories/create";
-        }
-    }
-
-    @GetMapping("/categories/{id}/edit")
-    @Operation(summary = "Formularz edycji kategorii",
-            description = "Wyświetla formularz do edycji istniejącej kategorii. Tylko właściciel może edytować.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Formularz edycji kategorii"),
-            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji"),
-            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
-    })
-    public String showEditCategoryForm(@PathVariable Long id,
-                                       @AuthenticationPrincipal CustomUserDetails userDetails,
-                                       RedirectAttributes redirectAttributes,
-                                       Model model) {
-        if (userDetails == null) return "redirect:/login";
-
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Kategoria nie znaleziona"));
-
-        if (!category.getCreatedBy().getId().equals(userDetails.getId())) {
-            redirectAttributes.addFlashAttribute("error", "Brak uprawnień do edycji tej kategorii");
-            return "redirect:/categories";
-        }
-
-        model.addAttribute("category", category);
-        model.addAttribute("user", userDetails);
-
-        return "categories/edit";
-    }
-
-    @PostMapping("/categories/{id}/edit")
-    @Operation(summary = "Aktualizuj kategorię",
-            description = "Aktualizuje istniejącą kategorię. Tylko właściciel może aktualizować.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
-            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza"),
-            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji")
-    })
-    public String updateCategory(@PathVariable Long id,
-                                 @Valid @ModelAttribute("category") Category category,
-                                 BindingResult result,
-                                 @AuthenticationPrincipal CustomUserDetails userDetails,
-                                 RedirectAttributes redirectAttributes) {
-        if (userDetails == null) return "redirect:/login";
-
-        if (result.hasErrors()) {
-            return "categories/edit";
-        }
-
-        try {
-            Category existingCategory = categoryRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Kategoria nie znaleziona"));
-
-            if (!existingCategory.getCreatedBy().getId().equals(userDetails.getId())) {
-                redirectAttributes.addFlashAttribute("error", "Brak uprawnień do edycji tej kategorii");
-                return "redirect:/categories";
-            }
-
-            existingCategory.setName(category.getName());
-            existingCategory.setDescription(category.getDescription());
-            existingCategory.setColorCode(category.getColorCode());
-
-            categoryRepository.save(existingCategory);
-
-            redirectAttributes.addFlashAttribute("message",
-                    "Kategoria '" + existingCategory.getName() + "' została zaktualizowana!");
-            return "redirect:/categories";
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
-            return "redirect:/categories/" + id + "/edit";
-        }
-    }
-
-    @PostMapping("/categories/{id}/delete")
-    @Operation(summary = "Usuń kategorię",
-            description = "Usuwa istniejącą kategorię. Tylko właściciel może usunąć.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
-            @ApiResponse(responseCode = "403", description = "Brak uprawnień do usunięcia"),
-            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
-    })
-    public String deleteCategory(@PathVariable Long id,
-                                 @AuthenticationPrincipal CustomUserDetails userDetails,
-                                 RedirectAttributes redirectAttributes) {
-        if (userDetails == null) return "redirect:/login";
-
-        try {
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Kategoria nie znaleziona"));
-
-            if (!category.getCreatedBy().getId().equals(userDetails.getId())) {
-                redirectAttributes.addFlashAttribute("error", "Brak uprawnień do usunięcia tej kategorii");
-                return "redirect:/categories";
-            }
-
-            categoryRepository.delete(category);
-
-            redirectAttributes.addFlashAttribute("message",
-                    "Kategoria '" + category.getName() + "' została usunięta!");
-            return "redirect:/categories";
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
-            return "redirect:/categories";
-        }
-    }
+//
+//    @PostMapping("/categories/create")
+//    @Operation(summary = "Utwórz nową kategorię",
+//            description = "Tworzy nową kategorię na podstawie danych z formularza.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
+//            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza")
+//    })
+//    public String createCategory(@Valid @ModelAttribute("category") Category category,
+//                                 BindingResult result,
+//                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                 RedirectAttributes redirectAttributes) {
+//        if (userDetails == null) return "redirect:/login";
+//
+//        if (result.hasErrors()) {
+//            return "categories/create";
+//        }
+//
+//        try {
+//            category.setCreatedBy(userRepository.findById(userDetails.getId()).orElseThrow());
+//            categoryRepository.save(category);
+//
+//            redirectAttributes.addFlashAttribute("message",
+//                    "Kategoria '" + category.getName() + "' została utworzona!");
+//            return "redirect:/categories";
+//
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
+//            return "redirect:/categories/create";
+//        }
+//    }
+//
+//    @GetMapping("/categories/{id}/edit")
+//    @Operation(summary = "Formularz edycji kategorii",
+//            description = "Wyświetla formularz do edycji istniejącej kategorii. Tylko właściciel może edytować.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "Formularz edycji kategorii"),
+//            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji"),
+//            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
+//    })
+//    public String showEditCategoryForm(@PathVariable Long id,
+//                                       @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                       RedirectAttributes redirectAttributes,
+//                                       Model model) {
+//        if (userDetails == null) return "redirect:/login";
+//
+//        Category category = categoryRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Kategoria nie znaleziona"));
+//
+//        if (!category.getCreatedBy().getId().equals(userDetails.getId())) {
+//            redirectAttributes.addFlashAttribute("error", "Brak uprawnień do edycji tej kategorii");
+//            return "redirect:/categories";
+//        }
+//
+//        model.addAttribute("category", category);
+//        model.addAttribute("user", userDetails);
+//
+//        return "categories/edit";
+//    }
+//
+//    @PostMapping("/categories/{id}/edit")
+//    @Operation(summary = "Aktualizuj kategorię",
+//            description = "Aktualizuje istniejącą kategorię. Tylko właściciel może aktualizować.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
+//            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza"),
+//            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji")
+//    })
+//    public String updateCategory(@PathVariable Long id,
+//                                 @Valid @ModelAttribute("category") Category category,
+//                                 BindingResult result,
+//                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                 RedirectAttributes redirectAttributes) {
+//        if (userDetails == null) return "redirect:/login";
+//
+//        if (result.hasErrors()) {
+//            return "categories/edit";
+//        }
+//
+//        try {
+//            Category existingCategory = categoryRepository.findById(id)
+//                    .orElseThrow(() -> new RuntimeException("Kategoria nie znaleziona"));
+//
+//            if (!existingCategory.getCreatedBy().getId().equals(userDetails.getId())) {
+//                redirectAttributes.addFlashAttribute("error", "Brak uprawnień do edycji tej kategorii");
+//                return "redirect:/categories";
+//            }
+//
+//            existingCategory.setName(category.getName());
+//            existingCategory.setDescription(category.getDescription());
+//            existingCategory.setColorCode(category.getColorCode());
+//
+//            categoryRepository.save(existingCategory);
+//
+//            redirectAttributes.addFlashAttribute("message",
+//                    "Kategoria '" + existingCategory.getName() + "' została zaktualizowana!");
+//            return "redirect:/categories";
+//
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
+//            return "redirect:/categories/" + id + "/edit";
+//        }
+//    }
+//
+//    @PostMapping("/categories/{id}/delete")
+//    @Operation(summary = "Usuń kategorię",
+//            description = "Usuwa istniejącą kategorię. Tylko właściciel może usunąć.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy kategorii"),
+//            @ApiResponse(responseCode = "403", description = "Brak uprawnień do usunięcia"),
+//            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
+//    })
+//    public String deleteCategory(@PathVariable Long id,
+//                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                 RedirectAttributes redirectAttributes) {
+//        if (userDetails == null) return "redirect:/login";
+//
+//        try {
+//            Category category = categoryRepository.findById(id)
+//                    .orElseThrow(() -> new RuntimeException("Kategoria nie znaleziona"));
+//
+//            if (!category.getCreatedBy().getId().equals(userDetails.getId())) {
+//                redirectAttributes.addFlashAttribute("error", "Brak uprawnień do usunięcia tej kategorii");
+//                return "redirect:/categories";
+//            }
+//
+//            categoryRepository.delete(category);
+//
+//            redirectAttributes.addFlashAttribute("message",
+//                    "Kategoria '" + category.getName() + "' została usunięta!");
+//            return "redirect:/categories";
+//
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
+//            return "redirect:/categories";
+//        }
+//    }
 
 
     @GetMapping("/meetings/{id}/status-history")
@@ -1251,158 +1299,112 @@ public class WebController {
     }
 
 
-    @GetMapping("/meetings/advanced")
-    @Operation(summary = "Zaawansowane wyszukiwanie spotkań",
-            description = "Zaawansowane wyszukiwanie spotkań z wieloma kryteriami filtrowania, sortowaniem i paginacją.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Strona z wynikami wyszukiwania"),
-            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
-    })
-    public String advancedMeetings(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                   @RequestParam(defaultValue = "0") int page,
-                                   @RequestParam(defaultValue = "12") int size,
-                                   @RequestParam(required = false) String search,
-                                   @RequestParam(required = false) String type,
-                                   @RequestParam(required = false) String status,
-                                   @RequestParam(required = false) List<Long> categoryIds,
-                                   @RequestParam(required = false) List<String> tags,
-                                   @RequestParam(required = false) Boolean recurring,
-                                   @RequestParam(required = false) Boolean template,
-                                   @RequestParam(required = false) String sortBy,
-                                   @RequestParam(defaultValue = "desc") String sortOrder,
-                                   Model model) {
-
-        if (userDetails == null) return "redirect:/login";
-
-        try {
-            Pageable pageable = PageRequest.of(page, size,
-                    Sort.by("asc".equalsIgnoreCase(sortOrder) ?
-                                    Sort.Direction.ASC : Sort.Direction.DESC,
-                            getSortField(sortBy)));
-
-            // Użyj istniejącej metody lub rozszerz ją
-            Page<MeetingResponse> meetingsPage = meetingService.getFilteredMeetings(
-                    search, type, status, pageable);
-
-            // Dodatkowe filtrowanie po stronie serwera dla nowych funkcji
-            List<MeetingResponse> filteredMeetings = meetingsPage.getContent().stream()
-                    .filter(meeting -> {
-                        if (categoryIds != null && !categoryIds.isEmpty()) {
-                            if (meeting.getCategories() == null) return false;
-                            Set<Long> meetingCategoryIds = meeting.getCategories().stream()
-                                    .map(CategoryResponse::getId)
-                                    .collect(Collectors.toSet());
-                            return meetingCategoryIds.stream().anyMatch(categoryIds::contains);
-                        }
-                        return true;
-                    })
-                    .filter(meeting -> {
-                        if (tags != null && !tags.isEmpty()) {
-                            if (meeting.getTags() == null) return false;
-                            return meeting.getTags().stream().anyMatch(tags::contains);
-                        }
-                        return true;
-                    })
-                    .filter(meeting -> {
-                        if (recurring != null) {
-                            return meeting.isRecurring() == recurring;
-                        }
-                        return true;
-                    })
-                    .filter(meeting -> {
-                        if (template != null) {
-                            return meeting.isTemplate() == template;
-                        }
-                        return true;
-                    })
-                    .collect(Collectors.toList());
-
-            // Konwersja z powrotem na Page
-            Page<MeetingResponse> finalPage = new PageImpl<>(
-                    filteredMeetings,
-                    pageable,
-                    filteredMeetings.size()
-            );
-
-            model.addAttribute("meetings", finalPage.getContent());
-            model.addAttribute("currentPage", page);
-            model.addAttribute("totalPages", finalPage.getTotalPages());
-            model.addAttribute("totalItems", finalPage.getTotalElements());
-            model.addAttribute("user", userDetails);
-
-            // Dodaj parametry do modelu dla formularza
-            model.addAttribute("searchParam", search);
-            model.addAttribute("typeParam", type);
-            model.addAttribute("statusParam", status);
-            model.addAttribute("categoryIds", categoryIds);
-            model.addAttribute("tags", tags);
-            model.addAttribute("recurring", recurring);
-            model.addAttribute("template", template);
-            model.addAttribute("sortBy", sortBy);
-            model.addAttribute("sortOrder", sortOrder);
-
-            // Dodaj listę kategorii użytkownika do wyboru
-            List<Category> userCategories = categoryRepository.findByCreatedById(userDetails.getId());
-            model.addAttribute("userCategories", userCategories);
-
-        } catch (Exception e) {
-            log.error("Error in advanced meetings search: {}", e.getMessage(), e);
-            model.addAttribute("meetings", Collections.emptyList());
-            model.addAttribute("error", "Błąd podczas wyszukiwania spotkań");
-        }
-
-        return "meetings/advanced-search";
-    }
-
-    private String getSortField(String sortBy) {
-        if (sortBy == null || sortBy.isEmpty()) {
-            return "startDate";
-        }
-        switch (sortBy) {
-            case "title": return "title";
-            case "created": return "createdAt";
-            case "updated": return "updatedAt";
-            case "participants": return "confirmedParticipantsCount";
-            default: return "startDate";
-        }
-    }
-
-
-    @GetMapping("/meetings/category/{categoryId}")
-    @Operation(summary = "Spotkania według kategorii",
-            description = "Wyświetla spotkania przypisane do określonej kategorii.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Strona z spotkaniami w kategorii"),
-            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
-    })
-    public String meetingsByCategory(@PathVariable Long categoryId,
-                                     @AuthenticationPrincipal CustomUserDetails userDetails,
-                                     @RequestParam(defaultValue = "0") int page,
-                                     @RequestParam(defaultValue = "12") int size,
-                                     Model model) {
-
-        try {
-            Pageable pageable = PageRequest.of(page, size);
-            Page<MeetingResponse> meetingsPage = meetingService.getMeetingsByCategory(categoryId, pageable);
-
-            model.addAttribute("meetings", meetingsPage.getContent());
-            model.addAttribute("currentPage", page);
-            model.addAttribute("totalPages", meetingsPage.getTotalPages());
-            model.addAttribute("totalItems", meetingsPage.getTotalElements());
-            model.addAttribute("user", userDetails);
-
-            Category category = categoryRepository.findById(categoryId).orElse(null);
-            model.addAttribute("currentCategory", category);
-
-        } catch (Exception e) {
-            log.error("Error loading meetings by category: {}", e.getMessage(), e);
-            model.addAttribute("meetings", Collections.emptyList());
-            model.addAttribute("error", "Błąd podczas ładowania spotkań z kategorii");
-        }
-
-        return "meetings/by-category";
-    }
-
+//    @GetMapping("/meetings/advanced")
+//    @Operation(summary = "Zaawansowane wyszukiwanie spotkań",
+//            description = "Zaawansowane wyszukiwanie spotkań z wieloma kryteriami filtrowania, sortowaniem i paginacją.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "Strona z wynikami wyszukiwania"),
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania")
+//    })
+//    public String advancedMeetings(
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "12") int size,
+//            @RequestParam(required = false) String search,
+//            @RequestParam(required = false) String type,
+//            @RequestParam(required = false) String status,
+//            @RequestParam(required = false) List<Long> categoryIds,
+//            @RequestParam(required = false) List<String> tags,
+//            @RequestParam(required = false) Boolean recurring,
+//            @RequestParam(required = false) Boolean template,
+//            @RequestParam(required = false) String sortBy,
+//            @RequestParam(defaultValue = "desc") String sortOrder,
+//            Model model
+//    ) {
+//
+//        if (userDetails == null) return "redirect:/login";
+//
+//        try {
+//            Page<MeetingResponse> finalPage = meetingService.getAdvancedMeetings(
+//                    userDetails, page, size, search, type, status,
+//                    categoryIds, tags, recurring, template, sortBy, sortOrder
+//            );
+//
+//            log.info("UWAGA ADVANED-page: {}", finalPage);
+//
+//            model.addAttribute("meetings", finalPage.getContent());
+//            model.addAttribute("currentPage", page);
+//            model.addAttribute("totalPages", finalPage.getTotalPages());
+//            model.addAttribute("totalItems", finalPage.getTotalElements());
+//            model.addAttribute("user", userDetails);
+//
+//            // Parametry formularza
+//            model.addAttribute("searchParam", search);
+//            model.addAttribute("typeParam", type);
+//            model.addAttribute("statusParam", status);
+//            model.addAttribute("categoryIds", categoryIds);
+//            model.addAttribute("tags", tags);
+//            model.addAttribute("recurring", recurring);
+//            model.addAttribute("template", template);
+//            model.addAttribute("sortBy", sortBy);
+//            model.addAttribute("sortOrder", sortOrder);
+//
+//            // Lista kategorii użytkownika
+//            List<Category> userCategories = categoryRepository.findByCreatedById(userDetails.getId());
+//            model.addAttribute("userCategories", userCategories);
+//
+////        } catch (Exception e) {
+////            log.error("Error in advanced meetings search: {}", e.getMessage(), e);
+////            model.addAttribute("meetings", Collections.emptyList());
+////            model.addAttribute("error", "Błąd podczas wyszukiwania spotkań");
+////        }
+//
+//        } catch (Exception e) {
+//            log.error("Error in advanced meetings search", e); // zamiast tylko e.getMessage()
+//            model.addAttribute("meetings", Collections.emptyList());
+//            model.addAttribute("error", "Błąd podczas wyszukiwania spotkań");
+//        }
+//
+//
+//        return "meetings/advanced-search";
+//    }
+//
+//
+//    @GetMapping("/meetings/category/{categoryId}")
+//    @Operation(summary = "Spotkania według kategorii",
+//            description = "Wyświetla spotkania przypisane do określonej kategorii.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "Strona z spotkaniami w kategorii"),
+//            @ApiResponse(responseCode = "404", description = "Kategoria nie znaleziona")
+//    })
+//    public String meetingsByCategory(@PathVariable Long categoryId,
+//                                     @AuthenticationPrincipal CustomUserDetails userDetails,
+//                                     @RequestParam(defaultValue = "0") int page,
+//                                     @RequestParam(defaultValue = "12") int size,
+//                                     Model model) {
+//
+//        try {
+//            Pageable pageable = PageRequest.of(page, size);
+//            Page<MeetingResponse> meetingsPage = meetingService.getMeetingsByCategory(categoryId, pageable);
+//
+//            model.addAttribute("meetings", meetingsPage.getContent());
+//            model.addAttribute("currentPage", page);
+//            model.addAttribute("totalPages", meetingsPage.getTotalPages());
+//            model.addAttribute("totalItems", meetingsPage.getTotalElements());
+//            model.addAttribute("user", userDetails);
+//
+//            Category category = categoryRepository.findById(categoryId).orElse(null);
+//            model.addAttribute("currentCategory", category);
+//
+//        } catch (Exception e) {
+//            log.error("Error loading meetings by category: {}", e.getMessage(), e);
+//            model.addAttribute("meetings", Collections.emptyList());
+//            model.addAttribute("error", "Błąd podczas ładowania spotkań z kategorii");
+//        }
+//
+//        return "meetings/by-category";
+//    }
+//
 
     @GetMapping("/meetings/tag/{tag}")
     @Operation(summary = "Spotkania według tagu",
@@ -1463,31 +1465,172 @@ public class WebController {
     }
 
 
-    @ModelAttribute("userCategories")
-    public List<CategoryResponse> getUserCategories(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails == null) return Collections.emptyList();
+//    @ModelAttribute("userCategories")
+//    public List<CategoryResponse> getUserCategories(@AuthenticationPrincipal CustomUserDetails userDetails) {
+//        if (userDetails == null) return Collections.emptyList();
+//
+//        try {
+//            List<Category> categories = categoryRepository.findByCreatedById(userDetails.getId());
+//            return categories.stream()
+//                    .map(cat -> CategoryResponse.builder()
+//                            .id(cat.getId())
+//                            .name(cat.getName())
+//                            .colorCode(cat.getColorCode())
+//                            .description(cat.getDescription())
+//                            .build())
+//                    .collect(Collectors.toList());
+//        } catch (Exception e) {
+//            log.error("Error loading user categories: {}", e.getMessage());
+//            return Collections.emptyList();
+//        }
+//    }
 
-        try {
-            List<Category> categories = categoryRepository.findByCreatedById(userDetails.getId());
-            return categories.stream()
-                    .map(cat -> CategoryResponse.builder()
-                            .id(cat.getId())
-                            .name(cat.getName())
-                            .colorCode(cat.getColorCode())
-                            .description(cat.getDescription())
-                            .build())
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Error loading user categories: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
 
+//
+//    @GetMapping("/meetings/search")
+//    @Operation(summary = "Wyszukiwanie spotkań",
+//            description = "Zaawansowane wyszukiwanie spotkań z wieloma parametrami filtrowania.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "Strona z wynikami wyszukiwania"),
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania"),
+//            @ApiResponse(responseCode = "400", description = "Nieprawidłowe parametry wyszukiwania")
+//    })
+//    public String searchMeetings(
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            @RequestParam(required = false) String keywords,
+//            @RequestParam(required = false) String tags,
+//            @RequestParam(required = false) List<String> searchFields,
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+//            @RequestParam(required = false) String type,
+//            @RequestParam(required = false) List<String> status,
+//            @RequestParam(required = false, defaultValue = "0") Integer minParticipants,
+//            @RequestParam(required = false, defaultValue = "100") Integer maxParticipants,
+//            @RequestParam(required = false) String organizerName,
+//            @RequestParam(required = false) String myParticipation,
+//            @RequestParam(required = false) String visibility,
+//            @RequestParam(required = false) String sortBy,
+//            @RequestParam(required = false) List<Long> categories,
+//            @RequestParam(required = false) Boolean recurringOnly,
+//            @RequestParam(required = false) Boolean templatesOnly,
+//            @RequestParam(required = false) Boolean hasAttachments,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "12") int size,
+//            Model model) {
+//
+//        if (userDetails == null) {
+//            return "redirect:/login";
+//        }
+//
+//        try {
+//            MeetingType meetingType = null;
+//            if (type != null && !type.isEmpty()) {
+//                try {
+//                    meetingType = MeetingType.valueOf(type);
+//                } catch (IllegalArgumentException e) {
+//                    log.warn("Invalid meeting type provided: {}", type);
+//                }
+//            }
+//
+//            MeetingVisibility meetingVisibility = null;
+//            if (visibility != null && !visibility.isEmpty()) {
+//                try {
+//                    meetingVisibility = MeetingVisibility.valueOf(visibility);
+//                } catch (IllegalArgumentException e) {
+//                    log.warn("Invalid visibility provided: {}", visibility);
+//                }
+//            }
+//
+//            SearchCriteria criteria = SearchCriteria.builder()
+//                    .keywords(keywords)
+//                    .tags(tags)
+//                    .searchFields(searchFields != null ? searchFields : Arrays.asList("TITLE", "DESCRIPTION"))
+//                    .dateFrom(dateFrom)
+//                    .dateTo(dateTo)
+//                    .type(meetingType)
+//                    .statuses(status)
+//                    .minParticipants(minParticipants)
+//                    .maxParticipants(maxParticipants)
+//                    .organizerName(organizerName)
+//                    .myParticipation(myParticipation)
+//                    .visibility(meetingVisibility)
+//                    .sortBy(sortBy)
+//                    .categoryIds(categories)
+//                    .recurringOnly(Boolean.TRUE.equals(recurringOnly))
+//                    .templatesOnly(Boolean.TRUE.equals(templatesOnly))
+//                    .hasAttachments(Boolean.TRUE.equals(hasAttachments))
+//                    .currentUserId(userDetails.getId())
+//                    .userAuthenticated(true)
+//                    .includePublic(true)
+//                    .build();
+//
+//            Pageable pageable = createSortedPageable(page, size, sortBy);
+//
+//            Page<MeetingResponse> meetingsPage = meetingService.searchMeetings(criteria, pageable);
+//
+//            List<MeetingResponse> enrichedMeetings = new ArrayList<>();
+//            for (MeetingResponse meeting : meetingsPage.getContent()) {
+//                enrichedMeetings.add(enrichMeetingWithUserInfo(meeting, userDetails.getId()));
+//            }
+//
+//            Page<MeetingResponse> finalPage = new PageImpl<>(
+//                    enrichedMeetings,
+//                    pageable,
+//                    meetingsPage.getTotalElements()
+//            );
+//
+//            model.addAttribute("meetings", finalPage.getContent());
+//            model.addAttribute("currentPage", page);
+//            model.addAttribute("totalPages", finalPage.getTotalPages());
+//            model.addAttribute("totalItems", finalPage.getTotalElements());
+//            model.addAttribute("pageSize", size);
+//            model.addAttribute("user", userDetails);
+//            model.addAttribute("searchCriteria", criteria);
+//            model.addAttribute("isSearchResults", true);
+//            model.addAttribute("resultsCount", finalPage.getTotalElements());
+//
+//            Map<String, String> searchParams = new LinkedHashMap<>(); // LinkedHashMap zachowuje kolejność
+//            if (keywords != null) searchParams.put("keywords", keywords);
+//            if (tags != null) searchParams.put("tags", tags);
+//            if (dateFrom != null) searchParams.put("dateFrom", dateFrom.toString());
+//            if (dateTo != null) searchParams.put("dateTo", dateTo.toString());
+//            if (type != null) searchParams.put("type", type);
+//            if (status != null && !status.isEmpty()) {
+//                searchParams.put("status", String.join(",", status));
+//            }
+//            if (organizerName != null) searchParams.put("organizerName", organizerName);
+//            if (myParticipation != null) searchParams.put("myParticipation", myParticipation);
+//            if (visibility != null) searchParams.put("visibility", visibility);
+//            if (sortBy != null) searchParams.put("sortBy", sortBy);
+//            if (categories != null && !categories.isEmpty()) {
+//                searchParams.put("categories", categories.stream()
+//                        .map(String::valueOf)
+//                        .collect(Collectors.joining(",")));
+//            }
+//            if (recurringOnly != null) searchParams.put("recurringOnly", recurringOnly.toString());
+//            if (templatesOnly != null) searchParams.put("templatesOnly", templatesOnly.toString());
+//            if (hasAttachments != null) searchParams.put("hasAttachments", hasAttachments.toString());
+//
+//            model.addAttribute("searchParams", searchParams);
+//
+//            List<Category> userCategories = categoryRepository.findByCreatedById(userDetails.getId());
+//            model.addAttribute("userCategories", userCategories);
+//
+//            return "meetings/search-results";
+//
+//        } catch (Exception e) {
+//            log.error("Error in advanced search: {}", e.getMessage(), e);
+//            model.addAttribute("user", userDetails);
+//            model.addAttribute("error", "Błąd podczas wyszukiwania: " + e.getMessage());
+//            model.addAttribute("meetings", Collections.emptyList());
+//            return "meetings/search-results";
+//        }
+//    }
 
 
     @GetMapping("/meetings/search")
     @Operation(summary = "Wyszukiwanie spotkań",
-            description = "Zaawansowane wyszukiwanie spotkań z wieloma parametrami filtrowania.")
+            description = "Zaawansowane wyszukiwanie spotkań z wieloma parametrami filtrowania, sortowaniem i paginacją.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Strona z wynikami wyszukiwania"),
             @ApiResponse(responseCode = "302", description = "Przekierowanie do logowania"),
@@ -1495,21 +1638,28 @@ public class WebController {
     })
     public String searchMeetings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
+            // ✅ Parametry z obu endpointów
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String keywords,
-            @RequestParam(required = false) String tags,
+            @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false) List<String> searchFields,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) List<String> status,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) List<String> statuses,
             @RequestParam(required = false, defaultValue = "0") Integer minParticipants,
             @RequestParam(required = false, defaultValue = "100") Integer maxParticipants,
             @RequestParam(required = false) String organizerName,
             @RequestParam(required = false) String myParticipation,
             @RequestParam(required = false) String visibility,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) List<Long> categories,
+            @RequestParam(required = false) String sortOrder,
+//            @RequestParam(required = false) List<Long> categoryIds,
+//            @RequestParam(required = false) List<Long> categories,
+            @RequestParam(required = false) Boolean recurring,
             @RequestParam(required = false) Boolean recurringOnly,
+            @RequestParam(required = false) Boolean template,
             @RequestParam(required = false) Boolean templatesOnly,
             @RequestParam(required = false) Boolean hasAttachments,
             @RequestParam(defaultValue = "0") int page,
@@ -1520,142 +1670,234 @@ public class WebController {
             return "redirect:/login";
         }
 
+        log.info("🔍 ===== SEARCH PARAMETERS START =====");
+        log.info("📥 Raw parameters received:");
+        log.info("  search: {}", search);
+        log.info("  keywords: {}", keywords);
+        log.info("  status: {}", status);  // TO JEST ŹRÓDŁO BŁĘDU!
+        log.info("  statuses: {}", statuses);
+        log.info("  type: {}", type);
+        log.info("🔍 ===== SEARCH PARAMETERS END =====");
+
         try {
+            // ✅ Unifikacja parametrów
+            String finalKeywords = search != null ? search : keywords;
+//            List<Long> finalCategories = categoryIds != null ? categoryIds : categories;
+            Boolean finalRecurring = recurring != null ? recurring : recurringOnly;
+            Boolean finalTemplate = template != null ? template : templatesOnly;
+            String finalSortBy = sortBy != null ? sortBy : "startDate";
+            String finalSortOrder = sortOrder != null ? sortOrder : "desc";
+            List<String> finalStatuses = statuses != null ? statuses :
+                    (status != null ? List.of(status) : new ArrayList<>());
+
+            // ✅ Konwersja typów enum
+//            MeetingType meetingType = null;
+//            if (type != null && !type.isBlank()) {
+//                try {
+//                    // Jeżeli używasz nazwy wyświetlanej w UI
+//                    meetingType = MeetingType.fromDisplayName(type);
+//                    log.info("MEtyp w kontrolerze: {}", meetingType);
+//                    // Jeśli używasz dokładnych nazw enumów, można użyć:
+//                    // meetingType = MeetingType.valueOf(type.trim().toUpperCase());
+//                } catch (IllegalArgumentException e) {
+//                    log.warn("Invalid meeting type: {}", type);
+//                }
+//            }
+
             MeetingType meetingType = null;
-            if (type != null && !type.isEmpty()) {
+            if (type != null && !type.isBlank()) {
                 try {
-                    meetingType = MeetingType.valueOf(type);
+                    // Konwersja bezpośrednio z nazwy enumu
+                    meetingType = MeetingType.valueOf(type.trim().toUpperCase());
+                    log.info("MEtyp w kontrolerze: {}", meetingType);
                 } catch (IllegalArgumentException e) {
-                    log.warn("Invalid meeting type provided: {}", type);
+                    log.warn("Invalid meeting type: {}", type);
                 }
             }
+
 
             MeetingVisibility meetingVisibility = null;
             if (visibility != null && !visibility.isEmpty()) {
                 try {
                     meetingVisibility = MeetingVisibility.valueOf(visibility);
                 } catch (IllegalArgumentException e) {
-                    log.warn("Invalid visibility provided: {}", visibility);
+                    log.warn("Invalid visibility: {}", visibility);
                 }
             }
 
+            // ✅ Budowanie SearchCriteria
             SearchCriteria criteria = SearchCriteria.builder()
-                    .keywords(keywords)
-                    .tags(tags)
-                    .searchFields(searchFields != null ? searchFields : Arrays.asList("TITLE", "DESCRIPTION"))
+                    .keywords(finalKeywords)
+                    .tags(tags != null ? String.join(",", tags) : null)
+                    .searchFields(searchFields != null ? searchFields : List.of("TITLE", "DESCRIPTION"))
                     .dateFrom(dateFrom)
                     .dateTo(dateTo)
                     .type(meetingType)
-                    .statuses(status)
+                    .statuses(finalStatuses)
                     .minParticipants(minParticipants)
                     .maxParticipants(maxParticipants)
                     .organizerName(organizerName)
                     .myParticipation(myParticipation)
-                    .visibility(meetingVisibility)  // ✅ MeetingVisibility zamiast String
-                    .sortBy(sortBy)
-                    .categoryIds(categories)
-                    .recurringOnly(Boolean.TRUE.equals(recurringOnly))
-                    .templatesOnly(Boolean.TRUE.equals(templatesOnly))
+                    .visibility(meetingVisibility)
+//                    .categoryIds(finalCategories)
+                    .recurringOnly(Boolean.TRUE.equals(finalRecurring))
+                    .templatesOnly(Boolean.TRUE.equals(finalTemplate))
                     .hasAttachments(Boolean.TRUE.equals(hasAttachments))
-                    .currentUserId(userDetails.getId())  // ✅ Dodaj currentUserId
+                    .currentUserId(userDetails.getId())
                     .userAuthenticated(true)
                     .includePublic(true)
                     .build();
 
-            Pageable pageable = createSortedPageable(page, size, sortBy);
+            // ✅ Stworzenie Pageable z sortowaniem
+            Sort sort = Sort.by(
+                    "asc".equalsIgnoreCase(finalSortOrder) ?
+                            Sort.Direction.ASC : Sort.Direction.DESC,
+                    getSortField(finalSortBy)
+            );
+            Pageable pageable = PageRequest.of(page, size, sort);
 
+            // ✅ Wykonanie wyszukiwania
             Page<MeetingResponse> meetingsPage = meetingService.searchMeetings(criteria, pageable);
 
-            List<MeetingResponse> enrichedMeetings = new ArrayList<>();
-            for (MeetingResponse meeting : meetingsPage.getContent()) {
-                enrichedMeetings.add(enrichMeetingWithUserInfo(meeting, userDetails.getId()));
-            }
-
-            Page<MeetingResponse> finalPage = new PageImpl<>(
-                    enrichedMeetings,
-                    pageable,
-                    meetingsPage.getTotalElements()
-            );
-
-            model.addAttribute("meetings", finalPage.getContent());
+            // ✅ Przygotowanie danych dla widoku
+            model.addAttribute("meetings", meetingsPage.getContent());
             model.addAttribute("currentPage", page);
-            model.addAttribute("totalPages", finalPage.getTotalPages());
-            model.addAttribute("totalItems", finalPage.getTotalElements());
+            model.addAttribute("totalPages", meetingsPage.getTotalPages());
+            model.addAttribute("totalItems", meetingsPage.getTotalElements());
             model.addAttribute("pageSize", size);
             model.addAttribute("user", userDetails);
-            model.addAttribute("searchCriteria", criteria);
             model.addAttribute("isSearchResults", true);
-            model.addAttribute("resultsCount", finalPage.getTotalElements());
+            model.addAttribute("resultsCount", meetingsPage.getTotalElements());
 
-            Map<String, String> searchParams = new LinkedHashMap<>(); // LinkedHashMap zachowuje kolejność
-            if (keywords != null) searchParams.put("keywords", keywords);
-            if (tags != null) searchParams.put("tags", tags);
-            if (dateFrom != null) searchParams.put("dateFrom", dateFrom.toString());
-            if (dateTo != null) searchParams.put("dateTo", dateTo.toString());
-            if (type != null) searchParams.put("type", type);
-            if (status != null && !status.isEmpty()) {
-                searchParams.put("status", String.join(",", status));
-            }
-            if (organizerName != null) searchParams.put("organizerName", organizerName);
-            if (myParticipation != null) searchParams.put("myParticipation", myParticipation);
-            if (visibility != null) searchParams.put("visibility", visibility);
-            if (sortBy != null) searchParams.put("sortBy", sortBy);
-            if (categories != null && !categories.isEmpty()) {
-                searchParams.put("categories", categories.stream()
-                        .map(String::valueOf)
-                        .collect(Collectors.joining(",")));
-            }
-            if (recurringOnly != null) searchParams.put("recurringOnly", recurringOnly.toString());
-            if (templatesOnly != null) searchParams.put("templatesOnly", templatesOnly.toString());
-            if (hasAttachments != null) searchParams.put("hasAttachments", hasAttachments.toString());
+            // ✅ Przekazanie parametrów do widoku
+            model.addAttribute("search", finalKeywords);
+            model.addAttribute("keywords", finalKeywords);
+            model.addAttribute("tags", tags);
+            model.addAttribute("dateFrom", dateFrom);
+            model.addAttribute("dateTo", dateTo);
+            model.addAttribute("type", type);
+            model.addAttribute("status", status);
+            model.addAttribute("statuses", finalStatuses);
+            model.addAttribute("organizerName", organizerName);
+            model.addAttribute("myParticipation", myParticipation);
+            model.addAttribute("visibility", visibility);
+            model.addAttribute("sortBy", finalSortBy);
+            model.addAttribute("sortOrder", finalSortOrder);
+//            model.addAttribute("categoryIds", finalCategories);
+//            model.addAttribute("categories", finalCategories);
+            model.addAttribute("recurring", finalRecurring);
+            model.addAttribute("template", finalTemplate);
+            model.addAttribute("hasAttachments", hasAttachments);
 
-            model.addAttribute("searchParams", searchParams);
 
-            List<Category> userCategories = categoryRepository.findByCreatedById(userDetails.getId());
-            model.addAttribute("userCategories", userCategories);
+            // ✅ Kategorie użytkownika
+//            List<Category> userCategories = categoryRepository.findByCreatedById(userDetails.getId());
+//            model.addAttribute("userCategories", userCategories);
 
-            return "meetings/search-results";
+            // ✅ URL dla paginacji
+            model.addAttribute("searchParams", buildSearchParams(
+                    finalKeywords, tags, dateFrom, dateTo, type, finalStatuses,
+                    minParticipants, maxParticipants, organizerName, myParticipation,
+                    visibility, finalSortBy, finalSortOrder,
+                    finalRecurring, finalTemplate, hasAttachments
+            ));
+
+            return "meetings/advanced-search";
 
         } catch (Exception e) {
-            log.error("Error in advanced search: {}", e.getMessage(), e);
+            log.error("Error in search: {}", e.getMessage(), e);
             model.addAttribute("user", userDetails);
             model.addAttribute("error", "Błąd podczas wyszukiwania: " + e.getMessage());
             model.addAttribute("meetings", Collections.emptyList());
-            return "meetings/search-results";
+            return "meetings/advanced-search";
         }
     }
 
-    private Pageable createSortedPageable(int page, int size, String sortBy) {
-        Sort sort;
-
-        if (sortBy == null || sortBy.isEmpty()) {
-            sort = Sort.by(Sort.Direction.DESC, "startDate");
-        } else {
-            switch (sortBy) {
-                case "START_DATE_ASC":
-                    sort = Sort.by(Sort.Direction.ASC, "startDate");
-                    break;
-                case "START_DATE_DESC":
-                    sort = Sort.by(Sort.Direction.DESC, "startDate");
-                    break;
-                case "TITLE_ASC":
-                    sort = Sort.by(Sort.Direction.ASC, "title");
-                    break;
-                case "TITLE_DESC":
-                    sort = Sort.by(Sort.Direction.DESC, "title");
-                    break;
-                case "CREATED_AT_DESC":
-                    sort = Sort.by(Sort.Direction.DESC, "createdAt");
-                    break;
-                case "PARTICIPANTS_DESC":
-                    sort = Sort.by(Sort.Direction.DESC, "confirmedParticipantsCount");
-                    break;
-                default:
-                    sort = Sort.by(Sort.Direction.DESC, "startDate");
-            }
+    private String getSortField(String sortBy) {
+        if (sortBy == null || sortBy.isEmpty()) return "startDate";
+        switch (sortBy.toLowerCase()) {
+            case "title": return "title";
+            case "created": return "createdAt";
+            case "updated": return "updatedAt";
+            case "date": return "startDate";
+            default: return "startDate";
         }
+    }
 
-        return PageRequest.of(page, size, sort);
+    private Map<String, String> buildSearchParams(
+            String keywords, List<String> tags, LocalDate dateFrom, LocalDate dateTo,
+            String type, List<String> statuses, Integer minParticipants, Integer maxParticipants,
+            String organizerName, String myParticipation, String visibility,
+            String sortBy, String sortOrder,
+            Boolean recurring, Boolean template, Boolean hasAttachments) {
+
+        Map<String, String> params = new LinkedHashMap<>();
+        if (keywords != null) params.put("keywords", keywords);
+        if (tags != null && !tags.isEmpty()) params.put("tags", String.join(",", tags));
+        if (dateFrom != null) params.put("dateFrom", dateFrom.toString());
+        if (dateTo != null) params.put("dateTo", dateTo.toString());
+        if (type != null) params.put("type", type);
+        if (statuses != null && !statuses.isEmpty()) params.put("status", String.join(",", statuses));
+        if (organizerName != null) params.put("organizerName", organizerName);
+        if (myParticipation != null) params.put("myParticipation", myParticipation);
+        if (visibility != null) params.put("visibility", visibility);
+        if (sortBy != null) params.put("sortBy", sortBy);
+        if (sortOrder != null) params.put("sortOrder", sortOrder);
+//        if (categories != null && !categories.isEmpty()) {
+//            params.put("categoryIds", categories.stream()
+//                    .map(String::valueOf)
+//                    .collect(Collectors.joining(",")));
+//        }
+        if (recurring != null) params.put("recurring", recurring.toString());
+        if (template != null) params.put("template", template.toString());
+        if (hasAttachments != null) params.put("hasAttachments", hasAttachments.toString());
+
+        return params;
+    }
+
+    // Dodaj tę metodę w kontrolerze
+    @ModelAttribute("buildPaginationLink")
+    public Function<Integer, String> buildPaginationLink(
+            @RequestParam(required = false) String keywords,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) List<Long> categoryIds,
+//            @RequestParam(required = false) List<Long> categories,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(required = false) Boolean recurring,
+            @RequestParam(required = false) Boolean recurringOnly,
+            @RequestParam(required = false) Boolean template,
+            @RequestParam(required = false) Boolean templatesOnly,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(defaultValue = "12") int size) {
+
+        return (page) -> {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/meetings/search")
+                    .queryParam("page", page)
+                    .queryParam("size", size);
+
+            if (keywords != null) builder.queryParam("keywords", keywords);
+            if (search != null) builder.queryParam("keywords", search);
+            if (type != null) builder.queryParam("type", type);
+            if (status != null) builder.queryParam("status", status);
+//            if (categoryIds != null && !categoryIds.isEmpty()) {
+//                builder.queryParam("categoryIds", String.join(",",
+//                        categoryIds.stream().map(String::valueOf).collect(Collectors.toList())));
+//            }
+            if (tags != null && !tags.isEmpty()) {
+                builder.queryParam("tags", String.join(",", tags));
+            }
+            if (recurring != null) builder.queryParam("recurring", recurring);
+            if (recurringOnly != null) builder.queryParam("recurring", recurringOnly);
+            if (template != null) builder.queryParam("template", template);
+            if (templatesOnly != null) builder.queryParam("template", templatesOnly);
+            if (sortBy != null) builder.queryParam("sortBy", sortBy);
+            if (sortOrder != null) builder.queryParam("sortOrder", sortOrder);
+
+            return builder.build().toUriString();
+        };
     }
 
 

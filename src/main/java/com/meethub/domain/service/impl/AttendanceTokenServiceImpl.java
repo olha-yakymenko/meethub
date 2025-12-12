@@ -64,6 +64,7 @@ public class AttendanceTokenServiceImpl implements AttendanceTokenService {
     /**
      * Waliduje i używa tokenu
      */
+    @Override
     public boolean validateAndUseToken(String token, Long meetingId) {
         try {
             Optional<AttendanceToken> tokenOpt = attendanceTokenRepository

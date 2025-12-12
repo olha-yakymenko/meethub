@@ -155,14 +155,24 @@
                         </div>
                         <div class="card-body">
                             <div class="d-grid gap-2">
-                                <a th:if="${location.type.name() == 'PHYSICAL' and mapUrl}"
+<!--                                <a th:if="${location.type.name() == 'PHYSICAL' and mapUrl}"-->
+<!--                                   th:href="${mapUrl}" target="_blank" class="btn btn-outline-primary">-->
+<!--                                    <i class="bi bi-map me-2"></i>Pokaż na mapie-->
+<!--                                </a>-->
+                                <a th:if="${location.type.name() == 'PHYSICAL' and mapUrl != null}"
                                    th:href="${mapUrl}" target="_blank" class="btn btn-outline-primary">
                                     <i class="bi bi-map me-2"></i>Pokaż na mapie
                                 </a>
-                                <a th:if="${location.type.name() == 'VIRTUAL' and location.virtualMeetingUrl}"
+
+<!--                                <a th:if="${location.type.name() == 'VIRTUAL' and location.virtualMeetingUrl}"-->
+<!--                                   th:href="${location.virtualMeetingUrl}" target="_blank" class="btn btn-outline-success">-->
+<!--                                    <i class="bi bi-camera-video me-2"></i>Dołącz do spotkania-->
+<!--                                </a>-->
+                                <a th:if="${location.type.name() == 'VIRTUAL' and location.virtualMeetingUrl != null}"
                                    th:href="${location.virtualMeetingUrl}" target="_blank" class="btn btn-outline-success">
                                     <i class="bi bi-camera-video me-2"></i>Dołącz do spotkania
                                 </a>
+
                                 <a th:href="@{/locations/{id}/edit(id=${location.id})}" class="btn btn-primary">
                                     <i class="bi bi-pencil me-2"></i>Edytuj
                                 </a>

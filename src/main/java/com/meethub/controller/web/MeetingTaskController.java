@@ -3,6 +3,7 @@ package com.meethub.controller.web;
 import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.request.CreateTaskRequest;
 import com.meethub.domain.model.request.UpdateTaskRequest;
+import com.meethub.domain.model.response.*;
 import com.meethub.domain.repository.jpa.MeetingParticipantRepository;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.service.TaskService;
@@ -17,8 +18,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/meetings/{meetingId}/tasks")
@@ -27,26 +26,50 @@ import java.util.stream.Collectors;
 public class MeetingTaskController {
 
     private final TaskService taskService;
-    private final MeetingRepository meetingRepository;
-    private final MeetingParticipantRepository participantRepository;
+
+//    @GetMapping
+//    @Operation(summary = "Lista zadań spotkania", description = "Wyświetla wszystkie zadania przypisane do spotkania.")
+//    public String getMeetingTasks(
+//            @Parameter(description = "ID spotkania", required = true) @PathVariable Long meetingId,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            List<Task> tasks = taskService.getMeetingTasks(meetingId);
+//            boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
+//
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("tasks", tasks);
+//            model.addAttribute("isOrganizer", isOrganizer);
+//            model.addAttribute("userId", userDetails.getId());
+//
+//            return "meetings/tasks/list";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId;
+//        }
+//    }
+
 
     @GetMapping
     @Operation(summary = "Lista zadań spotkania", description = "Wyświetla wszystkie zadania przypisane do spotkania.")
-    public String getMeetingTasks(
-            @Parameter(description = "ID spotkania", required = true) @PathVariable Long meetingId,
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            Model model) {
+    public String getMeetingTasks(@PathVariable Long meetingId,
+                                  @AuthenticationPrincipal CustomUserDetails userDetails,
+                                  Model model) {
+
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
 
         try {
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+            MeetingTasksResponse response = taskService.getMeetingTasksForUser(meetingId, userDetails.getId());
 
-            List<Task> tasks = taskService.getMeetingTasks(meetingId);
-            boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
-
-            model.addAttribute("meeting", meeting);
-            model.addAttribute("tasks", tasks);
-            model.addAttribute("isOrganizer", isOrganizer);
+            model.addAttribute("meeting", response.getMeeting());
+            model.addAttribute("tasks", response.getTasks());
+            model.addAttribute("isOrganizer", response.isOrganizer());
             model.addAttribute("userId", userDetails.getId());
 
             return "meetings/tasks/list";
@@ -56,23 +79,44 @@ public class MeetingTaskController {
         }
     }
 
+
+//    @GetMapping("/create")
+//    @Operation(summary = "Formularz tworzenia zadania", description = "Wyświetla formularz umożliwiający utworzenie nowego zadania. Tylko dla organizatora.")
+//    public String showCreateTaskForm(
+//            @Parameter(description = "ID spotkania", required = true) @PathVariable Long meetingId,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
+//                throw new RuntimeException("Tylko organizator może tworzyć zadania");
+//            }
+//
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("createTaskRequest", new CreateTaskRequest());
+//
+//            return "meetings/tasks/create";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks";
+//        }
+//    }
+
+
     @GetMapping("/create")
     @Operation(summary = "Formularz tworzenia zadania", description = "Wyświetla formularz umożliwiający utworzenie nowego zadania. Tylko dla organizatora.")
     public String showCreateTaskForm(
-            @Parameter(description = "ID spotkania", required = true) @PathVariable Long meetingId,
+            @PathVariable Long meetingId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
         try {
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
-
-            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
-                throw new RuntimeException("Tylko organizator może tworzyć zadania");
-            }
-
-            model.addAttribute("meeting", meeting);
-            model.addAttribute("createTaskRequest", new CreateTaskRequest());
+            MeetingTaskFormResponse response = taskService.getTaskCreationFormData(meetingId, userDetails.getId());
+            model.addAttribute("meeting", response.getMeeting());
+            model.addAttribute("createTaskRequest", response.getCreateTaskRequest());
 
             return "meetings/tasks/create";
         } catch (Exception e) {
@@ -80,6 +124,7 @@ public class MeetingTaskController {
             return "redirect:/meetings/" + meetingId + "/tasks";
         }
     }
+
 
     @PostMapping("/create")
     @Operation(summary = "Utwórz zadanie", description = "Tworzy nowe zadanie w spotkaniu.")
@@ -99,31 +144,56 @@ public class MeetingTaskController {
         }
     }
 
+//    @GetMapping("/{taskId}")
+//    @Operation(summary = "Szczegóły zadania", description = "Wyświetla szczegóły zadania oraz uprawnienia dostępu użytkownika.")
+//    public String getTaskDetails(
+//            @Parameter(description = "ID spotkania", required = true) @PathVariable Long meetingId,
+//            @Parameter(description = "ID zadania", required = true) @PathVariable Long taskId,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            Task task = taskService.getTaskById(taskId);
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
+//            boolean canAccess = isOrganizer || task.getAssignments().stream()
+//                    .anyMatch(a -> a.getUser().getId().equals(userDetails.getId()));
+//
+//            if (!canAccess) {
+//                throw new RuntimeException("Brak uprawnień do tego zadania");
+//            }
+//
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("task", task);
+//            model.addAttribute("isOrganizer", isOrganizer);
+//            model.addAttribute("userId", userDetails.getId());
+//
+//            return "meetings/tasks/details";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks";
+//        }
+//    }
+
+
+
     @GetMapping("/{taskId}")
     @Operation(summary = "Szczegóły zadania", description = "Wyświetla szczegóły zadania oraz uprawnienia dostępu użytkownika.")
     public String getTaskDetails(
-            @Parameter(description = "ID spotkania", required = true) @PathVariable Long meetingId,
-            @Parameter(description = "ID zadania", required = true) @PathVariable Long taskId,
+            @PathVariable Long meetingId,
+            @PathVariable Long taskId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
         try {
-            Task task = taskService.getTaskById(taskId);
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
 
-            boolean isOrganizer = meeting.getOrganizer().getId().equals(userDetails.getId());
-            boolean canAccess = isOrganizer || task.getAssignments().stream()
-                    .anyMatch(a -> a.getUser().getId().equals(userDetails.getId()));
-
-            if (!canAccess) {
-                throw new RuntimeException("Brak uprawnień do tego zadania");
-            }
-
-            model.addAttribute("meeting", meeting);
-            model.addAttribute("task", task);
-            model.addAttribute("isOrganizer", isOrganizer);
-            model.addAttribute("userId", userDetails.getId());
+            model.addAttribute("meeting", response.getMeeting());
+            model.addAttribute("task", response.getTask());
+            model.addAttribute("isOrganizer", response.isOrganizer());
+            model.addAttribute("userId", response.getUserId());
 
             return "meetings/tasks/details";
         } catch (Exception e) {
@@ -131,6 +201,37 @@ public class MeetingTaskController {
             return "redirect:/meetings/" + meetingId + "/tasks";
         }
     }
+
+
+//    @GetMapping("/{taskId}/edit")
+//    @Operation(summary = "Formularz edycji zadania", description = "Wyświetla formularz edycji zadania. Tylko organizator może edytować.")
+//    public String showEditTaskForm(
+//            @PathVariable Long meetingId,
+//            @PathVariable Long taskId,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            Task task = taskService.getTaskById(taskId);
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
+//                throw new RuntimeException("Tylko organizator może edytować zadania");
+//            }
+//
+//            String formattedDeadline = task.getDeadline().toString().replace("T", " ");
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("task", task);
+//            model.addAttribute("formattedDeadline", formattedDeadline);
+//
+//            return "meetings/tasks/edit";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+//        }
+//    }
+
 
     @GetMapping("/{taskId}/edit")
     @Operation(summary = "Formularz edycji zadania", description = "Wyświetla formularz edycji zadania. Tylko organizator może edytować.")
@@ -141,18 +242,11 @@ public class MeetingTaskController {
             Model model) {
 
         try {
-            Task task = taskService.getTaskById(taskId);
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+            MeetingTaskEditResponse response = taskService.getTaskForEditing(meetingId, taskId, userDetails.getId());
 
-            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
-                throw new RuntimeException("Tylko organizator może edytować zadania");
-            }
-
-            String formattedDeadline = task.getDeadline().toString().replace("T", " ");
-            model.addAttribute("meeting", meeting);
-            model.addAttribute("task", task);
-            model.addAttribute("formattedDeadline", formattedDeadline);
+            model.addAttribute("meeting", response.getMeeting());
+            model.addAttribute("task", response.getTask());
+            model.addAttribute("formattedDeadline", response.getFormattedDeadline());
 
             return "meetings/tasks/edit";
         } catch (Exception e) {
@@ -160,6 +254,8 @@ public class MeetingTaskController {
             return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
         }
     }
+
+
 
     @PostMapping("/{taskId}/edit")
     @Operation(summary = "Aktualizuj zadanie", description = "Aktualizuje dane zadania na podstawie formularza edycji.")
@@ -236,6 +332,52 @@ public class MeetingTaskController {
         return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
     }
 
+//    @GetMapping("/{taskId}/assign")
+//    @Operation(summary = "Formularz przypisywania użytkowników", description = "Pozwala organizatorowi przypisywać użytkowników do zadania.")
+//    public String showAssignUsersForm(
+//            @PathVariable Long meetingId,
+//            @PathVariable Long taskId,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            Task task = taskService.getTaskById(taskId);
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+//
+//            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
+//                throw new RuntimeException("Tylko organizator może przypisywać użytkowników");
+//            }
+//
+//            List<MeetingParticipant> participants = participantRepository.findByMeetingId(meetingId);
+//            List<User> confirmedUsers = participants.stream()
+//                    .filter(p -> p.getStatus() == com.meethub.domain.model.enums.ParticipationStatus.CONFIRMED)
+//                    .map(MeetingParticipant::getUser)
+//                    .collect(Collectors.toList());
+//
+//            List<TaskAssignment> assignments = taskService.getTaskAssignments(taskId);
+//            List<User> assignedUsers = assignments.stream()
+//                    .map(TaskAssignment::getUser)
+//                    .collect(Collectors.toList());
+//
+//            List<User> availableUsers = confirmedUsers.stream()
+//                    .filter(user -> !assignedUsers.contains(user))
+//                    .collect(Collectors.toList());
+//
+//            model.addAttribute("meeting", meeting);
+//            model.addAttribute("task", task);
+//            model.addAttribute("availableUsers", availableUsers);
+//            model.addAttribute("assignedUsers", assignedUsers);
+//            model.addAttribute("assignments", assignments);
+//
+//            return "meetings/tasks/assign";
+//        } catch (Exception e) {
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+//        }
+//    }
+
+
     @GetMapping("/{taskId}/assign")
     @Operation(summary = "Formularz przypisywania użytkowników", description = "Pozwala organizatorowi przypisywać użytkowników do zadania.")
     public String showAssignUsersForm(
@@ -245,34 +387,13 @@ public class MeetingTaskController {
             Model model) {
 
         try {
-            Task task = taskService.getTaskById(taskId);
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+            MeetingTaskAssignmentsResponse response = taskService.getTaskAssignmentsForUser(meetingId, taskId, userDetails.getId());
 
-            if (!meeting.getOrganizer().getId().equals(userDetails.getId())) {
-                throw new RuntimeException("Tylko organizator może przypisywać użytkowników");
-            }
-
-            List<MeetingParticipant> participants = participantRepository.findByMeetingId(meetingId);
-            List<User> confirmedUsers = participants.stream()
-                    .filter(p -> p.getStatus() == com.meethub.domain.model.enums.ParticipationStatus.CONFIRMED)
-                    .map(MeetingParticipant::getUser)
-                    .collect(Collectors.toList());
-
-            List<TaskAssignment> assignments = taskService.getTaskAssignments(taskId);
-            List<User> assignedUsers = assignments.stream()
-                    .map(TaskAssignment::getUser)
-                    .collect(Collectors.toList());
-
-            List<User> availableUsers = confirmedUsers.stream()
-                    .filter(user -> !assignedUsers.contains(user))
-                    .collect(Collectors.toList());
-
-            model.addAttribute("meeting", meeting);
-            model.addAttribute("task", task);
-            model.addAttribute("availableUsers", availableUsers);
-            model.addAttribute("assignedUsers", assignedUsers);
-            model.addAttribute("assignments", assignments);
+            model.addAttribute("meeting", response.getMeeting());
+            model.addAttribute("task", response.getTask());
+            model.addAttribute("availableUsers", response.getAvailableUsers());
+            model.addAttribute("assignedUsers", response.getAssignedUsers());
+            model.addAttribute("assignments", response.getAssignments());
 
             return "meetings/tasks/assign";
         } catch (Exception e) {
@@ -280,6 +401,7 @@ public class MeetingTaskController {
             return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
         }
     }
+
 
     @PostMapping("/{taskId}/assign")
     @Operation(summary = "Przypisz użytkownika do zadania", description = "Przypisuje wybranego użytkownika do zadania przez organizatora.")

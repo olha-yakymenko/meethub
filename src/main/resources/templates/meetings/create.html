@@ -195,17 +195,7 @@
                     </h4>
                 </div>
                 <div class="card-body">
-                    <!-- Komunikat błędu -->
-                    <div th:if="${error}" class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <span th:text="${error}"></span>
-                    </div>
 
-                    <!-- Komunikat sukcesu -->
-                    <div th:if="${message}" class="alert alert-success">
-                        <i class="bi bi-check-circle me-2"></i>
-                        <span th:text="${message}"></span>
-                    </div>
 
                     <!-- Formularz -->
                     <form th:action="@{/meetings/create}" th:object="${createMeetingRequest}" method="post">

@@ -77,7 +77,7 @@ public class MeetingAnalyticsWebController {
             redirectAttributes.addFlashAttribute("error",
                     "Błąd podczas generowania statystyk: " + e.getMessage());
         }
-        return "redirect:/meetings/" + meetingId + "/analytics";
+        return "redirect:/meetings/" + meetingId;
     }
 
     @GetMapping("/export/csv")

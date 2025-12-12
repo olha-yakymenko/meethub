@@ -44,7 +44,7 @@ public class SearchCriteria {
 
     // Zaawansowane
     private MeetingVisibility visibility;
-    private String sortBy;
+//    private String sortBy;
 
     @Builder.Default
     private List<Long> categoryIds = new ArrayList<>();
@@ -131,4 +131,14 @@ public class SearchCriteria {
                 !hasMyParticipationFilter() && !hasVisibilityFilter() && !hasCategoryFilter() &&
                 !hasRecurringFilter() && !hasTemplatesFilter() && !hasAttachmentsFilter();
     }
+
+    public void setType(String type) {
+        if (type == null || type.isBlank()) {
+            this.type = null;
+        } else {
+            this.type = MeetingType.valueOf(type.trim().toUpperCase());
+        }
+    }
+
+
 }

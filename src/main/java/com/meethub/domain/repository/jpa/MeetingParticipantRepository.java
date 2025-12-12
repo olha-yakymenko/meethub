@@ -61,6 +61,9 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     boolean existsByMeetingIdAndUserIdAndStatus(Long meetingId, Long userId, ParticipationStatus status);
 
 
+    boolean existsByMeetingIdAndUserIdAndStatusIn(Long meetingId, Long userId, List<ParticipationStatus> statuses);
+
+
     @Query("SELECT p FROM MeetingParticipant p " +
             "WHERE p.meeting.id = :meetingId " +
             "AND p.status = 'CONFIRMED' AND p.status = 'ORGANIZER'")
@@ -76,32 +79,6 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 
     @Query("SELECT COUNT(p) FROM MeetingParticipant p WHERE p.meeting.id = :meetingId AND p.status = 'ATTENDED'")
     long countAttendedParticipants(@Param("meetingId") Long meetingId);
-
-
-//    @Query("""
-//        SELECT p
-//        FROM MeetingParticipant p
-//        WHERE p.meeting.id = :meetingId
-//        AND p.status IN ('CONFIRMED', 'ATTENDED')
-//        ORDER BY p.user.lastName, p.user.firstName
-//    """)
-//    List<MeetingParticipant> findActiveParticipants(@Param("meetingId") Long meetingId);
-//    @Query("""
-//        SELECT p
-//        FROM MeetingParticipant p
-//        WHERE p.meeting.id = :meetingId
-//        AND p.status = 'ATTENDED'
-//        ORDER BY p.attendedAt DESC
-//    """)
-//    List<MeetingParticipant> findAttendedParticipants(@Param("meetingId") Long meetingId);
-
-//    @Query("""
-//SELECT p
-//FROM MeetingParticipant p
-//JOIN p.user u
-//WHERE p.meeting.id = :meetingId
-//""")
-//    List<ParticipantProjection> findParticipantsProjection(@Param("meetingId") Long meetingId);
 
 
     @Query("""
@@ -167,6 +144,28 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     ParticipantCountDto getParticipantCounts(@Param("meetingId") Long meetingId);
 
     Optional<MeetingParticipant> findByIdAndInvitationToken(Long participantId, String invitationToken);
+
+    @Query("SELECT p.user FROM MeetingParticipant p WHERE p.meeting.id = :meetingId AND p.status = 'CONFIRMED'")
+    List<User> findConfirmedUsersByMeetingId(@Param("meetingId") Long meetingId);
+
+
+    @Query("""
+    SELECT mp.user
+    FROM MeetingParticipant mp
+    WHERE mp.meeting.id = :meetingId
+      AND mp.status = 'CONFIRMED'
+      AND mp.user.id NOT IN (
+          SELECT ta.user.id
+          FROM TaskAssignment ta
+          WHERE ta.task.id = :taskId
+      )
+    ORDER BY mp.user.lastName, mp.user.firstName
+""")
+    List<User> findAvailableUsersForTask(@Param("meetingId") Long meetingId,
+                                         @Param("taskId") Long taskId);
+
+
+
 
 //    @Query("""
 //        SELECT AVG(EXTRACT(EPOCH FROM (p.respondedAt - p.invitedAt)) / 60)

@@ -248,12 +248,12 @@ public class ParticipationServiceImpl implements ParticipationService {
 
     // ========== METODY POMOCNICZE ==========
 
-    private MeetingParticipant getParticipant(Long meetingId, Long userId) {
+    MeetingParticipant getParticipant(Long meetingId, Long userId) {
         return participantRepository.findByMeetingIdAndUserId(meetingId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Participation not found"));
     }
 
-    private void validateCanChangeStatus(MeetingParticipant participant, ParticipationStatus newStatus) {
+    void validateCanChangeStatus(MeetingParticipant participant, ParticipationStatus newStatus) {
         ParticipationStatus currentStatus = participant.getStatus();
 
         // Nie można zmienić statusu jeśli już odrzucono

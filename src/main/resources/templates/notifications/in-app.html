@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Lista spotkań - MeetHub</title>
+    <style>
+        .meeting-card {
+            transition: transform 0.2s;
+            border-left: 4px solid transparent;
+        }
+        .meeting-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .meeting-card.template { border-left-color: #6f42c1; }
+        .meeting-card.recurring { border-left-color: #20c997; }
+        .meeting-card.categorized { border-left-color: #fd7e14; }
+        .category-badge {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .badge-purple { background-color: #6f42c1 !important; color: white !important; }
+    </style>
+</head>
+<body>
+<div th:fragment="content">
+
+<!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3">
+                <i class="fas fa-bell text-primary me-2"></i>
+                <span th:text="${pageTitle}">Moje powiadomienia</span>
+                <span class="badge badge-notification rounded-pill ms-2"
+                      th:text="${totalCount}">0</span>
+            </h1>
+            <p class="text-muted">
+                Poniżej znajdują się wszystkie Twoje powiadomienia w aplikacji
+            </p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="/notifications/in-app" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Wszystkie
+                </a>
+                <a href="/notifications/in-app/recent?limit=10" class="btn btn-outline-primary">
+                    <i class="fas fa-clock"></i> Ostatnie
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error message -->
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Notifications list -->
+    <div class="row">
+        <div class="col-12 col-lg-8 mx-auto">
+            <!-- Empty state -->
+            <div th:if="${#lists.isEmpty(messages)}" class="empty-state">
+                <i class="fas fa-bell-slash fa-4x mb-3 text-muted"></i>
+                <h4 class="text-muted">Brak powiadomień</h4>
+                <p class="text-muted">Nie masz jeszcze żadnych powiadomień w aplikacji.</p>
+            </div>
+
+            <!-- Notifications -->
+            <div th:each="message, iterStat : ${messages}" th:if="${!#lists.isEmpty(messages)}">
+                <div class="card notification-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-primary fa-lg mt-1"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="card-text mb-2" th:text="${message}">
+                                    Treść powiadomienia
+                                </p>
+                                <small class="text-muted">
+                                    <i class="far fa-clock me-1"></i>
+                                    <span th:text="${#dates.format(#dates.createNow(), 'dd.MM.yyyy HH:mm')}">
+                                            dzisiaj
+                                        </span>
+                                </small>
+                            </div>
+                            <div class="flex-shrink-0">
+                                    <span class="badge bg-light text-dark">
+                                        <span th:text="${iterStat.count}">#</span>/<span th:text="${totalCount}">total</span>
+                                    </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer info -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>Informacje
+                    </h5>
+                    <p class="card-text text-muted mb-0">
+                        <small>
+                            Powiadomienia IN_APP są dostępne tylko w aplikacji webowej.
+                            Aby otrzymywać powiadomienia email, sprawdź ustawienia swojego konta.
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Auto-refresh notifications every 30 seconds
+    setTimeout(function() {
+        window.location.reload();
+    }, 30000); // 30 seconds
+</script>
+</body>
+</html>

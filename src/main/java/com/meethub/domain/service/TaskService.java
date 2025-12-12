@@ -7,7 +7,9 @@ import com.meethub.domain.model.entity.TaskFile;
 import com.meethub.domain.model.enums.AssignmentStatus;
 import com.meethub.domain.model.request.CreateTaskRequest;
 import com.meethub.domain.model.request.UpdateTaskRequest;
+import com.meethub.domain.model.response.*;
 import org.springframework.core.io.Resource;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -47,5 +49,21 @@ public interface TaskService {
     boolean canUserAccessAssignment(Long assignmentId, Long userId);
 
     Task updateTaskWithRequest(Long taskId, UpdateTaskRequest request, Long userId);
+
+    @Transactional(readOnly = true)
+    MeetingTasksResponse getMeetingTasksForUser(Long meetingId, Long userId);
+
+    @Transactional(readOnly = true)
+    MeetingTaskFormResponse getTaskCreationFormData(Long meetingId, Long userId);
+
+    // TaskServiceImpl.java
+    @Transactional(readOnly = true)
+    MeetingTaskDetailsResponse getTaskDetailsForUser(Long meetingId, Long taskId, Long userId);
+
+    // TaskService.java
+    MeetingTaskEditResponse getTaskForEditing(Long meetingId, Long taskId, Long userId);
+
+    // TaskService.java
+    MeetingTaskAssignmentsResponse getTaskAssignmentsForUser(Long meetingId, Long taskId, Long userId);
 
 }

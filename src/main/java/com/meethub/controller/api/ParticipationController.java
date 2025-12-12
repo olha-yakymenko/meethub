@@ -34,6 +34,20 @@ public class ParticipationController {
         return ResponseEntity.ok(ApiResponse.success("Participation confirmed", participant));
     }
 
+//    @GetMapping("/meetings/{meetingId}/confirm")
+//    @Operation(
+//            summary = "Potwierdza udział w spotkaniu",
+//            description = "Potwierdza udział użytkownika w spotkaniu na podstawie tokena."
+//    )
+//    public ResponseEntity<ApiResponse<MeetingParticipant>> confirmParticipation(
+//            @PathVariable Long meetingId,
+//            @RequestParam String token) {
+//
+//        MeetingParticipant participant = participationService.confirmParticipationWithToken(meetingId, token);
+//        return ResponseEntity.ok(ApiResponse.success("Participation confirmed", participant));
+//    }
+
+
     @PostMapping("/meetings/{meetingId}/decline")
     @Operation(
             summary = "Odrzuca udział w spotkaniu",

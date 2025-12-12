@@ -2,6 +2,7 @@
 package com.meethub.domain.repository.jpa;
 
 import com.meethub.domain.model.entity.TaskAssignment;
+import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.enums.AssignmentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,4 +53,8 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
 
     // Sprawdzenie istnienia
     boolean existsByTaskIdAndUserId(Long taskId, Long userId);
+
+    @Query("SELECT a.user FROM TaskAssignment a WHERE a.task.id = :taskId")
+    List<User> findAssignedUsersByTaskId(@Param("taskId") Long taskId);
+
 }

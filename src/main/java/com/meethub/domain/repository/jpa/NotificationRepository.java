@@ -36,6 +36,27 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     default List<Notification> findPendingNotifications() {
         return findByStatusAndScheduledForBefore(NotificationStatus.PENDING, LocalDateTime.now());
     }
+
+
+
+    @Query("SELECT n.message FROM Notification n " +
+            "WHERE n.user.id = :userId AND n.channel = 'IN_APP' " +
+            "ORDER BY n.createdAt DESC")
+    List<String> findInAppMessagesByUserId(@Param("userId") Long userId);
+
+    // 2. Z paginacją
+    @Query("SELECT n.message FROM Notification n " +
+            "WHERE n.user.id = :userId AND n.channel = 'IN_APP' " +
+            "ORDER BY n.createdAt DESC")
+    List<String> findInAppMessagesByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    // 3. Pobierz nieprzeczytane wiadomości IN_APP
+    @Query("SELECT n.message FROM Notification n " +
+            "WHERE n.user.id = :userId AND n.channel = 'IN_APP' " +
+            "AND n.status = 'SENT' " +
+            "ORDER BY n.createdAt DESC")
+    List<String> findUnreadInAppMessagesByUserId(@Param("userId") Long userId);
+
 }
 
 

@@ -6,6 +6,7 @@ import com.meethub.domain.model.enums.AssignmentStatus;
 import com.meethub.domain.model.enums.TaskStatus;
 import com.meethub.domain.model.request.CreateTaskRequest;
 import com.meethub.domain.model.request.UpdateTaskRequest;
+import com.meethub.domain.model.response.*;
 import com.meethub.domain.repository.jpa.*;
 import com.meethub.domain.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -519,4 +521,119 @@ public class TaskServiceImpl implements TaskService {
             log.error("Error deleting assignment files from disk: {}", e.getMessage());
         }
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public MeetingTasksResponse getMeetingTasksForUser(Long meetingId, Long userId) {
+        // Pobierz spotkanie
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+        // Sprawdź, czy użytkownik jest organizatorem
+        boolean isOrganizer = meeting.getOrganizer().getId().equals(userId);
+
+        // Pobierz zadania
+        List<Task> tasks = getMeetingTasks(meetingId);
+
+        return MeetingTasksResponse.builder()
+                .meeting(meeting)
+                .tasks(tasks)
+                .isOrganizer(isOrganizer)
+                .build();
+    }
+
+
+    @Transactional(readOnly = true)
+    @Override
+    public MeetingTaskFormResponse getTaskCreationFormData(Long meetingId, Long userId) {
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+        if (!meeting.getOrganizer().getId().equals(userId)) {
+            throw new RuntimeException("Tylko organizator może tworzyć zadania");
+        }
+
+        return MeetingTaskFormResponse.builder()
+                .meeting(meeting)
+                .createTaskRequest(new CreateTaskRequest())
+                .build();
+    }
+
+    // TaskServiceImpl.java
+    @Transactional(readOnly = true)
+    @Override
+    public MeetingTaskDetailsResponse getTaskDetailsForUser(Long meetingId, Long taskId, Long userId) {
+        Task task = getTaskById(taskId);
+
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+        boolean isOrganizer = meeting.getOrganizer().getId().equals(userId);
+        boolean canAccess = isOrganizer || task.getAssignments().stream()
+                .anyMatch(a -> a.getUser().getId().equals(userId));
+
+        if (!canAccess) {
+            throw new RuntimeException("Brak uprawnień do tego zadania");
+        }
+
+        return MeetingTaskDetailsResponse.builder()
+                .meeting(meeting)
+                .task(task)
+                .isOrganizer(isOrganizer)
+                .userId(userId)
+                .build();
+    }
+
+    // TaskServiceImpl.java
+    @Override
+    @Transactional(readOnly = true)
+    public MeetingTaskEditResponse getTaskForEditing(Long meetingId, Long taskId, Long userId) {
+        Task task = getTaskById(taskId);
+
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+        if (!meeting.getOrganizer().getId().equals(userId)) {
+            throw new RuntimeException("Tylko organizator może edytować zadania");
+        }
+
+        String formattedDeadline = task.getDeadline() != null ? task.getDeadline().toString().replace("T", " ") : null;
+
+        return MeetingTaskEditResponse.builder()
+                .meeting(meeting)
+                .task(task)
+                .formattedDeadline(formattedDeadline)
+                .build();
+    }
+
+    // TaskServiceImpl.java
+    @Override
+    @Transactional(readOnly = true)
+    public MeetingTaskAssignmentsResponse getTaskAssignmentsForUser(Long meetingId, Long taskId, Long userId) {
+        Task task = getTaskById(taskId);
+
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Spotkanie nie zostało znalezione"));
+
+        if (!meeting.getOrganizer().getId().equals(userId)) {
+            throw new RuntimeException("Tylko organizator może przypisywać użytkowników");
+        }
+
+        List<User> assignedUsers = assignmentRepository.findAssignedUsersByTaskId(taskId);
+
+        List<User> availableUsers = participantRepository.findAvailableUsersForTask(meetingId, taskId);
+
+
+        List<TaskAssignment> assignments = assignmentRepository.findByTaskId(taskId);
+
+        return MeetingTaskAssignmentsResponse.builder()
+                .meeting(meeting)
+                .task(task)
+                .availableUsers(availableUsers)
+                .assignedUsers(assignedUsers)
+                .assignments(assignments)
+                .build();
+    }
+
+
 }

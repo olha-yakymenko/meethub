@@ -56,7 +56,6 @@ public interface MeetingParticipantService {
 
     ParticipantCountDto getParticipantCounts(Long meetingId);
 
-//    Double getAverageResponseTimeMinutes(Long meetingId);
 
     MeetingParticipant inviteParticipant(Long meetingId, Long userId, Long organizerId);
     List<MeetingParticipant> inviteMultipleParticipants(Long meetingId, InviteParticipantsRequest request, Long organizerId);
@@ -80,6 +79,8 @@ public interface MeetingParticipantService {
 
     boolean canUserEditMeeting(Long meetingId, Long userId);
 
+    MeetingParticipant markAsAttended(Long meetingId, Long userId);
+
     // Zachowaj istniejące metody dla kompatybilności
     void joinMeeting(Long userId, Long meetingId);
     void leaveMeeting(Long userId, Long meetingId);
@@ -88,7 +89,6 @@ public interface MeetingParticipantService {
 
     // Metody pomocnicze
     boolean hasAvailableSpots(Long meetingId);
-    boolean canUserJoinMeeting(Long meetingId, Long userId);
     List<ParticipantResponse> getPendingRequests(Long meetingId);
     boolean isUserPendingApproval(Long meetingId, Long userId);
 

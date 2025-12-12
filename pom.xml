@@ -274,6 +274,8 @@
                     <include>**/*.woff2</include>
                     <include>**/*.ttf</include>
                     <include>**/*.eot</include>
+                    <include>**/*.sql</include>
+
                 </includes>
             </resource>
         </resources>

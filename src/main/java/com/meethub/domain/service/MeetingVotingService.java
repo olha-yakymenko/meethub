@@ -4,6 +4,7 @@ package com.meethub.domain.service;
 import com.meethub.domain.model.entity.MeetingVoting;
 import com.meethub.domain.model.request.*;
 import com.meethub.domain.model.response.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -57,4 +58,11 @@ public interface MeetingVotingService {
 
     void closeExpiredVotingIfNeeded(Long votingId);
 
+    @Transactional(readOnly = true)
+    MeetingVoting getVotingEntity(Long votingId);
+
+    VotingResponse getVotingDetailsForUser(Long votingId, Long userId);
+
+    @Transactional(readOnly = true)
+    void validateUserCanVote(Long meetingId, Long votingId, Long userId);
 }

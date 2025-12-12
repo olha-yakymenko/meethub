@@ -1017,29 +1017,29 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- Audit logs table
-CREATE TABLE IF NOT EXISTS audit_logs (
-    id BIGSERIAL PRIMARY KEY,
-    action VARCHAR(100) NOT NULL,
-    entity_type VARCHAR(100) NOT NULL,
-    entity_id BIGINT,
-    old_values JSONB,
-    new_values JSONB,
-    performed_by BIGINT REFERENCES users(id),
-    performed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ip_address VARCHAR(45),
-    user_agent TEXT
-);
+--CREATE TABLE IF NOT EXISTS audit_logs (
+--    id BIGSERIAL PRIMARY KEY,
+--    action VARCHAR(100) NOT NULL,
+--    entity_type VARCHAR(100) NOT NULL,
+--    entity_id BIGINT,
+--    old_values JSONB,
+--    new_values JSONB,
+--    performed_by BIGINT REFERENCES users(id),
+--    performed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--    ip_address VARCHAR(45),
+--    user_agent TEXT
+--);
 
 -- Email templates table
-CREATE TABLE IF NOT EXISTS email_templates (
-    id BIGSERIAL PRIMARY KEY,
-    template_key VARCHAR(100) UNIQUE NOT NULL,
-    subject VARCHAR(500) NOT NULL,
-    body_template TEXT NOT NULL,
-    language VARCHAR(10) NOT NULL DEFAULT 'pl',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+--CREATE TABLE IF NOT EXISTS email_templates (
+--    id BIGSERIAL PRIMARY KEY,
+--    template_key VARCHAR(100) UNIQUE NOT NULL,
+--    subject VARCHAR(500) NOT NULL,
+--    body_template TEXT NOT NULL,
+--    language VARCHAR(10) NOT NULL DEFAULT 'pl',
+--    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+--);
 
 -- =============================================
 -- 6. INDEXES
@@ -1105,13 +1105,13 @@ CREATE INDEX IF NOT EXISTS idx_notification_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notification_status ON notifications(status);
 CREATE INDEX IF NOT EXISTS idx_notification_created ON notifications(created_at);
 
--- Audit logs indexes
-CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_audit_performed_by ON audit_logs(performed_by);
-CREATE INDEX IF NOT EXISTS idx_audit_performed_at ON audit_logs(performed_at);
+---- Audit logs indexes
+--CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
+--CREATE INDEX IF NOT EXISTS idx_audit_performed_by ON audit_logs(performed_by);
+--CREATE INDEX IF NOT EXISTS idx_audit_performed_at ON audit_logs(performed_at);
 
 -- Email templates indexes
-CREATE INDEX IF NOT EXISTS idx_email_template_key ON email_templates(template_key);
+--CREATE INDEX IF NOT EXISTS idx_email_template_key ON email_templates(template_key);
 
 -- =============================================
 -- 7. SAMPLE DATA
@@ -1183,11 +1183,11 @@ INSERT INTO meeting_tasks (meeting_id, title, description, status, priority, ass
 ON CONFLICT DO NOTHING;
 
 -- Insert sample email templates
-INSERT INTO email_templates (template_key, subject, body_template, language) VALUES
-('meeting-invitation', 'Zaproszenie do spotkania: {{meetingTitle}}', 'Witaj {{userName}}!<br><br>Zostałeś zaproszony do spotkania "{{meetingTitle}}" organizowanego przez {{organizerName}}.<br><br>Data: {{meetingDate}}<br><br><a href="{{confirmationLink}}">Potwierdź udział</a>', 'pl'),
-('waitlist-notification', 'Zostałeś dodany do listy oczekujących: {{meetingTitle}}', 'Witaj {{userName}}!<br><br>Zostałeś dodany do listy oczekujących na spotkanie "{{meetingTitle}}". Twoja pozycja w kolejce: {{position}}.<br><br>Powiadomimy Cię gdy miejsce się zwolni.', 'pl'),
-('waitlist-promotion', 'Miejsce zwolniło się w spotkaniu: {{meetingTitle}}', 'Witaj {{userName}}!<br><br>Miejsce zwolniło się w spotkaniu "{{meetingTitle}}" i zostałeś automatycznie zapisany!<br><br>Zapraszamy do udziału.', 'pl')
-ON CONFLICT DO NOTHING;
+--INSERT INTO email_templates (template_key, subject, body_template, language) VALUES
+--('meeting-invitation', 'Zaproszenie do spotkania: {{meetingTitle}}', 'Witaj {{userName}}!<br><br>Zostałeś zaproszony do spotkania "{{meetingTitle}}" organizowanego przez {{organizerName}}.<br><br>Data: {{meetingDate}}<br><br><a href="{{confirmationLink}}">Potwierdź udział</a>', 'pl'),
+--('waitlist-notification', 'Zostałeś dodany do listy oczekujących: {{meetingTitle}}', 'Witaj {{userName}}!<br><br>Zostałeś dodany do listy oczekujących na spotkanie "{{meetingTitle}}". Twoja pozycja w kolejce: {{position}}.<br><br>Powiadomimy Cię gdy miejsce się zwolni.', 'pl'),
+--('waitlist-promotion', 'Miejsce zwolniło się w spotkaniu: {{meetingTitle}}', 'Witaj {{userName}}!<br><br>Miejsce zwolniło się w spotkaniu "{{meetingTitle}}" i zostałeś automatycznie zapisany!<br><br>Zapraszamy do udziału.', 'pl')
+--ON CONFLICT DO NOTHING;
 
 -- =============================================
 -- 8. ROZSZERZENIE TABEL DLA SYSTEMU POWIADOMIEŃ
@@ -1285,8 +1285,8 @@ SELECT setval('meethub_schema.user_group_members_id_seq', COALESCE((SELECT MAX(i
 SELECT setval('meethub_schema.meeting_resources_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.meeting_resources), 1));
 SELECT setval('meethub_schema.meeting_tasks_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.meeting_tasks), 1));
 SELECT setval('meethub_schema.notifications_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.notifications), 1));
-SELECT setval('meethub_schema.audit_logs_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.audit_logs), 1));
-SELECT setval('meethub_schema.email_templates_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.email_templates), 1));
+--SELECT setval('meethub_schema.audit_logs_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.audit_logs), 1));
+--SELECT setval('meethub_schema.email_templates_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.email_templates), 1));
 SELECT setval('meethub_schema.notification_schedules_id_seq', COALESCE((SELECT MAX(id) FROM meethub_schema.notification_schedules), 1));
 
 -- Set default schema for user
@@ -1305,25 +1305,25 @@ CREATE INDEX IF NOT EXISTS idx_resource_current ON meethub_schema.meeting_resour
 CREATE INDEX IF NOT EXISTS idx_resource_uploaded_at ON meethub_schema.meeting_resources(uploaded_at DESC);
 
 -- Dodaj WSZYSTKIE brakujące kolumny do email_templates
-ALTER TABLE meethub_schema.email_templates
-ADD COLUMN IF NOT EXISTS name VARCHAR(200),
-ADD COLUMN IF NOT EXISTS category VARCHAR(100),
-ADD COLUMN IF NOT EXISTS description TEXT,
-ADD COLUMN IF NOT EXISTS variables_help TEXT,
-ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
-ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1,
-ADD COLUMN IF NOT EXISTS channel VARCHAR(50),
-ADD COLUMN IF NOT EXISTS available_variables TEXT;
-
--- Ustaw domyślne wartości
-UPDATE meethub_schema.email_templates SET
-    name = template_key,
-    category = 'NOTIFICATION',
-    is_active = TRUE,
-    version = 1,
-    channel = 'EMAIL'
-WHERE name IS NULL OR category IS NULL OR is_active IS NULL;
-
+--ALTER TABLE meethub_schema.email_templates
+--ADD COLUMN IF NOT EXISTS name VARCHAR(200),
+--ADD COLUMN IF NOT EXISTS category VARCHAR(100),
+--ADD COLUMN IF NOT EXISTS description TEXT,
+--ADD COLUMN IF NOT EXISTS variables_help TEXT,
+--ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
+--ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1,
+--ADD COLUMN IF NOT EXISTS channel VARCHAR(50),
+--ADD COLUMN IF NOT EXISTS available_variables TEXT;
+--
+---- Ustaw domyślne wartości
+--UPDATE meethub_schema.email_templates SET
+--    name = template_key,
+--    category = 'NOTIFICATION',
+--    is_active = TRUE,
+--    version = 1,
+--    channel = 'EMAIL'
+--WHERE name IS NULL OR category IS NULL OR is_active IS NULL;
+--
 
 
 -- =============================================
@@ -1643,91 +1643,91 @@ ALTER TABLE meeting_statistics
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
 
 
+--
+--INSERT INTO meethub_schema.email_templates (
+--    template_key,
+--    subject,
+--    body_template,
+--    language,
+--    name,
+--    category,
+--    description,
+--    variables_help,
+--    is_active,
+--    version,
+--    channel,
+--    available_variables
+--) VALUES (
+--    'participant_joined',
+--    'Nowy uczestnik w spotkaniu',
+--    'Użytkownik {{participantName}} dołączył do spotkania "{{meetingTitle}}" dnia {{meetingDate}}.
+--Aktualna liczba uczestników: {{currentParticipants}}.',
+--    'pl',
+--    'Uczestnik dołączył',
+--    'MEETING',
+--    'Powiadomienie o nowym uczestniku',
+--    '{{participantName}}, {{meetingTitle}}, {{meetingDate}}, {{currentParticipants}}',
+--    true,
+--    1,
+--    'EMAIL',
+--    '{{participantName}},{{meetingTitle}},{{meetingDate}},{{currentParticipants}}'
+--);
 
-INSERT INTO meethub_schema.email_templates (
-    template_key,
-    subject,
-    body_template,
-    language,
-    name,
-    category,
-    description,
-    variables_help,
-    is_active,
-    version,
-    channel,
-    available_variables
-) VALUES (
-    'participant_joined',
-    'Nowy uczestnik w spotkaniu',
-    'Użytkownik {{participantName}} dołączył do spotkania "{{meetingTitle}}" dnia {{meetingDate}}.
-Aktualna liczba uczestników: {{currentParticipants}}.',
-    'pl',
-    'Uczestnik dołączył',
-    'MEETING',
-    'Powiadomienie o nowym uczestniku',
-    '{{participantName}}, {{meetingTitle}}, {{meetingDate}}, {{currentParticipants}}',
-    true,
-    1,
-    'EMAIL',
-    '{{participantName}},{{meetingTitle}},{{meetingDate}},{{currentParticipants}}'
-);
+--
+--INSERT INTO meethub_schema.email_templates (
+--    template_key, subject, body_template, language,
+--    name, category, description, variables_help,
+--    is_active, version, channel, available_variables
+--) VALUES (
+--    'join_request',
+--    'Nowa prośba o dołączenie do spotkania',
+--    'Użytkownik {{requesterName}} ({{requesterEmail}}) wysłał prośbę o dołączenie do spotkania "{{meetingTitle}}" zaplanowanego na {{meetingDate}}.',
+--    'pl',
+--    'Prośba o dołączenie',
+--    'MEETING',
+--    'Powiadomienie o nowej prośbie o dołączenie',
+--    '{{requesterName}}, {{requesterEmail}}, {{meetingTitle}}, {{meetingDate}}',
+--    true, 1, 'EMAIL',
+--    '{{requesterName}},{{requesterEmail}},{{meetingTitle}},{{meetingDate}}'
+--);
 
+--
+--INSERT INTO meethub_schema.email_templates (
+--    template_key, subject, body_template, language,
+--    name, category, description, variables_help,
+--    is_active, version, channel, available_variables
+--) VALUES (
+--    'request_approved',
+--    'Twoja prośba została zaakceptowana',
+--    'Cześć {{userName}}, Twoja prośba o dołączenie do spotkania "{{meetingTitle}}" w dniu {{meetingDate}} została zaakceptowana przez {{organizerName}}.
+--Lokalizacja: {{meetingLocation}}.',
+--    'pl',
+--    'Prośba zaakceptowana',
+--    'MEETING',
+--    'Powiadomienie o zaakceptowaniu prośby',
+--    '{{userName}}, {{meetingTitle}}, {{meetingDate}}, {{organizerName}}, {{meetingLocation}}',
+--    true, 1, 'EMAIL',
+--    '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}},{{meetingLocation}}'
+--);
 
-INSERT INTO meethub_schema.email_templates (
-    template_key, subject, body_template, language,
-    name, category, description, variables_help,
-    is_active, version, channel, available_variables
-) VALUES (
-    'join_request',
-    'Nowa prośba o dołączenie do spotkania',
-    'Użytkownik {{requesterName}} ({{requesterEmail}}) wysłał prośbę o dołączenie do spotkania "{{meetingTitle}}" zaplanowanego na {{meetingDate}}.',
-    'pl',
-    'Prośba o dołączenie',
-    'MEETING',
-    'Powiadomienie o nowej prośbie o dołączenie',
-    '{{requesterName}}, {{requesterEmail}}, {{meetingTitle}}, {{meetingDate}}',
-    true, 1, 'EMAIL',
-    '{{requesterName}},{{requesterEmail}},{{meetingTitle}},{{meetingDate}}'
-);
-
-
-INSERT INTO meethub_schema.email_templates (
-    template_key, subject, body_template, language,
-    name, category, description, variables_help,
-    is_active, version, channel, available_variables
-) VALUES (
-    'request_approved',
-    'Twoja prośba została zaakceptowana',
-    'Cześć {{userName}}, Twoja prośba o dołączenie do spotkania "{{meetingTitle}}" w dniu {{meetingDate}} została zaakceptowana przez {{organizerName}}.
-Lokalizacja: {{meetingLocation}}.',
-    'pl',
-    'Prośba zaakceptowana',
-    'MEETING',
-    'Powiadomienie o zaakceptowaniu prośby',
-    '{{userName}}, {{meetingTitle}}, {{meetingDate}}, {{organizerName}}, {{meetingLocation}}',
-    true, 1, 'EMAIL',
-    '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}},{{meetingLocation}}'
-);
-
-
-INSERT INTO meethub_schema.email_templates (
-    template_key, subject, body_template, language,
-    name, category, description, variables_help,
-    is_active, version, channel, available_variables
-) VALUES (
-    'request_rejected',
-    'Twoja prośba została odrzucona',
-    'Cześć {{userName}}, Twoja prośba o dołączenie do spotkania "{{meetingTitle}}" w dniu {{meetingDate}} została odrzucona przez {{organizerName}}.',
-    'pl',
-    'Prośba odrzucona',
-    'MEETING',
-    'Powiadomienie o odrzuceniu prośby',
-    '{{userName}}, {{meetingTitle}}, {{meetingDate}}, {{organizerName}}',
-    true, 1, 'EMAIL',
-    '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}}'
-);
-
+--
+--INSERT INTO meethub_schema.email_templates (
+--    template_key, subject, body_template, language,
+--    name, category, description, variables_help,
+--    is_active, version, channel, available_variables
+--) VALUES (
+--    'request_rejected',
+--    'Twoja prośba została odrzucona',
+--    'Cześć {{userName}}, Twoja prośba o dołączenie do spotkania "{{meetingTitle}}" w dniu {{meetingDate}} została odrzucona przez {{organizerName}}.',
+--    'pl',
+--    'Prośba odrzucona',
+--    'MEETING',
+--    'Powiadomienie o odrzuceniu prośby',
+--    '{{userName}}, {{meetingTitle}}, {{meetingDate}}, {{organizerName}}',
+--    true, 1, 'EMAIL',
+--    '{{userName}},{{meetingTitle}},{{meetingDate}},{{organizerName}}'
+--);
+--
 
 
 -- ✅ DODAJ TE KOLUMNY DO TABELI meetings
@@ -1848,31 +1848,31 @@ CREATE INDEX IF NOT EXISTS idx_participants_response_date
     ON meethub_schema.meeting_participants(response_date);
 
 
-    -- ✅ STWÓRZ TABELĘ DLA KONKRETNYCH WYSTĄPIEŃ POWTARZAJĄCYCH SIĘ SPOTKAŃ
-    CREATE TABLE IF NOT EXISTS meethub_schema.recurrence_occurrences (
-        id BIGSERIAL PRIMARY KEY,
-        meeting_series_id BIGINT NOT NULL REFERENCES meethub_schema.meetings(id) ON DELETE CASCADE,
-        occurrence_date TIMESTAMP NOT NULL,
-        status VARCHAR(20) DEFAULT 'SCHEDULED',
-        is_exception BOOLEAN DEFAULT FALSE,
-        modified_start_date TIMESTAMP,
-        modified_end_date TIMESTAMP,
-        cancelled BOOLEAN DEFAULT FALSE,
-        notes TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
+--    -- ✅ STWÓRZ TABELĘ DLA KONKRETNYCH WYSTĄPIEŃ POWTARZAJĄCYCH SIĘ SPOTKAŃ
+--    CREATE TABLE IF NOT EXISTS meethub_schema.recurrence_occurrences (
+--        id BIGSERIAL PRIMARY KEY,
+--        meeting_series_id BIGINT NOT NULL REFERENCES meethub_schema.meetings(id) ON DELETE CASCADE,
+--        occurrence_date TIMESTAMP NOT NULL,
+--        status VARCHAR(20) DEFAULT 'SCHEDULED',
+--        is_exception BOOLEAN DEFAULT FALSE,
+--        modified_start_date TIMESTAMP,
+--        modified_end_date TIMESTAMP,
+--        cancelled BOOLEAN DEFAULT FALSE,
+--        notes TEXT,
+--        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+--    );
 
-    -- ✅ DODAJ INDEKSY
-    CREATE INDEX IF NOT EXISTS idx_occurrences_series
-        ON meethub_schema.recurrence_occurrences(meeting_series_id);
-
-    CREATE INDEX IF NOT EXISTS idx_occurrences_date
-        ON meethub_schema.recurrence_occurrences(occurrence_date);
-
-    CREATE INDEX IF NOT EXISTS idx_occurrences_status
-        ON meethub_schema.recurrence_occurrences(status);
-
-
+--    -- ✅ DODAJ INDEKSY
+--    CREATE INDEX IF NOT EXISTS idx_occurrences_series
+--        ON meethub_schema.recurrence_occurrences(meeting_series_id);
+--
+--    CREATE INDEX IF NOT EXISTS idx_occurrences_date
+--        ON meethub_schema.recurrence_occurrences(occurrence_date);
+--
+--    CREATE INDEX IF NOT EXISTS idx_occurrences_status
+--        ON meethub_schema.recurrence_occurrences(status);
+--
+--
 
 -- ✅ ZAKTUALIZUJ SEKWENCJE DLA NOWYCH TABEL
 SELECT setval('meethub_schema.categories_id_seq',
@@ -1881,8 +1881,8 @@ SELECT setval('meethub_schema.categories_id_seq',
 SELECT setval('meethub_schema.meeting_status_changes_id_seq',
     COALESCE((SELECT MAX(id) FROM meethub_schema.meeting_status_changes), 1));
 
-SELECT setval('meethub_schema.recurrence_occurrences_id_seq',
-    COALESCE((SELECT MAX(id) FROM meethub_schema.recurrence_occurrences), 1));
+--SELECT setval('meethub_schema.recurrence_occurrences_id_seq',
+--    COALESCE((SELECT MAX(id) FROM meethub_schema.recurrence_occurrences), 1));
 
 -- ✅ DODAJ PRZYKŁADOWE KATEGORIE
 INSERT INTO meethub_schema.categories (name, description, color_code, created_by) VALUES
@@ -2031,7 +2031,7 @@ $$ LANGUAGE plpgsql;
 GRANT ALL PRIVILEGES ON meethub_schema.categories TO meethub_user, meethub_app;
 GRANT ALL PRIVILEGES ON meethub_schema.meeting_categories TO meethub_user, meethub_app;
 GRANT ALL PRIVILEGES ON meethub_schema.meeting_status_changes TO meethub_user, meethub_app;
-GRANT ALL PRIVILEGES ON meethub_schema.recurrence_occurrences TO meethub_user, meethub_app;
+--GRANT ALL PRIVILEGES ON meethub_schema.recurrence_occurrences TO meethub_user, meethub_app;
 
 GRANT USAGE ON SEQUENCE meethub_schema.categories_id_seq TO meethub_user, meethub_app;
 GRANT USAGE ON SEQUENCE meethub_schema.meeting_status_changes_id_seq TO meethub_user, meethub_app;
@@ -2104,188 +2104,188 @@ USING recurrence_exceptions::text;
 
 
 
+--
+---- Wykonaj te komendy w PostgreSQL
+--INSERT INTO email_templates (template_key, language, subject, body_template, created_at, updated_at)
+--VALUES
+---- Szablon dla organizatora gdy spotkanie się rozpoczęło
+--('meeting_started', 'pl',
+-- '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
+-- '<!DOCTYPE html>
+--<html>
+--<head>
+--    <meta charset="UTF-8">
+--    <title>Spotkanie się rozpoczęło</title>
+--</head>
+--<body>
+--    <h1>🎉 Spotkanie się rozpoczęło!</h1>
+--    <p>Cześć {{userName}}!</p>
+--    <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
+--    <p><strong>Czas:</strong> {{meetingTime}}</p>
+--    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+--    {{#meetingLink}}<p><strong>Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+--    <br>
+--    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+--</body>
+--</html>',
+-- NOW(), NOW()),
+--
+---- Szablon przypomnienia o spotkaniu
+--('meeting_reminder', 'pl',
+-- '🔔 Przypomnienie: Spotkanie {{meetingTitle}} za {{minutesBefore}} minut',
+-- '<!DOCTYPE html>
+--<html>
+--<head>
+--    <meta charset="UTF-8">
+--    <title>Przypomnienie o spotkaniu</title>
+--</head>
+--<body>
+--    <h1>🔔 Przypomnienie o spotkaniu</h1>
+--    <p>Cześć {{userName}}!</p>
+--    <p>Przypominamy o spotkaniu <strong>{{meetingTitle}}</strong>.</p>
+--    <p><strong>Rozpoczyna się za:</strong> {{minutesBefore}} minut</p>
+--    <p><strong>Godzina:</strong> {{meetingTime}}</p>
+--    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+--    {{#meetingLink}}<p><strong>Link:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+--    <br>
+--    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+--</body>
+--</html>',
+-- NOW(), NOW()),
+--
+---- Szablon dla uczestnika gdy spotkanie się rozpoczęło
+--('meeting_started_participant', 'pl',
+-- '🎉 Spotkanie {{meetingTitle}} się rozpoczęło',
+-- '<!DOCTYPE html>
+--<html>
+--<head>
+--    <meta charset="UTF-8">
+--    <title>Spotkanie się rozpoczęło</title>
+--</head>
+--<body>
+--    <h1>🎉 Spotkanie się rozpoczęło!</h1>
+--    <p>Cześć {{userName}}!</p>
+--    <p>Spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
+--    <p><strong>Organizator:</strong> {{organizerName}}</p>
+--    <p><strong>Czas:</strong> {{meetingTime}}</p>
+--    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+--    {{#meetingLink}}<p><strong>Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+--    <br>
+--    <p>Do zobaczenia na spotkaniu!<br>Zespół MeetHub</p>
+--</body>
+--</html>',
+-- NOW(), NOW()),
+--
+---- Szablon przypomnienia dla uczestnika
+--('meeting_reminder_participant', 'pl',
+-- '🔔 Przypomnienie: Spotkanie {{meetingTitle}} za {{minutesBefore}} minut',
+-- '<!DOCTYPE html>
+--<html>
+--<head>
+--    <meta charset="UTF-8">
+--    <title>Przypomnienie o spotkaniu</title>
+--</head>
+--<body>
+--    <h1>🔔 Przypomnienie o spotkaniu</h1>
+--    <p>Cześć {{userName}}!</p>
+--    <p>Przypominamy o spotkaniu <strong>{{meetingTitle}}</strong>.</p>
+--    <p><strong>Rozpoczyna się za:</strong> {{minutesBefore}} minut</p>
+--    <p><strong>Godzina:</strong> {{meetingTime}}</p>
+--    <p><strong>Organizator:</strong> {{organizerName}}</p>
+--    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
+--    {{#meetingLink}}<p><strong>Link:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
+--    <br>
+--    <p>Do zobaczenia!<br>Zespół MeetHub</p>
+--</body>
+--</html>',
+-- NOW(), NOW()),
+--
+---- Szablon gdy spotkanie nie zostało rozpoczęte
+--('meeting_not_started', 'pl',
+-- '⚠️ Spotkanie {{meetingTitle}} nie zostało rozpoczęte',
+-- '<!DOCTYPE html>
+--<html>
+--<head>
+--    <meta charset="UTF-8">
+--    <title>Spotkanie nie rozpoczęte</title>
+--</head>
+--<body>
+--    <h1>⚠️ Uwaga!</h1>
+--    <p>Cześć {{organizerName}},</p>
+--    <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> miało rozpocząć się o {{scheduledTime}},</p>
+--    <p>ale <strong>nie zostało jeszcze oznaczone jako rozpoczęte</strong>.</p>
+--    <p><strong>Opóźnienie:</strong> {{minutesLate}} minut</p>
+--    <br>
+--    <p>Proszę sprawdzić:</p>
+--    <ul>
+--        <li>Czy spotkanie faktycznie się odbywa?</li>
+--        <li>Czy trzeba je anulować?</li>
+--        <li>Czy uczestnicy są poinformowani?</li>
+--    </ul>
+--    <br>
+--    <p>Zespół MeetHub</p>
+--</body>
+--</html>',
+-- NOW(), NOW()),
+--
+---- Szablon testowy
+--('test_email', 'pl',
+-- '📧 Testowy email z MeetHub',
+-- '<!DOCTYPE html>
+--<html>
+--<head>
+--    <meta charset="UTF-8">
+--    <title>Test Email</title>
+--</head>
+--<body>
+--    <h1>✅ Test systemu powiadomień</h1>
+--    <p>Cześć {{userName}}!</p>
+--    <p>To jest testowy email wysłany o {{testTime}}.</p>
+--    <p>Jeśli go otrzymujesz, oznacza to że system powiadomień działa poprawnie! 🎉</p>
+--    <br>
+--    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+--</body>
+--</html>',
+-- NOW(), NOW());
+--
 
--- Wykonaj te komendy w PostgreSQL
-INSERT INTO email_templates (template_key, language, subject, body_template, created_at, updated_at)
-VALUES
--- Szablon dla organizatora gdy spotkanie się rozpoczęło
-('meeting_started', 'pl',
- '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
- '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Spotkanie się rozpoczęło</title>
-</head>
-<body>
-    <h1>🎉 Spotkanie się rozpoczęło!</h1>
-    <p>Cześć {{userName}}!</p>
-    <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
-    <p><strong>Czas:</strong> {{meetingTime}}</p>
-    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
-    {{#meetingLink}}<p><strong>Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
-    <br>
-    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
-</body>
-</html>',
- NOW(), NOW()),
+--
+-- -- Zaktualizuj szablon meeting_started na prostszy
+-- UPDATE meethub_schema.email_templates
+-- SET body_template = '<!DOCTYPE html>
+-- <html>
+-- <head>
+--     <meta charset="UTF-8">
+--     <title>Spotkanie się rozpoczęło</title>
+-- </head>
+-- <body>
+--     <h1>🎉 Spotkanie się rozpoczęło!</h1>
+--     <p>Cześć {{userName}}!</p>
+--     <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
+--     <p><strong>Czas:</strong> {{meetingDate}}</p>
+--     <p>Dołącz do spotkania w aplikacji MeetHub.</p>
+--     <br>
+--     <p>Pozdrawiamy,<br>Zespół MeetHub</p>
+-- </body>
+-- </html>',
+--     subject = '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
+--     updated_at = NOW()
+-- WHERE template_key = 'meeting_started' AND language = 'pl';
+--
 
--- Szablon przypomnienia o spotkaniu
-('meeting_reminder', 'pl',
- '🔔 Przypomnienie: Spotkanie {{meetingTitle}} za {{minutesBefore}} minut',
- '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Przypomnienie o spotkaniu</title>
-</head>
-<body>
-    <h1>🔔 Przypomnienie o spotkaniu</h1>
-    <p>Cześć {{userName}}!</p>
-    <p>Przypominamy o spotkaniu <strong>{{meetingTitle}}</strong>.</p>
-    <p><strong>Rozpoczyna się za:</strong> {{minutesBefore}} minut</p>
-    <p><strong>Godzina:</strong> {{meetingTime}}</p>
-    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
-    {{#meetingLink}}<p><strong>Link:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
-    <br>
-    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
-</body>
-</html>',
- NOW(), NOW()),
-
--- Szablon dla uczestnika gdy spotkanie się rozpoczęło
-('meeting_started_participant', 'pl',
- '🎉 Spotkanie {{meetingTitle}} się rozpoczęło',
- '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Spotkanie się rozpoczęło</title>
-</head>
-<body>
-    <h1>🎉 Spotkanie się rozpoczęło!</h1>
-    <p>Cześć {{userName}}!</p>
-    <p>Spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
-    <p><strong>Organizator:</strong> {{organizerName}}</p>
-    <p><strong>Czas:</strong> {{meetingTime}}</p>
-    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
-    {{#meetingLink}}<p><strong>Link do spotkania:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
-    <br>
-    <p>Do zobaczenia na spotkaniu!<br>Zespół MeetHub</p>
-</body>
-</html>',
- NOW(), NOW()),
-
--- Szablon przypomnienia dla uczestnika
-('meeting_reminder_participant', 'pl',
- '🔔 Przypomnienie: Spotkanie {{meetingTitle}} za {{minutesBefore}} minut',
- '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Przypomnienie o spotkaniu</title>
-</head>
-<body>
-    <h1>🔔 Przypomnienie o spotkaniu</h1>
-    <p>Cześć {{userName}}!</p>
-    <p>Przypominamy o spotkaniu <strong>{{meetingTitle}}</strong>.</p>
-    <p><strong>Rozpoczyna się za:</strong> {{minutesBefore}} minut</p>
-    <p><strong>Godzina:</strong> {{meetingTime}}</p>
-    <p><strong>Organizator:</strong> {{organizerName}}</p>
-    {{#location}}<p><strong>Miejsce:</strong> {{location}}</p>{{/location}}
-    {{#meetingLink}}<p><strong>Link:</strong> <a href="{{meetingLink}}">{{meetingLink}}</a></p>{{/meetingLink}}
-    <br>
-    <p>Do zobaczenia!<br>Zespół MeetHub</p>
-</body>
-</html>',
- NOW(), NOW()),
-
--- Szablon gdy spotkanie nie zostało rozpoczęte
-('meeting_not_started', 'pl',
- '⚠️ Spotkanie {{meetingTitle}} nie zostało rozpoczęte',
- '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Spotkanie nie rozpoczęte</title>
-</head>
-<body>
-    <h1>⚠️ Uwaga!</h1>
-    <p>Cześć {{organizerName}},</p>
-    <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> miało rozpocząć się o {{scheduledTime}},</p>
-    <p>ale <strong>nie zostało jeszcze oznaczone jako rozpoczęte</strong>.</p>
-    <p><strong>Opóźnienie:</strong> {{minutesLate}} minut</p>
-    <br>
-    <p>Proszę sprawdzić:</p>
-    <ul>
-        <li>Czy spotkanie faktycznie się odbywa?</li>
-        <li>Czy trzeba je anulować?</li>
-        <li>Czy uczestnicy są poinformowani?</li>
-    </ul>
-    <br>
-    <p>Zespół MeetHub</p>
-</body>
-</html>',
- NOW(), NOW()),
-
--- Szablon testowy
-('test_email', 'pl',
- '📧 Testowy email z MeetHub',
- '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Test Email</title>
-</head>
-<body>
-    <h1>✅ Test systemu powiadomień</h1>
-    <p>Cześć {{userName}}!</p>
-    <p>To jest testowy email wysłany o {{testTime}}.</p>
-    <p>Jeśli go otrzymujesz, oznacza to że system powiadomień działa poprawnie! 🎉</p>
-    <br>
-    <p>Pozdrawiamy,<br>Zespół MeetHub</p>
-</body>
-</html>',
- NOW(), NOW());
-
-
-
- -- Zaktualizuj szablon meeting_started na prostszy
- UPDATE meethub_schema.email_templates
- SET body_template = '<!DOCTYPE html>
- <html>
- <head>
-     <meta charset="UTF-8">
-     <title>Spotkanie się rozpoczęło</title>
- </head>
- <body>
-     <h1>🎉 Spotkanie się rozpoczęło!</h1>
-     <p>Cześć {{userName}}!</p>
-     <p>Twoje spotkanie <strong>{{meetingTitle}}</strong> właśnie się rozpoczęło.</p>
-     <p><strong>Czas:</strong> {{meetingDate}}</p>
-     <p>Dołącz do spotkania w aplikacji MeetHub.</p>
-     <br>
-     <p>Pozdrawiamy,<br>Zespół MeetHub</p>
- </body>
- </html>',
-     subject = '🎉 Spotkanie {{meetingTitle}} się rozpoczęło!',
-     updated_at = NOW()
- WHERE template_key = 'meeting_started' AND language = 'pl';
-
-
- -- Aktualizuj szablon meeting_started w bazie
- UPDATE email_templates
- SET body_template = body_template || '
-
- {{#if attendanceToken}}
- <div style="background-color: #f8f9fa; padding: 20px; margin: 25px 0;">
-     <h3>🔐 Potwierdź obecność</h3>
-     <p>Twój kod potwierdzający: <strong>{{attendanceTokenFormatted}}</strong></p>
-     <p><a href="{{confirmationLink}}">Kliknij tutaj aby potwierdzić</a></p>
- </div>
- {{/if}}'
- WHERE template_key IN ('meeting_started', 'meeting_started_participant');
-
+-- -- Aktualizuj szablon meeting_started w bazie
+-- UPDATE email_templates
+-- SET body_template = body_template || '
+--
+-- {{#if attendanceToken}}
+-- <div style="background-color: #f8f9fa; padding: 20px; margin: 25px 0;">
+--     <h3>🔐 Potwierdź obecność</h3>
+--     <p>Twój kod potwierdzający: <strong>{{attendanceTokenFormatted}}</strong></p>
+--     <p><a href="{{confirmationLink}}">Kliknij tutaj aby potwierdzić</a></p>
+-- </div>
+-- {{/if}}'
+-- WHERE template_key IN ('meeting_started', 'meeting_started_participant');
+--
 
 
 
@@ -2316,3 +2316,19 @@ VALUES
  ALTER TABLE meeting_participants
  ADD COLUMN attendance_confirmed_at TIMESTAMP,
  ADD COLUMN attendance_token_used VARCHAR(255);
+
+
+--
+--UPDATE email_templates
+--SET body_template = REPLACE(
+--    body_template,
+--    '{{#if attendanceToken}}',
+--    ''
+--);
+--
+--UPDATE email_templates
+--SET body_template = REPLACE(
+--    body_template,
+--    '{{/if}}',
+--    ''
+--);

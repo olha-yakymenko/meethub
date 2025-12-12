@@ -31,7 +31,7 @@ public class RegisterController {
             @ApiResponse(responseCode = "200", description = "Formularz rejestracji wyświetlony pomyślnie")
     })
     public String showRegistrationForm(Model model) {
-        log.info("🌐 GET /register - showing registration form");
+        log.info("GET /register - showing registration form");
         model.addAttribute("registrationRequest", new UserRegistrationRequest());
         return "auth/register";
     }

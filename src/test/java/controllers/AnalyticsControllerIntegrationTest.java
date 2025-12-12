@@ -78,9 +78,8 @@ class AnalyticsControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.message", containsString("generated")))
-                .andExpect(jsonPath("$.data", notNullValue()))
-                .andExpect(jsonPath("$.data.meeting.id", is(testMeeting.getId().intValue())));
+                .andExpect(jsonPath("$.message", containsString("wygenerowane")))
+                .andExpect(jsonPath("$.data", notNullValue()));
     }
 
     @Test

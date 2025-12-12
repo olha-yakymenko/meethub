@@ -15,4 +15,15 @@ public enum MeetingType {
     public String getDisplayName() {
         return displayName;
     }
+
+    public static MeetingType fromDisplayName(String name) {
+        if (name == null) return null;
+        for (MeetingType type : values()) {
+            if (type.getDisplayName().equalsIgnoreCase(name)) {
+                return type;
+            }
+        }
+        return null;
+    }
+
 }

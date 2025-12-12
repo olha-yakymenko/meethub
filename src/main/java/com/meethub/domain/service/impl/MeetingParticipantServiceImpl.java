@@ -18,6 +18,7 @@ import com.meethub.domain.repository.jpa.*;
 import com.meethub.domain.service.EmailService;
 import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.domain.service.NotificationService;
+import com.meethub.exception.BusinessException;
 import com.meethub.exception.ResourceNotFoundException;
 import com.meethub.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
@@ -48,12 +49,20 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     private final NotificationService notificationService;
     private final MeetingMapper meetingMapper;
 
+//    @Override
+//    public List<ParticipantProjection> getMeetingParticipants(Long meetingId) {
+//        List<ParticipantProjection> participants = participantRepository.findParticipantsProjection(meetingId);
+//        log.info("UWAGA LISTA UŻYTKOWNIKÓW: {}", participants);
+//        return participants;
+//    }
+
     @Override
     public List<ParticipantProjection> getMeetingParticipants(Long meetingId) {
-        List<ParticipantProjection> participants = participantRepository.findParticipantsProjection(meetingId);
+        List<ParticipantProjection> participants = participantRepository.findActiveParticipantsProjection(meetingId);
         log.info("UWAGA LISTA UŻYTKOWNIKÓW: {}", participants);
         return participants;
     }
+
 
     @Override
     public ParticipantCountDto getParticipantCounts(Long meetingId){
@@ -386,26 +395,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return confirmedCount < meeting.getMaxParticipants();
     }
 
-    @Override
-    public boolean canUserJoinMeeting(Long meetingId, Long userId) {
-        if (userId == null) return false;
-
-        Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
-
-        // Sprawdź czy użytkownik już jest uczestnikiem
-        if (isUserParticipant(meetingId, userId)) {
-            return false;
-        }
-
-        // Sprawdź typ spotkania
-        if (meeting.getVisibility() == MeetingVisibility.INVITE_ONLY) {
-            return false; // Tylko dla zaproszonych
-        }
-
-        // Sprawdź dostępność miejsc
-        return hasAvailableSpots(meetingId);
-    }
 
     @Override
     public List<ParticipantResponse> getPendingRequests(Long meetingId) {
@@ -528,24 +517,41 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     }
 
     @Override
-    public void joinMeeting(Long userId, Long meetingId) {
-        // Uniwersalna metoda join - automatycznie wybiera odpowiednią strategię
-        Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+    public MeetingParticipant markAsAttended(Long meetingId, Long userId) {
+        log.info("Marking user {} as attended for meeting {}", userId, meetingId);
 
-        switch (meeting.getVisibility()) {
-            case PUBLIC:
-                joinPublicMeeting(meetingId, userId);
-                break;
-            case PRIVATE:
-                requestToJoinPrivateMeeting(meetingId, userId);
-                break;
-            case INVITE_ONLY:
-                throw new SecurityException("This meeting is invite-only");
-            default:
-                throw new SecurityException("Unknown meeting visibility");
+        MeetingParticipant participant = participantRepository
+                .findByMeetingIdAndUserId(meetingId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Użytkownik nie jest uczestnikiem spotkania"));
+
+        if (participant.getStatus() != ParticipationStatus.CONFIRMED) {
+            throw new BusinessException("Tylko uczestnicy ze statusem CONFIRMED mogą być oznaczeni jako ATTENDED");
         }
+
+        participant.setStatus(ParticipationStatus.ATTENDED);
+
+        return participantRepository.save(participant);
     }
+
+//    @Override
+//    public void joinMeeting(Long userId, Long meetingId) {
+//        // Uniwersalna metoda join - automatycznie wybiera odpowiednią strategię
+//        Meeting meeting = meetingRepository.findById(meetingId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+//
+//        switch (meeting.getVisibility()) {
+//            case PUBLIC:
+//                joinPublicMeeting(meetingId, userId);
+//                break;
+//            case PRIVATE:
+//                requestToJoinPrivateMeeting(meetingId, userId);
+//                break;
+//            case INVITE_ONLY:
+//                throw new SecurityException("This meeting is invite-only");
+//            default:
+//                throw new SecurityException("Unknown meeting visibility");
+//        }
+//    }
 
     @Override
     public void leaveMeeting(Long userId, Long meetingId) {
@@ -609,7 +615,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return participantRepository.existsByMeetingIdAndUserId(meetingId, userId);
     }
 
-    private boolean isMeetingFull(Long meetingId) {
+    boolean isMeetingFull(Long meetingId) {
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
 
@@ -690,7 +696,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         }
     }
 
-    private boolean isOnWaitlist(Long meetingId, Long userId) {
+    boolean isOnWaitlist(Long meetingId, Long userId) {
         if (meetingId == null || userId == null) {
             return false;
         }
@@ -700,7 +706,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                         .orElse(false);
     }
 
-    private void removeFromWaitlist(Long meetingId, Long userId) {
+    void removeFromWaitlist(Long meetingId, Long userId) {
         if (meetingId == null || userId == null) {
             return;
         }
@@ -1016,7 +1022,12 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
             // ✅ Podstawowe statystyki z bazy
             long totalFromDb = participantRepository.countByMeetingId(meetingId);
-            long confirmedFromDb = participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
+//            long confirmedFromDb = participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
+
+            long confirmedFromDb = participantRepository.countByMeetingIdAndStatusIn(
+                    meetingId,
+                    Arrays.asList(ParticipationStatus.CONFIRMED, ParticipationStatus.ATTENDED)
+            );
 
             // ✅ Sprawdź czy organizator jest już w uczestnikach
             boolean organizerIsParticipant = participantRepository
@@ -1233,10 +1244,10 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
 
     @Override
-    public MeetingParticipantService.ParticipantStats getMeetingStats(Long meetingId) {
+    public ParticipantStats getMeetingStats(Long meetingId) {
         Map<String, Long> stats = getParticipantStatistics(meetingId);
 
-        return new MeetingParticipantService.ParticipantStats() {
+        return new ParticipantStats() {
             @Override
             public long getTotalInvited() {
                 return stats.getOrDefault("invited", 0L);
@@ -1353,12 +1364,19 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
             }
 
             // ✅ Sprawdź w bazie czy ma status CONFIRMED
-            boolean isConfirmed = participantRepository.existsByMeetingIdAndUserIdAndStatus(
-                    meetingId, userId, ParticipationStatus.CONFIRMED
+//            boolean isConfirmed = participantRepository.existsByMeetingIdAndUserIdAndStatus(
+//                    meetingId, userId, ParticipationStatus.CONFIRMED
+//            );
+
+            boolean isConfirmedOrAttended = participantRepository.existsByMeetingIdAndUserIdAndStatusIn(
+                    meetingId,
+                    userId,
+                    Arrays.asList(ParticipationStatus.CONFIRMED, ParticipationStatus.ATTENDED)
             );
 
-            log.debug("User {} confirmed status in meeting {}: {}", userId, meetingId, isConfirmed);
-            return isConfirmed;
+
+            log.debug("User {} confirmed status in meeting {}: {}", userId, meetingId, isConfirmedOrAttended);
+            return isConfirmedOrAttended;
 
         } catch (Exception e) {
             log.error("Error checking confirmed participant status for user {} in meeting {}: {}",
@@ -1581,6 +1599,35 @@ public void confirmAttendance(Long participantId, String inputToken) {
         participantRepository.save(participant);
     }
 
+    @Override
+    public void joinMeeting(Long meetingId, Long userId) {
 
+        if (userId == null) {
+            throw new IllegalStateException("Musisz być zalogowany");
+        }
+
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new IllegalArgumentException("Spotkanie nie zostało znalezione"));
+
+        boolean isParticipant = isParticipant(meetingId, userId);
+
+        if (isParticipant) {
+            throw new IllegalStateException("Już jesteś uczestnikiem tego spotkania");
+        }
+
+        switch (meeting.getVisibility()) {
+
+            case PUBLIC:
+                joinPublicMeeting(meetingId, userId);
+                break;
+
+            case PRIVATE:
+                requestToJoinPrivateMeeting(meetingId, userId);
+                break;
+
+            case INVITE_ONLY:
+                throw new IllegalStateException("To spotkanie jest dostępne tylko dla zaproszonych");
+        }
+    }
 
 }

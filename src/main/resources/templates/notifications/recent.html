@@ -1,0 +1,206 @@
+<!DOCTYPE<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Lista spotkań - MeetHub</title>
+    <style>
+        .meeting-card {
+            transition: transform 0.2s;
+            border-left: 4px solid transparent;
+        }
+        .meeting-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .meeting-card.template { border-left-color: #6f42c1; }
+        .meeting-card.recurring { border-left-color: #20c997; }
+        .meeting-card.categorized { border-left-color: #fd7e14; }
+        .category-badge {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .badge-purple { background-color: #6f42c1 !important; color: white !important; }
+    </style>
+</head>
+<body>
+<div th:fragment="content">
+
+<!-- Page header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/notifications/in-app">Powiadomienia</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Ostatnie</li>
+                </ol>
+            </nav>
+            <h1 class="h2 mb-0">
+                <i class="fas fa-clock text-warning me-2"></i>
+                <span th:text="${pageTitle}">Ostatnie powiadomienia</span>
+            </h1>
+            <p class="text-muted mb-0">
+                Ostatnie
+                <span class="badge bg-warning text-dark limit-badge" th:text="${limit}">10</span>
+                powiadomień w aplikacji
+            </p>
+        </div>
+
+        <div>
+            <a href="/notifications/in-app" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> Wszystkie powiadomienia
+            </a>
+        </div>
+    </div>
+
+    <!-- Error alert -->
+    <div th:if="${error}" class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Limit selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="card-title">
+                <i class="fas fa-filter me-2"></i>Liczba wyświetlanych powiadomień
+            </h6>
+            <div class="btn-group" role="group">
+                <a th:href="@{/notifications/in-app/recent(limit=5)}"
+                   class="btn btn-outline-primary"
+                   th:classappend="${limit == 5} ? 'active' : ''">
+                    5
+                </a>
+                <a th:href="@{/notifications/in-app/recent(limit=10)}"
+                   class="btn btn-outline-primary"
+                   th:classappend="${limit == 10} ? 'active' : ''">
+                    10
+                </a>
+                <a th:href="@{/notifications/in-app/recent(limit=20)}"
+                   class="btn btn-outline-primary"
+                   th:classappend="${limit == 20} ? 'active' : ''">
+                    20
+                </a>
+                <a th:href="@{/notifications/in-app/recent(limit=50)}"
+                   class="btn btn-outline-primary"
+                   th:classappend="${limit == 50} ? 'active' : ''">
+                    50
+                </a>
+            </div>
+            <p class="text-muted mt-2 mb-0 small">
+                <i class="fas fa-info-circle me-1"></i>
+                Wybierz liczbę powiadomień do wyświetlenia (max 100)
+            </p>
+        </div>
+    </div>
+
+    <!-- Notifications list -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-bell me-2"></i>
+                    Powiadomienia
+                    <span class="badge bg-primary rounded-pill ms-2" th:text="${totalCount}">0</span>
+                </h5>
+                <small class="text-muted" th:if="${totalCount > 0}">
+                    Wyświetlane <span th:text="${totalCount}">0</span> z ostatnich
+                </small>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <!-- Empty state -->
+            <div th:if="${#lists.isEmpty(messages)}" class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">Brak ostatnich powiadomień</h4>
+                <p class="text-muted mb-0">Nie masz żadnych powiadomień w ostatnim czasie.</p>
+                <a href="/notifications/in-app" class="btn btn-primary mt-3">
+                    <i class="fas fa-list me-1"></i> Sprawdź wszystkie powiadomienia
+                </a>
+            </div>
+
+            <!-- Notifications -->
+            <div th:each="message, iterStat : ${messages}" th:if="${!#lists.isEmpty(messages)}">
+                <div class="notification-item px-4">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0 mt-1">
+                            <i class="fas fa-circle text-primary" style="font-size: 0.5rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <p class="mb-1" th:text="${message}">
+                                    Treść powiadomienia
+                                </p>
+                                <small class="timestamp ms-2">
+                                    <span th:text="${iterStat.count}">#</span>
+                                </small>
+                            </div>
+                            <div class="timestamp">
+                                <i class="far fa-calendar me-1"></i>
+                                <span th:text="${#dates.format(#dates.createNow(), 'dd.MM.yyyy HH:mm')}">
+                                        dzisiaj
+                                    </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light" th:if="${totalCount > 0}">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Powiadomienia są aktualizowane w czasie rzeczywistym
+                </small>
+                <a href="/notifications/in-app" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>
+                    Zobacz wszystkie powiadomienia
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-refresh info -->
+    <div class="alert alert-info mt-4" role="alert">
+        <div class="d-flex">
+            <i class="fas fa-sync-alt fa-lg me-3 mt-1"></i>
+            <div>
+                <h6 class="alert-heading mb-1">Automatyczne odświeżanie</h6>
+                <p class="mb-0 small">
+                    Strona odświeży się automatycznie za
+                    <span id="countdown">30</span> sekund, aby pokazać nowe powiadomienia.
+                    <a href="#" class="alert-link" onclick="location.reload();">Odśwież teraz</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Countdown timer -->
+<script>
+    let seconds = 30;
+    const countdownElement = document.getElementById('countdown');
+
+    const countdown = setInterval(function() {
+        seconds--;
+        countdownElement.textContent = seconds;
+
+        if (seconds <= 0) {
+            clearInterval(countdown);
+            window.location.reload();
+        }
+    }, 1000);
+</script>
+</body>
+</html>

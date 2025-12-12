@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface AttendanceTokenService {
     AttendanceToken createToken(User user, Meeting meeting);
 
+    boolean validateAndUseToken(String token, Long meetingId);
+
     Optional<AttendanceToken> getTokenForUserAndMeeting(Long userId, Long meetingId);
 }

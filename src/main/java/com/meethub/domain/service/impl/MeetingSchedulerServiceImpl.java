@@ -208,20 +208,20 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         LocalDateTime reminderTime = LocalDateTime.now().plusMinutes(minutesBefore);
 
         // 1. Powiadom organizatora
-        if (isNotificationEnabled(meeting.getOrganizer(), "meeting_reminders")) {
-            try {
-                notificationService.scheduleMeetingReminder(
-                        meeting.getId(),
-                        meeting.getOrganizer().getId(),
-                        reminderTime
-                );
-                log.debug("✅ Zaplanowano przypomnienie dla organizatora {}",
-                        meeting.getOrganizer().getId());
-            } catch (Exception e) {
-                log.error("❌ Błąd planowania przypomnienia dla organizatora: {}",
-                        e.getMessage());
-            }
-        }
+//        if (isNotificationEnabled(meeting.getOrganizer(), "meeting_reminders")) {
+//            try {
+//                notificationService.scheduleMeetingReminder(
+//                        meeting.getId(),
+//                        meeting.getOrganizer().getId(),
+//                        reminderTime
+//                );
+//                log.debug("✅ Zaplanowano przypomnienie dla organizatora {}",
+//                        meeting.getOrganizer().getId());
+//            } catch (Exception e) {
+//                log.error("❌ Błąd planowania przypomnienia dla organizatora: {}",
+//                        e.getMessage());
+//            }
+//        }
 
         // 2. Powiadom uczestników
         List<MeetingParticipant> confirmedParticipants = participantRepository

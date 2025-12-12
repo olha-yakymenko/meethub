@@ -8,6 +8,7 @@ import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.response.MeetingParticipationInfo;
 import com.meethub.domain.model.response.MeetingResponse;
 import com.meethub.domain.model.response.ParticipantResponse;
+import com.meethub.security.CustomUserDetailsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,11 +70,31 @@ public interface MeetingService {
     @Transactional(readOnly = true)
     List<MeetingResponse> getUpcomingRecurringMeetings(Long userId);
 
+//    Page<MeetingResponse> getAdvancedMeetings(
+//            CustomUserDetailsService.CustomUserDetails userDetails,
+//            int page,
+//            int size,
+//            String search,
+//            String type,
+//            String status,
+//            List<Long> categoryIds,
+//            List<String> tags,
+//            Boolean recurring,
+//            Boolean template,
+//            String sortBy,
+//            String sortOrder
+//    );
+
     MeetingResponse saveAsTemplate(Long meetingId, String templateName, Long userId);
 
-    @Transactional(readOnly = true)
-    Page<MeetingResponse> searchMeetings(SearchCriteria criteria,  Pageable pageable);
+//    @Transactional(readOnly = true)
+//    Page<MeetingResponse> searchMeetings(SearchCriteria criteria,  Pageable pageable);
 
+   Page<MeetingResponse> searchMeetings(SearchCriteria criteria, Pageable pageable);
+
+    MeetingResponse getMeetingDetails(Long meetingId, Long userId);
+
+    MeetingResponse getMeetingForVotingCreation(Long meetingId, Long userId);
 
 //    List<ParticipantResponse> getConfirmedParticipants(Long meetingId);
 }

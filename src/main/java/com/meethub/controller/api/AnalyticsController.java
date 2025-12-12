@@ -31,7 +31,6 @@ import java.util.Optional;
 public class AnalyticsController {
 
     private final MeetingAnalyticsService analyticsService;
-    private final MeetingService meetingService;
 
     // ========== STATYSTYKI SPOTKANIA ==========
 

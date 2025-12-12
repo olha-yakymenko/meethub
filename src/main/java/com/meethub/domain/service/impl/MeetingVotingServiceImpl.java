@@ -7,6 +7,7 @@ import com.meethub.domain.model.request.*;
 import com.meethub.domain.model.response.*;
 import com.meethub.domain.repository.jpa.*;
 import com.meethub.domain.service.MeetingVotingService;
+import com.meethub.exception.VotingAccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -457,13 +458,23 @@ public class MeetingVotingServiceImpl implements MeetingVotingService {
         }
     }
 
-    private void validateVotingPermission(MeetingVoting voting, Long userId) {
+//    private void validateVotingPermission(MeetingVoting voting, Long userId) {
+//        boolean isOrganizer = voting.getMeeting().getOrganizer().getId().equals(userId);
+//        boolean isParticipant = participantRepository.existsByMeetingIdAndUserId(
+//                voting.getMeeting().getId(), userId);
+//
+//        if (!isOrganizer && !isParticipant) {
+//            throw new RuntimeException("Nie masz uprawnień do udziału w tym głosowaniu");
+//        }
+//    }
+
+    public void validateVotingPermission(MeetingVoting voting, Long userId) {
         boolean isOrganizer = voting.getMeeting().getOrganizer().getId().equals(userId);
         boolean isParticipant = participantRepository.existsByMeetingIdAndUserId(
                 voting.getMeeting().getId(), userId);
 
         if (!isOrganizer && !isParticipant) {
-            throw new RuntimeException("Nie masz uprawnień do udziału w tym głosowaniu");
+            throw new VotingAccessDeniedException("Nie masz uprawnień do udziału w tym głosowaniu");
         }
     }
 
@@ -667,4 +678,37 @@ public class MeetingVotingServiceImpl implements MeetingVotingService {
         if (userId == null) return false;
         return voting.getMeeting().getOrganizer().getId().equals(userId);
     }
+@Transactional(readOnly = true)
+@Override
+public MeetingVoting getVotingEntity(Long votingId) {
+        return votingRepository.findById(votingId)
+                .orElseThrow(() -> new RuntimeException("Głosowanie nie zostało znalezione"));
+    }
+
+    @Override
+    public VotingResponse getVotingDetailsForUser(Long votingId, Long userId) {
+        MeetingVoting voting = getVotingEntity(votingId);
+        validateVotingPermission(voting, userId);
+        closeExpiredVotingIfNeeded(votingId);
+        return mapToVotingResponse(voting, userId);
+    }
+
+
+    @Transactional(readOnly = true)
+    @Override
+    public void validateUserCanVote(Long meetingId, Long votingId, Long userId) {
+        MeetingVoting voting = votingRepository.findById(votingId)
+                .orElseThrow(() -> new RuntimeException("Głosowanie nie zostało znalezione"));
+
+        Meeting meeting = voting.getMeeting();
+
+        boolean isOrganizer = meeting.getOrganizer().getId().equals(userId);
+        boolean isParticipant = participantRepository.existsByMeetingIdAndUserId(meetingId, userId);
+
+        if (!isOrganizer && !isParticipant) {
+            throw new VotingAccessDeniedException("Tylko uczestnicy spotkania mogą głosować");
+        }
+    }
+
+
 }

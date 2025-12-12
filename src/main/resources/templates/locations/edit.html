@@ -1,24 +1,112 @@
-<!-- src/main/resources/templates/meetings/tasks/edit.html -->
+<!--&lt;!&ndash; src/main/resources/templates/meetings/tasks/edit.html &ndash;&gt;-->
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://www.thymeleaf.org" lang="pl" th:replace="~{layout}">-->
+<!--<head>-->
+<!--    <title>Edytuj zadanie - MeetHub</title>-->
+<!--</head>-->
+<!--<body>-->
+<!--<div th:fragment="content">-->
+<!--    <div class="row justify-content-center">-->
+<!--        <div class="col-md-8">-->
+<!--            &lt;!&ndash; Header &ndash;&gt;-->
+<!--            <div class="d-flex justify-content-between align-items-center mb-4">-->
+<!--                <div>-->
+<!--                    <h1 class="h3 mb-0">-->
+<!--                        <i class="bi bi-pencil me-2"></i>Edytuj zadanie-->
+<!--                    </h1>-->
+<!--                    <p class="text-muted mb-0" th:text="'Spotkanie: ' + ${meeting.title}"></p>-->
+<!--                </div>-->
+<!--                <a th:href="@{/meetings/{meetingId}/tasks/{taskId}(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                   class="btn btn-outline-secondary">-->
+<!--                    <i class="bi bi-arrow-left me-2"></i>Powrót do zadania-->
+<!--                </a>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; Messages &ndash;&gt;-->
+<!--            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">-->
+<!--                <span th:text="${error}"></span>-->
+<!--                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; Form &ndash;&gt;-->
+<!--            <div class="card">-->
+<!--                <div class="card-body">-->
+<!--                    <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/edit(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                          method="post">-->
+
+<!--                        &lt;!&ndash; Title &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="title" class="form-label">Tytuł zadania *</label>-->
+<!--                            <input type="text" class="form-control" id="title" name="title"-->
+<!--                                   th:value="${task.title}" required maxlength="255">-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Description &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="description" class="form-label">Opis zadania *</label>-->
+<!--                            <textarea class="form-control" id="description" name="description"-->
+<!--                                      rows="5" required th:text="${task.description}"></textarea>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Deadline &ndash;&gt;-->
+<!--                        <div class="mb-3">-->
+<!--                            <label for="deadline" class="form-label">Termin wykonania *</label>-->
+<!--                            <input type="datetime-local" class="form-control" id="deadline" name="deadline"-->
+<!--                                   th:value="${#dates.format(task.deadline, 'yyyy-MM-dd') + 'T' + #dates.format(task.deadline, 'HH:mm')}"-->
+<!--                                   required>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Allow Self Assignment &ndash;&gt;-->
+<!--                        <div class="mb-3 form-check form-switch">-->
+<!--                            <input type="checkbox" class="form-check-input" id="allowSelfAssignment"-->
+<!--                                   name="allowSelfAssignment" value="true"-->
+<!--                                   th:checked="${task.allowSelfAssignment}">-->
+<!--                            <label class="form-check-label" for="allowSelfAssignment">-->
+<!--                                Zezwól na samodzielne dołączanie do zadania-->
+<!--                            </label>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Buttons &ndash;&gt;-->
+<!--                        <div class="d-flex justify-content-between">-->
+<!--                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}(meetingId=${meeting.id}, taskId=${task.id})}"-->
+<!--                               class="btn btn-outline-secondary">-->
+<!--                                <i class="bi bi-x-circle me-2"></i>Anuluj-->
+<!--                            </a>-->
+<!--                            <button type="submit" class="btn btn-primary">-->
+<!--                                <i class="bi bi-check-circle me-2"></i>Zapisz zmiany-->
+<!--                            </button>-->
+<!--                        </div>-->
+<!--                    </form>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+<!-- src/main/resources/templates/locations/edit.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="pl" th:replace="~{layout}">
 <head>
-    <title>Edytuj zadanie - MeetHub</title>
+    <title>Edytuj lokalizację - MeetHub</title>
 </head>
 <body>
 <div th:fragment="content">
     <div class="row justify-content-center">
         <div class="col-md-8">
+
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 class="h3 mb-0">
-                        <i class="bi bi-pencil me-2"></i>Edytuj zadanie
+                        <i class="bi bi-pencil me-2"></i>Edytuj lokalizację
                     </h1>
-                    <p class="text-muted mb-0" th:text="'Spotkanie: ' + ${meeting.title}"></p>
                 </div>
-                <a th:href="@{/meetings/{meetingId}/tasks/{taskId}(meetingId=${meeting.id}, taskId=${task.id})}"
-                   class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>Powrót do zadania
+                <a th:href="@{/locations/{id}(id=${locationId})}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Powrót
                 </a>
             </div>
 
@@ -27,58 +115,96 @@
                 <span th:text="${error}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
 
             <!-- Form -->
             <div class="card">
                 <div class="card-body">
-                    <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/edit(meetingId=${meeting.id}, taskId=${task.id})}"
-                          method="post">
+                    <form th:action="@{/locations/{id}/edit(id=${locationId})}" th:object="${locationRequest}" method="post">
 
-                        <!-- Title -->
+                        <!-- Name -->
                         <div class="mb-3">
-                            <label for="title" class="form-label">Tytuł zadania *</label>
-                            <input type="text" class="form-control" id="title" name="title"
-                                   th:value="${task.title}" required maxlength="255">
+                            <label for="name" class="form-label">Nazwa *</label>
+                            <input type="text" class="form-control" id="name" th:field="*{name}" required maxlength="255">
                         </div>
 
-                        <!-- Description -->
+                        <!-- Type -->
                         <div class="mb-3">
-                            <label for="description" class="form-label">Opis zadania *</label>
-                            <textarea class="form-control" id="description" name="description"
-                                      rows="5" required th:text="${task.description}"></textarea>
+                            <label for="type" class="form-label">Typ *</label>
+                            <input type="text" class="form-control" id="type" th:field="*{type}" required>
                         </div>
 
-                        <!-- Deadline -->
+                        <!-- Address -->
                         <div class="mb-3">
-                            <label for="deadline" class="form-label">Termin wykonania *</label>
-                            <input type="datetime-local" class="form-control" id="deadline" name="deadline"
-                                   th:value="${#dates.format(task.deadline, 'yyyy-MM-dd') + 'T' + #dates.format(task.deadline, 'HH:mm')}"
-                                   required>
+                            <label for="address" class="form-label">Adres</label>
+                            <input type="text" class="form-control" id="address" th:field="*{address}">
                         </div>
 
-                        <!-- Allow Self Assignment -->
-                        <div class="mb-3 form-check form-switch">
-                            <input type="checkbox" class="form-check-input" id="allowSelfAssignment"
-                                   name="allowSelfAssignment" value="true"
-                                   th:checked="${task.allowSelfAssignment}">
-                            <label class="form-check-label" for="allowSelfAssignment">
-                                Zezwól na samodzielne dołączanie do zadania
-                            </label>
+                        <!-- City -->
+                        <div class="mb-3">
+                            <label for="city" class="form-label">Miasto</label>
+                            <input type="text" class="form-control" id="city" th:field="*{city}">
+                        </div>
+
+                        <!-- Country -->
+                        <div class="mb-3">
+                            <label for="country" class="form-label">Kraj</label>
+                            <input type="text" class="form-control" id="country" th:field="*{country}">
+                        </div>
+
+                        <!-- Latitude & Longitude -->
+                        <div class="mb-3 row">
+                            <div class="col">
+                                <label for="latitude" class="form-label">Szerokość geograficzna</label>
+                                <input type="text" class="form-control" id="latitude" th:field="*{latitude}">
+                            </div>
+                            <div class="col">
+                                <label for="longitude" class="form-label">Długość geograficzna</label>
+                                <input type="text" class="form-control" id="longitude" th:field="*{longitude}">
+                            </div>
+                        </div>
+
+                        <!-- Virtual Meeting URL -->
+                        <div class="mb-3">
+                            <label for="virtualMeetingUrl" class="form-label">Link do spotkania wirtualnego</label>
+                            <input type="url" class="form-control" id="virtualMeetingUrl" th:field="*{virtualMeetingUrl}">
+                        </div>
+
+                        <!-- Access Code -->
+                        <div class="mb-3">
+                            <label for="accessCode" class="form-label">Kod dostępu</label>
+                            <input type="text" class="form-control" id="accessCode" th:field="*{accessCode}">
+                        </div>
+
+                        <!-- Driving Instructions -->
+                        <div class="mb-3">
+                            <label for="drivingInstructions" class="form-label">Instrukcje dojazdu</label>
+                            <textarea class="form-control" id="drivingInstructions" th:field="*{drivingInstructions}" rows="3"></textarea>
+                        </div>
+
+                        <!-- Timezone -->
+                        <div class="mb-3">
+                            <label for="timezone" class="form-label">Strefa czasowa</label>
+                            <input type="text" class="form-control" id="timezone" th:field="*{timezone}">
                         </div>
 
                         <!-- Buttons -->
                         <div class="d-flex justify-content-between">
-                            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}(meetingId=${meeting.id}, taskId=${task.id})}"
-                               class="btn btn-outline-secondary">
+                            <a th:href="@{/locations/{id}(id=${locationId})}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-circle me-2"></i>Anuluj
                             </a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-circle me-2"></i>Zapisz zmiany
                             </button>
                         </div>
+
                     </form>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

@@ -536,4 +536,18 @@ public class LocationServiceImpl implements LocationService {
         log.info("Getting all locations (basic info)");
         return locationRepository.findAllBasicInfo();
     }
+
+    @Override
+    public void validateLocationExists(Long locationId) {
+
+        if (locationId == null) {
+            return; // brak lokalizacji = OK
+        }
+
+        boolean exists = locationRepository.existsById(locationId);
+
+        if (!exists) {
+            throw new IllegalArgumentException("Wybrana lokalizacja nie istnieje");
+        }
+    }
 }

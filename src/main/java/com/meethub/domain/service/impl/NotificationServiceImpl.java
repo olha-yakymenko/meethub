@@ -9,21 +9,19 @@ import com.meethub.domain.model.response.UserProfileResponse;
 import com.meethub.domain.repository.jpa.*;
 import com.meethub.domain.service.AttendanceTokenService;
 import com.meethub.domain.service.EmailService;
-import com.meethub.domain.service.MeetingSchedulerService;
 import com.meethub.domain.service.NotificationService;
 import com.meethub.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -43,43 +41,43 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final AttendanceTokenService attendanceTokenService;
     private final AttendanceTokenRepository attendanceTokenRepository;
+//
+//    @Override
+//    public Notification createNotification(Notification notification) {
+//        return notificationRepository.save(notification);
+//    }
 
-    @Override
-    public Notification createNotification(Notification notification) {
-        return notificationRepository.save(notification);
-    }
-
-    @Override
-    public void sendNotification(Long notificationId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
-
-        try {
-            switch (notification.getChannel()) {
-                case EMAIL:
-                    sendEmailNotification(notification);
-                    break;
-                case PUSH:
-                    sendPushNotification(notification);
-                    break;
-
-                case IN_APP:
-                    sendInAppNotification(notification);
-                    break;
-            }
-
-            notification.setStatus(NotificationStatus.SENT);
-            notification.setSentAt(LocalDateTime.now());
-
-        } catch (Exception e) {
-            log.error("Failed to send notification: {}", e.getMessage());
-            notification.setStatus(NotificationStatus.FAILED);
-            notification.setErrorMessage(e.getMessage());
-            notification.setRetryCount(notification.getRetryCount() + 1);
-        }
-
-        notificationRepository.save(notification);
-    }
+//    @Override
+//    public void sendNotification(Long notificationId) {
+//        Notification notification = notificationRepository.findById(notificationId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+//
+//        try {
+//            switch (notification.getChannel()) {
+//                case EMAIL:
+//                    sendEmailNotification(notification);
+//                    break;
+//                case PUSH:
+//                    sendPushNotification(notification);
+//                    break;
+//
+//                case IN_APP:
+//                    sendInAppNotification(notification);
+//                    break;
+//            }
+//
+//            notification.setStatus(NotificationStatus.SENT);
+//            notification.setSentAt(LocalDateTime.now());
+//
+//        } catch (Exception e) {
+//            log.error("Failed to send notification: {}", e.getMessage());
+//            notification.setStatus(NotificationStatus.FAILED);
+//            notification.setErrorMessage(e.getMessage());
+//            notification.setRetryCount(notification.getRetryCount() + 1);
+//        }
+//
+//        notificationRepository.save(notification);
+//    }
 
     @Override
     public void markAsRead(Long notificationId, Long userId) {
@@ -113,14 +111,14 @@ public class NotificationServiceImpl implements NotificationService {
                 .map(this::mapToNotificationResponse);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<NotificationResponse> getUnreadNotifications(Long userId) {
-        return notificationRepository.findByUserIdAndStatus(userId, NotificationStatus.SENT)
-                .stream()
-                .map(this::mapToNotificationResponse)
-                .collect(Collectors.toList());
-    }
+//    @Override
+//    @Transactional(readOnly = true)
+//    public List<NotificationResponse> getUnreadNotifications(Long userId) {
+//        return notificationRepository.findByUserIdAndStatus(userId, NotificationStatus.SENT)
+//                .stream()
+//                .map(this::mapToNotificationResponse)
+//                .collect(Collectors.toList());
+//    }
 
     @Override
     @Transactional(readOnly = true)
@@ -195,22 +193,22 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    @Scheduled(fixedRate = 60000) // Co minutę
-    @Override
-    public void sendScheduledNotifications() {
-        LocalDateTime now = LocalDateTime.now();
-        List<Notification> scheduledNotifications = notificationRepository
-                .findByStatusAndScheduledForBefore(NotificationStatus.PENDING, now);
-
-        for (Notification notification : scheduledNotifications) {
-            try {
-                sendNotificationBasedOnChannel(notification);
-            } catch (Exception e) {
-                log.error("Failed to send scheduled notification {}: {}",
-                        notification.getId(), e.getMessage());
-            }
-        }
-    }
+//    @Scheduled(fixedRate = 60000) // Co minutę
+//    @Override
+//    public void sendScheduledNotifications() {
+//        LocalDateTime now = LocalDateTime.now();
+//        List<Notification> scheduledNotifications = notificationRepository
+//                .findByStatusAndScheduledForBefore(NotificationStatus.PENDING, now);
+//
+//        for (Notification notification : scheduledNotifications) {
+//            try {
+//                sendNotificationBasedOnChannel(notification);
+//            } catch (Exception e) {
+//                log.error("Failed to send scheduled notification {}: {}",
+//                        notification.getId(), e.getMessage());
+//            }
+//        }
+//    }
 
     private void sendNotificationBasedOnChannel(Notification notification) {
         switch (notification.getChannel()) {
@@ -227,20 +225,20 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.save(notification);
     }
 
-    @Scheduled(cron = "0 0 8 * * ?") // Codziennie o 8:00
-    @Override
-    public void processNotificationDigests() {
-        LocalDateTime now = LocalDateTime.now();
-        List<User> usersWithDigest = userRepository.findByDigestEnabledTrue();
-
-        for (User user : usersWithDigest) {
-            if ("DAILY".equals(user.getDigestFrequency())) {
-                sendDailyDigest(user, now);
-            } else if ("WEEKLY".equals(user.getDigestFrequency()) && now.getDayOfWeek().getValue() == 1) {
-                sendWeeklyDigest(user, now);
-            }
-        }
-    }
+//    @Scheduled(cron = "0 0 8 * * ?") // Codziennie o 8:00
+//    @Override
+//    public void processNotificationDigests() {
+//        LocalDateTime now = LocalDateTime.now();
+//        List<User> usersWithDigest = userRepository.findByDigestEnabledTrue();
+//
+//        for (User user : usersWithDigest) {
+//            if ("DAILY".equals(user.getDigestFrequency())) {
+//                sendDailyDigest(user, now);
+//            } else if ("WEEKLY".equals(user.getDigestFrequency()) && now.getDayOfWeek().getValue() == 1) {
+//                sendWeeklyDigest(user, now);
+//            }
+//        }
+//    }
 
     @Override
     public void updateNotificationPreferences(Long userId, NotificationPreferencesRequest request) {
@@ -310,37 +308,37 @@ public class NotificationServiceImpl implements NotificationService {
 
         return response;
     }
+//
+//    @Override
+//    public void aggregateMeetingUpdates(Long meetingId) {
+//        List<User> relatedUsers = userRepository.findUsersByMeetingId(meetingId);
+//
+//        for (User user : relatedUsers) {
+//            if (getUserPreference(user, "meeting_updates", "true").equals("true")) {
+//                sendAggregatedNotification(user.getId(), NotificationType.MEETING_UPDATE, List.of(meetingId));
+//            }
+//        }
+//    }
 
-    @Override
-    public void aggregateMeetingUpdates(Long meetingId) {
-        List<User> relatedUsers = userRepository.findUsersByMeetingId(meetingId);
-
-        for (User user : relatedUsers) {
-            if (getUserPreference(user, "meeting_updates", "true").equals("true")) {
-                sendAggregatedNotification(user.getId(), NotificationType.MEETING_UPDATE, List.of(meetingId));
-            }
-        }
-    }
-
-    @Override
-    public void sendAggregatedNotification(Long userId, NotificationType type, List<Long> referenceIds) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        String title = getAggregatedTitle(type, referenceIds.size());
-        String message = getAggregatedMessage(type, referenceIds);
-
-        Notification notification = Notification.builder()
-                .user(user)
-                .title(title)
-                .message(message)
-                .type(type)
-                .channel(NotificationChannel.IN_APP)
-                .status(NotificationStatus.PENDING)
-                .build();
-
-        notificationRepository.save(notification);
-    }
+//    @Override
+//    public void sendAggregatedNotification(Long userId, NotificationType type, List<Long> referenceIds) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+//
+//        String title = getAggregatedTitle(type, referenceIds.size());
+//        String message = getAggregatedMessage(type, referenceIds);
+//
+//        Notification notification = Notification.builder()
+//                .user(user)
+//                .title(title)
+//                .message(message)
+//                .type(type)
+//                .channel(NotificationChannel.IN_APP)
+//                .status(NotificationStatus.PENDING)
+//                .build();
+//
+//        notificationRepository.save(notification);
+//    }
 
     @Override
     public void sendParticipantJoinedNotification(User organizer, User participant, Meeting meeting) {
@@ -522,7 +520,30 @@ public class NotificationServiceImpl implements NotificationService {
             sendEmailForNotification(savedNotification, user, personalizedTitle, personalizedMessage, variables);
         }
 
+        createInAppNotificationForUser(user, templateKey, variables, type, personalizedTitle, personalizedMessage);
+
         return savedNotification;
+    }
+
+
+    private Notification createInAppNotificationForUser(User user, String templateKey,
+                                                        Map<String, String> variables,
+                                                        NotificationType type,
+                                                        String title,
+                                                        String message) {
+        Notification inAppNotification = Notification.builder()
+                .user(user)
+                .title(title)
+                .message(message)
+                .type(type)
+                .channel(NotificationChannel.IN_APP) // Zawsze IN_APP
+                .templateKey(templateKey)
+                .templateVariables(variables)
+                .status(NotificationStatus.DELIVERED) // Automatycznie "dostarczone"
+                .deliveredAt(LocalDateTime.now())
+                .build();
+
+        return notificationRepository.save(inAppNotification);
     }
 
     private void sendEmailForNotification(Notification notification,
@@ -554,11 +575,11 @@ public class NotificationServiceImpl implements NotificationService {
                 if (token != null) {
                     // Dodaj zmienne tokenu (szablon z bazy użyje {{#if attendanceToken}})
                     emailVariables.put("attendanceToken", token);
-                    emailVariables.put("attendanceTokenFormatted", formatTokenForDisplay(token));
+//                    emailVariables.put("attendanceTokenFormatted", formatTokenForDisplay(token));
+                    emailVariables.put("attendanceTokenFormatted", token);
                     emailVariables.put("confirmationLink", buildConfirmationLink(
                             extractMeetingIdFromVariables(templateVariables), token));
                     emailVariables.put("token", token); // alias
-
                     log.info("🔐 Dodano token do emaila dla {}: {}",
                             user.getEmail(), formatTokenForDisplay(token));
                 }
@@ -580,8 +601,10 @@ public class NotificationServiceImpl implements NotificationService {
             emailService.sendHtmlEmail(
                     user.getEmail(),
                     personalizedSubject,
-                    personalizedBody // Szablon z bazy już obsługuje token przez {{#if attendanceToken}}
+                    personalizedBody
             );
+
+
 
             // ========== 5. AKTUALIZUJ STATUS ==========
             notification.setStatus(NotificationStatus.SENT);
@@ -612,8 +635,46 @@ public class NotificationServiceImpl implements NotificationService {
     /**
      * Generuje token tylko jeśli to spotkanie i mamy meetingId
      */
+//    private String generateTokenIfMeetingExists(User user, Map<String, String> variables) {
+//        if (variables == null) return null;
+//
+//        Long meetingId = extractMeetingIdFromVariables(variables);
+//        if (meetingId == null) {
+//            log.warn("⚠️ Brak meetingId dla generacji tokenu");
+//            return null;
+//        }
+//
+//        try {
+//            // Sprawdź czy serwis tokenów jest dostępny
+//            if (attendanceTokenService == null) {
+//                log.warn("⚠️ AttendanceTokenService nie jest dostępny");
+//                return null;
+//            }
+//
+//            // Znajdź istniejący token lub stwórz nowy
+//            Optional<AttendanceToken> existingToken = attendanceTokenService
+//                    .getTokenForUserAndMeeting(user.getId(), meetingId);
+//
+//            if (existingToken.isPresent()) {
+//                return existingToken.get().getToken();
+//            }
+//
+//            // Stwórz nowy token
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+//
+//            AttendanceToken newToken = attendanceTokenService.createToken(user, meeting);
+//            return newToken.getToken();
+//
+//        } catch (Exception e) {
+//            log.error("❌ Błąd generowania tokenu: {}", e.getMessage());
+//            return null;
+//        }
+//    }
+
+
     private String generateTokenIfMeetingExists(User user, Map<String, String> variables) {
-        if (variables == null) return null;
+        if (variables == null || user == null) return null;
 
         Long meetingId = extractMeetingIdFromVariables(variables);
         if (meetingId == null) {
@@ -622,32 +683,35 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         try {
-            // Sprawdź czy serwis tokenów jest dostępny
+            // Upewnij się, że serwis tokenów istnieje
             if (attendanceTokenService == null) {
                 log.warn("⚠️ AttendanceTokenService nie jest dostępny");
                 return null;
             }
 
-            // Znajdź istniejący token lub stwórz nowy
+            // Najpierw szukamy aktywnego tokenu w bazie
             Optional<AttendanceToken> existingToken = attendanceTokenService
                     .getTokenForUserAndMeeting(user.getId(), meetingId);
 
             if (existingToken.isPresent()) {
+                log.info("✅ Znaleziono istniejący token dla użytkownika {} i spotkania {}", user.getId(), meetingId);
                 return existingToken.get().getToken();
             }
 
-            // Stwórz nowy token
+            // Jeśli brak tokenu, tworzymy nowy
             Meeting meeting = meetingRepository.findById(meetingId)
                     .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
 
             AttendanceToken newToken = attendanceTokenService.createToken(user, meeting);
+            log.info("✅ Utworzono nowy token dla użytkownika {} i spotkania {}", user.getId(), meetingId);
             return newToken.getToken();
 
         } catch (Exception e) {
-            log.error("❌ Błąd generowania tokenu: {}", e.getMessage());
+            log.error("❌ Błąd generowania tokenu: {}", e.getMessage(), e);
             return null;
         }
     }
+
 
     /**
      * Wyciąga meetingId z zmiennych
@@ -683,91 +747,97 @@ public class NotificationServiceImpl implements NotificationService {
     /**
      * Buduje link potwierdzający
      */
+//    private String buildConfirmationLink(Long meetingId, String token) {
+//        // Możesz dodać konfigurację z application.properties
+//        String baseUrl = "http://localhost:8080";
+//        return baseUrl + "/api/v1/meetings/" + meetingId +
+//                "/confirm-attendance?token=" + token;
+//    }
+
     private String buildConfirmationLink(Long meetingId, String token) {
-        // Możesz dodać konfigurację z application.properties
         String baseUrl = "http://localhost:8080";
-        return baseUrl + "/api/v1/meetings/" + meetingId +
-                "/confirm-attendance?token=" + token;
+        return baseUrl + "/api/v1/participations/meetings/" + meetingId + "/confirm?token=" + token;
     }
 
 
-    private void sendEmailFromTemplate(User user, String templateKey,
-                                       Map<String, String> variables,
-                                       NotificationType type) {
-        String userEmail = user.getEmail();
-        log.info("📧 Próba wysłania email do {} (szablon: {})", userEmail, templateKey);
-
-        try {
-            // 1. Znajdź szablon w bazie danych
-            Optional<EmailTemplate> templateOpt = emailTemplateRepository
-                    .findByTemplateKeyAndLanguage(templateKey, user.getLanguage());
-
-            if (!templateOpt.isPresent()) {
-                log.warn("⚠️ Szablon '{}' nie znaleziony w DB. Pomijam email.", templateKey);
-                return; // Wyjdź BEZ wyjątku
-            }
-
-            EmailTemplate template = templateOpt.get();
-
-            // 2. Personalizuj temat i treść z szablonu DB
-            String subject = personalizeTemplate(template.getSubject(), variables);
-            String body = personalizeTemplate(template.getBodyTemplate(), variables);
-
-            // 3. Przygotuj zmienne dla Thymeleaf - DODAJ WSZYSTKIE POTRZEBNE
-            Map<String, Object> emailVariables = new HashMap<>();
-
-            // Podstawowe zmienne
-            emailVariables.put("userName", user.getFirstName());
-            emailVariables.put("organizerName", user.getFirstName()); // Dla szablonu meeting_started.html
-            emailVariables.put("userEmail", userEmail);
-            emailVariables.put("subject", subject);
-            emailVariables.put("currentYear", LocalDateTime.now().getYear());
-
-            // Skopiuj wszystkie zmienne z oryginalnego mapy
-            emailVariables.putAll(variables);
-
-            // Dodaj specjalne zmienne
-            if (variables.containsKey("meetingTitle")) {
-                emailVariables.put("meetingTitle", variables.get("meetingTitle"));
-            }
-            if (variables.containsKey("meetingTime")) {
-                emailVariables.put("meetingTime", variables.get("meetingTime"));
-            }
-            if (variables.containsKey("meetingDate")) {
-                emailVariables.put("meetingDate", variables.get("meetingDate"));
-                emailVariables.put("meetingTime", variables.get("meetingDate")); // Dla kompatybilności
-            }
-            if (variables.containsKey("location")) {
-                emailVariables.put("location", variables.get("location"));
-            }
-            if (variables.containsKey("meetingId")) {
-                emailVariables.put("meetingId", variables.get("meetingId"));
-            }
-
-            // 4. Użyj POPRAWNEGO szablonu Thymeleaf
-            String thymeleafTemplate = "meeting_started"; // To musi być plik meeting_started.html w templates/email/
-            log.info("   📄 Używam szablonu Thymeleaf: {}", thymeleafTemplate);
-
-            // 5. Wyślij email - NIE RZUCAJ WYJĄTKU nawet jeśli się nie uda
-            try {
-                emailService.sendTemplateEmail(
-                        userEmail,
-                        subject,
-                        thymeleafTemplate, // "meeting_started" -> szuka templates/email/meeting_started.html
-                        emailVariables
-                );
-                log.info("✅ Wywołano sendTemplateEmail dla {}", userEmail);
-
-            } catch (Exception emailException) {
-                log.error("❌ Błąd sendTemplateEmail (tylko log): {}", emailException.getMessage());
-                // NIE RZUCAJ DALEJ - email to dodatkowa funkcja, nie główna logika
-            }
-
-        } catch (Exception e) {
-            log.error("❌ Błąd w sendEmailFromTemplate (tylko log): {}", e.getMessage());
-            // NIE RZUCAJ WYJĄTKU DALEJ - to nie może zepsuc głównej transakcji
-        }
-    }
+//
+//    private void sendEmailFromTemplate(User user, String templateKey,
+//                                       Map<String, String> variables,
+//                                       NotificationType type) {
+//        String userEmail = user.getEmail();
+//        log.info("📧 Próba wysłania email do {} (szablon: {})", userEmail, templateKey);
+//
+//        try {
+//            // 1. Znajdź szablon w bazie danych
+//            Optional<EmailTemplate> templateOpt = emailTemplateRepository
+//                    .findByTemplateKeyAndLanguage(templateKey, user.getLanguage());
+//
+//            if (!templateOpt.isPresent()) {
+//                log.warn("⚠️ Szablon '{}' nie znaleziony w DB. Pomijam email.", templateKey);
+//                return; // Wyjdź BEZ wyjątku
+//            }
+//
+//            EmailTemplate template = templateOpt.get();
+//
+//            // 2. Personalizuj temat i treść z szablonu DB
+//            String subject = personalizeTemplate(template.getSubject(), variables);
+//            String body = personalizeTemplate(template.getBodyTemplate(), variables);
+//
+//            // 3. Przygotuj zmienne dla Thymeleaf - DODAJ WSZYSTKIE POTRZEBNE
+//            Map<String, Object> emailVariables = new HashMap<>();
+//
+//            // Podstawowe zmienne
+//            emailVariables.put("userName", user.getFirstName());
+//            emailVariables.put("organizerName", user.getFirstName()); // Dla szablonu meeting_started.html
+//            emailVariables.put("userEmail", userEmail);
+//            emailVariables.put("subject", subject);
+//            emailVariables.put("currentYear", LocalDateTime.now().getYear());
+//
+//            // Skopiuj wszystkie zmienne z oryginalnego mapy
+//            emailVariables.putAll(variables);
+//
+//            // Dodaj specjalne zmienne
+//            if (variables.containsKey("meetingTitle")) {
+//                emailVariables.put("meetingTitle", variables.get("meetingTitle"));
+//            }
+//            if (variables.containsKey("meetingTime")) {
+//                emailVariables.put("meetingTime", variables.get("meetingTime"));
+//            }
+//            if (variables.containsKey("meetingDate")) {
+//                emailVariables.put("meetingDate", variables.get("meetingDate"));
+//                emailVariables.put("meetingTime", variables.get("meetingDate")); // Dla kompatybilności
+//            }
+//            if (variables.containsKey("location")) {
+//                emailVariables.put("location", variables.get("location"));
+//            }
+//            if (variables.containsKey("meetingId")) {
+//                emailVariables.put("meetingId", variables.get("meetingId"));
+//            }
+//
+//            // 4. Użyj POPRAWNEGO szablonu Thymeleaf
+//            String thymeleafTemplate = "meeting_started"; // To musi być plik meeting_started.html w templates/email/
+//            log.info("   📄 Używam szablonu Thymeleaf: {}", thymeleafTemplate);
+//
+//            // 5. Wyślij email - NIE RZUCAJ WYJĄTKU nawet jeśli się nie uda
+//            try {
+//                emailService.sendTemplateEmail(
+//                        userEmail,
+//                        subject,
+//                        thymeleafTemplate, // "meeting_started" -> szuka templates/email/meeting_started.html
+//                        emailVariables
+//                );
+//                log.info("✅ Wywołano sendTemplateEmail dla {}", userEmail);
+//
+//            } catch (Exception emailException) {
+//                log.error("❌ Błąd sendTemplateEmail (tylko log): {}", emailException.getMessage());
+//                // NIE RZUCAJ DALEJ - email to dodatkowa funkcja, nie główna logika
+//            }
+//
+//        } catch (Exception e) {
+//            log.error("❌ Błąd w sendEmailFromTemplate (tylko log): {}", e.getMessage());
+//            // NIE RZUCAJ WYJĄTKU DALEJ - to nie może zepsuc głównej transakcji
+//        }
+//    }
 
     public boolean isNotificationAllowed(User user, NotificationType type, NotificationChannel channel) {
         // Sprawdź czy kanał jest włączony globalnie
@@ -923,6 +993,43 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (Exception e) {
             log.warn("Could not get participants count for meeting {}", meetingId, e);
             return 0L;
+        }
+    }
+
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getInAppMessages(Long userId) {
+        log.info("Pobieram wiadomości IN_APP dla użytkownika: {}", userId);
+        return notificationRepository.findInAppMessagesByUserId(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getRecentInAppMessages(Long userId, int limit) {
+        log.info("Pobieram ostatnie {} wiadomości IN_APP dla użytkownika: {}", limit, userId);
+
+        if (limit <= 0 || limit > 100) {
+            throw new IllegalArgumentException("Limit musi być między 1 a 100");
+        }
+
+        Pageable pageable = PageRequest.of(0, limit);
+        return notificationRepository.findInAppMessagesByUserId(userId, pageable);
+    }
+
+//    @Transactional(readOnly = true)
+//    @Override
+//    public List<String> getUnreadInAppMessages(Long userId) {
+//        log.info("Pobieram nieprzeczytane wiadomości IN_APP dla użytkownika: {}", userId);
+//        return notificationRepository.findUnreadInAppMessagesByUserId(userId);
+//    }
+
+
+    // Możesz też dodać metodę pomocniczą do walidacji użytkownika
+    private void validateUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Użytkownik nie znaleziony");
         }
     }
 }

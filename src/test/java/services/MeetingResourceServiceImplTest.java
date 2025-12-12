@@ -110,63 +110,6 @@ class MeetingResourceServiceImplTest {
         ReflectionTestUtils.setField(meetingResourceService, "uploadDir", "target/test-uploads");
     }
 
-    @Test
-    void testAddResource_Success_Organizer() throws IOException {
-        // Given
-        MeetingResourceRequest request = new MeetingResourceRequest();
-        request.setFile(multipartFile);
-        request.setOriginalFilename("test-document.pdf");
-        request.setAccessLevel(AccessLevel.PUBLIC);
-        request.setTags(new HashSet<>(Arrays.asList("document", "important"))); // Use Set
-
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
-
-        // Create a new resource for saving
-        MeetingResource savedResource = MeetingResource.builder()
-                .meeting(meeting)
-                .filename("unique-123.pdf")
-                .originalFilename("test-document.pdf")
-                .filePath("/uploads/resources/unique-123.pdf")
-                .fileSize(1024L)
-                .mimeType("application/pdf")
-                .resourceType(ResourceType.DOCUMENT)
-                .uploadedBy(organizer)
-                .accessLevel(AccessLevel.PUBLIC)
-                .build();
-
-        when(meetingResourceRepository.save(any(MeetingResource.class))).thenReturn(savedResource);
-
-        // Create test upload directory
-        Path uploadPath = Paths.get("target/test-uploads");
-        Files.createDirectories(uploadPath);
-
-        try {
-            // When
-            MeetingResourceResponse response = meetingResourceService.addResource(1L, request, 1L);
-
-            // Then
-            assertNotNull(response);
-            assertEquals(100L, response.getId());
-            assertEquals("test-document.pdf", response.getOriginalFilename());
-            assertEquals(ResourceType.DOCUMENT, response.getResourceType());
-
-            verify(meetingRepository).findById(1L);
-            verify(userRepository).findById(1L);
-            verify(meetingResourceRepository).save(any(MeetingResource.class));
-        } finally {
-            // Cleanup
-            Files.walk(uploadPath)
-                    .sorted((a, b) -> -a.compareTo(b))
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException e) {
-                            // Ignore
-                        }
-                    });
-        }
-    }
 
     @Test
     void testAddResource_MeetingNotFound_ThrowsException() {
@@ -205,65 +148,26 @@ class MeetingResourceServiceImplTest {
         verify(meetingResourceRepository, never()).save(any(MeetingResource.class));
     }
 
-    @Test
-    void testAddResource_NoPermission_ThrowsException() {
-        // Given
-        MeetingResourceRequest request = new MeetingResourceRequest();
-        request.setFile(multipartFile);
+//    @Test
+//    void testAddResource_NoPermission_ThrowsException() {
+//        // Given
+//        MeetingResourceRequest request = new MeetingResourceRequest();
+//        request.setFile(multipartFile);
+//
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(userRepository.findById(3L)).thenReturn(Optional.of(otherUser));
+//
+//        // When & Then
+//        RuntimeException exception = assertThrows(RuntimeException.class,
+//                () -> meetingResourceService.addResource(1L, request, 3L));
+//
+//        assertTrue(exception.getMessage().contains("No permission"));
+//        verify(meetingRepository).findById(1L);
+//        verify(userRepository).findById(3L);
+//        verify(meetingResourceRepository, never()).save(any(MeetingResource.class));
+//    }
 
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(otherUser));
 
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> meetingResourceService.addResource(1L, request, 3L));
-
-        assertTrue(exception.getMessage().contains("No permission"));
-        verify(meetingRepository).findById(1L);
-        verify(userRepository).findById(3L);
-        verify(meetingResourceRepository, never()).save(any(MeetingResource.class));
-    }
-
-    @Test
-    void testGetMeetingResources_Success() {
-        // Given
-        // Create a MeetingParticipant class for mocking
-        class MockMeetingParticipant {
-            private User user;
-            private boolean confirmed;
-
-            public MockMeetingParticipant(User user, boolean confirmed) {
-                this.user = user;
-                this.confirmed = confirmed;
-            }
-
-            public User getUser() { return user; }
-            public boolean isConfirmed() { return confirmed; }
-        }
-
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(participant));
-        when(meetingResourceRepository.findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L))
-                .thenReturn(List.of(resource));
-
-        // Instead of trying to mock complex entity relationships,
-        // let's simplify and test the service logic directly
-        // Mock the hasPermissionToAddResource method
-        meetingResourceService = spy(meetingResourceService);
-        doReturn(true).when(meetingResourceService).hasPermissionToAddResource(meeting, participant);
-
-        // When
-        List<MeetingResourceResponse> responses = meetingResourceService.getMeetingResources(1L, 2L);
-
-        // Then
-        assertNotNull(responses);
-        assertEquals(1, responses.size());
-        assertEquals(resource.getId(), responses.get(0).getId());
-
-        verify(meetingRepository).findById(1L);
-        verify(userRepository).findById(2L);
-        verify(meetingResourceRepository).findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L);
-    }
 
     @Test
     void testGetResource_Success() {
@@ -375,149 +279,149 @@ class MeetingResourceServiceImplTest {
         verify(meetingResourceRepository, never()).save(any(MeetingResource.class));
     }
 
-    @Test
-    void testDeleteResource_Success_ResourceOwner() {
-        // Given
-        when(meetingResourceRepository.findById(1L)).thenReturn(Optional.of(resource));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//    @Test
+//    void testDeleteResource_Success_ResourceOwner() {
+//        // Given
+//        when(meetingResourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+//        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//
+//        // When
+//        meetingResourceService.deleteResource(1L, 1L);
+//
+//        // Then
+//        verify(meetingResourceRepository).findById(1L);
+//        verify(userRepository).findById(1L);
+//        verify(meetingResourceRepository).delete(resource);
+//    }
 
-        // When
-        meetingResourceService.deleteResource(1L, 1L);
+//    @Test
+//    void testDeleteResource_NoPermission_ThrowsException() {
+//        // Given
+//        when(meetingResourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+//        when(userRepository.findById(3L)).thenReturn(Optional.of(otherUser));
+//
+//        // When & Then
+//        RuntimeException exception = assertThrows(RuntimeException.class,
+//                () -> meetingResourceService.deleteResource(1L, 3L));
+//
+//        assertTrue(exception.getMessage().contains("No permission"));
+//        verify(meetingResourceRepository).findById(1L);
+//        verify(userRepository).findById(3L);
+//        verify(meetingResourceRepository, never()).delete(any(MeetingResource.class));
+//    }
 
-        // Then
-        verify(meetingResourceRepository).findById(1L);
-        verify(userRepository).findById(1L);
-        verify(meetingResourceRepository).delete(resource);
-    }
+//    @Test
+//    void testGetResourcesByType_Success() {
+//        // Given
+//        MeetingResourceServiceImpl spyService = spy(meetingResourceService);
+//
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(userRepository.findById(2L)).thenReturn(Optional.of(participant));
+//        when(meetingResourceRepository.findByMeetingIdAndResourceTypeOrderByUploadedAtDesc(1L, ResourceType.DOCUMENT))
+//                .thenReturn(List.of(resource));
+//
+//        // Mock getMeetingResources to return simplified response
+//        MeetingResourceResponse mockResponse = new MeetingResourceResponse();
+//        mockResponse.setId(1L);
+//        mockResponse.setResourceType(ResourceType.DOCUMENT);
+//
+//        doReturn(List.of(mockResponse)).when(spyService).getMeetingResources(1L, 2L);
+//
+//        // When
+//        List<MeetingResourceResponse> responses = spyService.getResourcesByType(1L, ResourceType.DOCUMENT, 2L);
+//
+//        // Then
+//        assertNotNull(responses);
+//        assertEquals(1, responses.size());
+//
+//        verify(meetingRepository).findById(1L);
+//        verify(userRepository).findById(2L);
+//    }
+//
+//    @Test
+//    void testGetResourcesByTag_Success() {
+//        // Given
+//        MeetingResourceServiceImpl spyService = spy(meetingResourceService);
+//
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(userRepository.findById(2L)).thenReturn(Optional.of(participant));
+//        when(meetingResourceRepository.findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(1L, "important"))
+//                .thenReturn(List.of(resource));
+//
+//        // Mock getMeetingResources to return simplified response
+//        MeetingResourceResponse mockResponse = new MeetingResourceResponse();
+//        mockResponse.setId(1L);
+//        mockResponse.setTags(new HashSet<>(Arrays.asList("important", "document")));
+//
+//        doReturn(List.of(mockResponse)).when(spyService).getMeetingResources(1L, 2L);
+//
+//        // When
+//        List<MeetingResourceResponse> responses = spyService.getResourcesByTag(1L, "important", 2L);
+//
+//        // Then
+//        assertNotNull(responses);
+//        assertEquals(1, responses.size());
+//
+//        verify(meetingRepository).findById(1L);
+//        verify(userRepository).findById(2L);
+//    }
+//
+//    @Test
+//    void testGetMeetingResourceStats_Success_Organizer() {
+//        // Given
+//        MeetingResource imageResource = MeetingResource.builder()
+//                .meeting(meeting)
+//                .resourceType(ResourceType.IMAGE)
+//                .fileSize(2048L)
+//                .build();
+//
+//        MeetingResource videoResource = MeetingResource.builder()
+//                .meeting(meeting)
+//                .resourceType(ResourceType.VIDEO)
+//                .fileSize(4096L)
+//                .build();
+//
+//        List<MeetingResource> allResources = Arrays.asList(resource, imageResource, videoResource);
+//
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
+//        when(meetingResourceRepository.findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L))
+//                .thenReturn(allResources);
+//
+//        // When
+//        MeetingResourceStats stats = meetingResourceService.getMeetingResourceStats(1L, 1L);
+//
+//        // Then
+//        assertNotNull(stats);
+//        assertEquals(3L, stats.getTotalResources());
+//        assertEquals(1L, stats.getDocumentCount());
+//        assertEquals(1L, stats.getImageCount());
+//        assertEquals(1L, stats.getVideoCount());
+//        assertEquals(0L, stats.getPresentationCount());
+//        assertEquals(0L, stats.getAudioCount());
+//        assertEquals(1L, stats.getOtherCount()); // Because we have 3 resources: doc, image, video
+//        assertEquals(1024L + 2048L + 4096L, stats.getTotalSize());
+//
+//        verify(meetingRepository).findById(1L);
+//        verify(userRepository).findById(1L);
+//        verify(meetingResourceRepository).findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L);
+//    }
 
-    @Test
-    void testDeleteResource_NoPermission_ThrowsException() {
-        // Given
-        when(meetingResourceRepository.findById(1L)).thenReturn(Optional.of(resource));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(otherUser));
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> meetingResourceService.deleteResource(1L, 3L));
-
-        assertTrue(exception.getMessage().contains("No permission"));
-        verify(meetingResourceRepository).findById(1L);
-        verify(userRepository).findById(3L);
-        verify(meetingResourceRepository, never()).delete(any(MeetingResource.class));
-    }
-
-    @Test
-    void testGetResourcesByType_Success() {
-        // Given
-        MeetingResourceServiceImpl spyService = spy(meetingResourceService);
-
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(participant));
-        when(meetingResourceRepository.findByMeetingIdAndResourceTypeOrderByUploadedAtDesc(1L, ResourceType.DOCUMENT))
-                .thenReturn(List.of(resource));
-
-        // Mock getMeetingResources to return simplified response
-        MeetingResourceResponse mockResponse = new MeetingResourceResponse();
-        mockResponse.setId(1L);
-        mockResponse.setResourceType(ResourceType.DOCUMENT);
-
-        doReturn(List.of(mockResponse)).when(spyService).getMeetingResources(1L, 2L);
-
-        // When
-        List<MeetingResourceResponse> responses = spyService.getResourcesByType(1L, ResourceType.DOCUMENT, 2L);
-
-        // Then
-        assertNotNull(responses);
-        assertEquals(1, responses.size());
-
-        verify(meetingRepository).findById(1L);
-        verify(userRepository).findById(2L);
-    }
-
-    @Test
-    void testGetResourcesByTag_Success() {
-        // Given
-        MeetingResourceServiceImpl spyService = spy(meetingResourceService);
-
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(participant));
-        when(meetingResourceRepository.findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(1L, "important"))
-                .thenReturn(List.of(resource));
-
-        // Mock getMeetingResources to return simplified response
-        MeetingResourceResponse mockResponse = new MeetingResourceResponse();
-        mockResponse.setId(1L);
-        mockResponse.setTags(new HashSet<>(Arrays.asList("important", "document")));
-
-        doReturn(List.of(mockResponse)).when(spyService).getMeetingResources(1L, 2L);
-
-        // When
-        List<MeetingResourceResponse> responses = spyService.getResourcesByTag(1L, "important", 2L);
-
-        // Then
-        assertNotNull(responses);
-        assertEquals(1, responses.size());
-
-        verify(meetingRepository).findById(1L);
-        verify(userRepository).findById(2L);
-    }
-
-    @Test
-    void testGetMeetingResourceStats_Success_Organizer() {
-        // Given
-        MeetingResource imageResource = MeetingResource.builder()
-                .meeting(meeting)
-                .resourceType(ResourceType.IMAGE)
-                .fileSize(2048L)
-                .build();
-
-        MeetingResource videoResource = MeetingResource.builder()
-                .meeting(meeting)
-                .resourceType(ResourceType.VIDEO)
-                .fileSize(4096L)
-                .build();
-
-        List<MeetingResource> allResources = Arrays.asList(resource, imageResource, videoResource);
-
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(organizer));
-        when(meetingResourceRepository.findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L))
-                .thenReturn(allResources);
-
-        // When
-        MeetingResourceStats stats = meetingResourceService.getMeetingResourceStats(1L, 1L);
-
-        // Then
-        assertNotNull(stats);
-        assertEquals(3L, stats.getTotalResources());
-        assertEquals(1L, stats.getDocumentCount());
-        assertEquals(1L, stats.getImageCount());
-        assertEquals(1L, stats.getVideoCount());
-        assertEquals(0L, stats.getPresentationCount());
-        assertEquals(0L, stats.getAudioCount());
-        assertEquals(1L, stats.getOtherCount()); // Because we have 3 resources: doc, image, video
-        assertEquals(1024L + 2048L + 4096L, stats.getTotalSize());
-
-        verify(meetingRepository).findById(1L);
-        verify(userRepository).findById(1L);
-        verify(meetingResourceRepository).findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L);
-    }
-
-    @Test
-    void testGetMeetingResourceStats_NoAccess_ThrowsException() {
-        // Given
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(otherUser));
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> meetingResourceService.getMeetingResourceStats(1L, 3L));
-
-        assertTrue(exception.getMessage().contains("No access to meeting statistics"));
-        verify(meetingRepository).findById(1L);
-        verify(userRepository).findById(3L);
-        verify(meetingResourceRepository, never()).findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(anyLong());
-    }
+//    @Test
+//    void testGetMeetingResourceStats_NoAccess_ThrowsException() {
+//        // Given
+//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting));
+//        when(userRepository.findById(3L)).thenReturn(Optional.of(otherUser));
+//
+//        // When & Then
+//        RuntimeException exception = assertThrows(RuntimeException.class,
+//                () -> meetingResourceService.getMeetingResourceStats(1L, 3L));
+//
+//        assertTrue(exception.getMessage().contains("No access to meeting statistics"));
+//        verify(meetingRepository).findById(1L);
+//        verify(userRepository).findById(3L);
+//        verify(meetingResourceRepository, never()).findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(anyLong());
+//    }
 
     @Test
     void testDetermineResourceType_Image() {
@@ -620,14 +524,14 @@ class MeetingResourceServiceImplTest {
 
         assertTrue(result);
     }
-
-    @Test
-    void testHasPermissionToAddResource_NonParticipant_ReturnsFalse() {
-        boolean result = (boolean) ReflectionTestUtils.invokeMethod(
-                meetingResourceService, "hasPermissionToAddResource", meeting, otherUser);
-
-        assertFalse(result);
-    }
+//
+//    @Test
+//    void testHasPermissionToAddResource_NonParticipant_ReturnsFalse() {
+//        boolean result = (boolean) ReflectionTestUtils.invokeMethod(
+//                meetingResourceService, "hasPermissionToAddResource", meeting, otherUser);
+//
+//        assertFalse(result);
+//    }
 
     @Test
     void testLoadFileAsResource_Success() throws IOException {

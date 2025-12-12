@@ -41,4 +41,6 @@ public interface LocationService {
 
     List<LocationBasicInfo> getLocationsForSelect();
     List<LocationBasicInfo> getAllLocationsBasic();
+
+    void validateLocationExists(Long locationId);
 }

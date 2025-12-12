@@ -15,4 +15,15 @@ public enum MeetingStatus {
     public String getDisplayName() {
         return displayName;
     }
+
+    public static MeetingStatus fromDisplayName(String name) {
+        if (name == null) return null;
+        for (MeetingStatus s : values()) {
+            if (s.getDisplayName().equalsIgnoreCase(name)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
 }

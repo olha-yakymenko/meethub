@@ -1,3 +1,586 @@
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://www.thymeleaf.org"-->
+<!--      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"-->
+<!--      lang="pl"-->
+<!--      th:replace="~{layout}">-->
+<!--<head>-->
+<!--    <title>Lista spotkań - MeetHub</title>-->
+<!--    <style>-->
+<!--        .meeting-card {-->
+<!--            transition: transform 0.2s;-->
+<!--            border-left: 4px solid transparent;-->
+<!--        }-->
+<!--        .meeting-card:hover {-->
+<!--            transform: translateY(-2px);-->
+<!--            box-shadow: 0 4px 12px rgba(0,0,0,0.1);-->
+<!--        }-->
+<!--        .meeting-card.template {-->
+<!--            border-left-color: #6f42c1;-->
+<!--        }-->
+<!--        .meeting-card.recurring {-->
+<!--            border-left-color: #20c997;-->
+<!--        }-->
+<!--        .meeting-card.categorized {-->
+<!--            border-left-color: #fd7e14;-->
+<!--        }-->
+<!--        .category-badge {-->
+<!--            display: inline-block;-->
+<!--            width: 12px;-->
+<!--            height: 12px;-->
+<!--            border-radius: 50%;-->
+<!--            margin-right: 4px;-->
+<!--        }-->
+<!--        .advanced-filters {-->
+<!--            background: #f8f9fa;-->
+<!--            border-radius: 8px;-->
+<!--            padding: 15px;-->
+<!--            margin-bottom: 20px;-->
+<!--        }-->
+<!--        .badge-purple {-->
+<!--            background-color: #6f42c1 !important;-->
+<!--            color: white !important;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--<div th:fragment="content">-->
+<!--    &lt;!&ndash; Nagłówek z akcjami &ndash;&gt;-->
+<!--    <div class="d-flex justify-content-between align-items-center mb-4">-->
+<!--        <div>-->
+<!--            <h1 class="display-6">-->
+<!--                <i class="bi bi-calendar3 me-2"></i>Spotkania-->
+<!--            </h1>-->
+<!--            <p class="text-muted">Zarządzaj swoimi spotkaniami i spotkaniami publicznymi</p>-->
+<!--        </div>-->
+<!--        <div class="d-flex gap-2">-->
+<!--            <div class="dropdown">-->
+<!--                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">-->
+<!--                    <i class="bi bi-plus-circle me-2"></i>Utwórz spotkanie-->
+<!--                </button>-->
+<!--                <ul class="dropdown-menu">-->
+<!--                    <li><a class="dropdown-item" th:href="@{/meetings/create}">-->
+<!--                        <i class="bi bi-plus-lg me-2"></i>Nowe spotkanie-->
+<!--                    </a></li>-->
+<!--                    <li><a class="dropdown-item" th:href="@{/meetings/templates}">-->
+<!--                        <i class="bi bi-file-earmark me-2"></i>Z szablonu-->
+<!--                    </a></li>-->
+<!--                    <li><a class="dropdown-item" href="#quickTemplateModal" data-bs-toggle="modal">-->
+<!--                        <i class="bi bi-lightning me-2"></i>Szybkie szablony-->
+<!--                    </a></li>-->
+<!--                </ul>-->
+<!--            </div>-->
+<!--            <a th:href="@{/meetings/advanced}" class="btn btn-outline-primary">-->
+<!--                <i class="bi bi-funnel me-2"></i>Zaawansowane-->
+<!--            </a>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Szybkie akcje &ndash;&gt;-->
+<!--    <div class="row mb-4">-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-primary bg-opacity-10 border-primary">-->
+<!--                <div class="card-body py-3">-->
+<!--                    <a th:href="@{/meetings/recurring}" class="text-decoration-none text-primary">-->
+<!--                        <i class="bi bi-repeat me-2"></i>Powtarzające się-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-success bg-opacity-10 border-success">-->
+<!--                <div class="card-body py-3">-->
+<!--                    <a th:href="@{/meetings/templates}" class="text-decoration-none text-success">-->
+<!--                        <i class="bi bi-file-earmark me-2"></i>Moje szablony-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-warning bg-opacity-10 border-warning">-->
+<!--                <div class="card-body py-3">-->
+<!--                    <a th:href="@{/categories}" class="text-decoration-none text-warning">-->
+<!--                        <i class="bi bi-tags me-2"></i>Kategorie-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-info bg-opacity-10 border-info">-->
+<!--                <div class="card-body py-3">-->
+<!--                    <a th:href="@{/meetings?status=UPCOMING}" class="text-decoration-none text-info">-->
+<!--                        <i class="bi bi-clock me-2"></i>Nadchodzące-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Zaawansowane filtry (rozszerzone) &ndash;&gt;-->
+<!--    <div class="card mb-4">-->
+<!--        <div class="card-header">-->
+<!--            <h6 class="card-title mb-0">-->
+<!--                <i class="bi bi-funnel me-2"></i>Filtrowanie i wyszukiwanie-->
+<!--            </h6>-->
+<!--        </div>-->
+<!--        <div class="card-body">-->
+<!--            <form th:action="@{/meetings}" method="get" class="row g-3">-->
+<!--                &lt;!&ndash; Podstawowe filtry &ndash;&gt;-->
+<!--                <div class="col-md-3">-->
+<!--                    <label class="form-label">Szukaj</label>-->
+<!--                    <input type="text" name="search" class="form-control"-->
+<!--                           th:value="${searchParam}"-->
+<!--                           placeholder="Tytuł, opis, tagi...">-->
+<!--                </div>-->
+
+<!--                <div class="col-md-2">-->
+<!--                    <label class="form-label">Typ</label>-->
+<!--                    <select name="type" class="form-select">-->
+<!--                        <option value="">Wszystkie</option>-->
+<!--                        <option value="VIRTUAL" th:selected="${typeParam == 'VIRTUAL'}">Online</option>-->
+<!--                        <option value="PHYSICAL" th:selected="${typeParam == 'PHYSICAL'}">Osobiście</option>-->
+<!--                        <option value="HYBRID" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+
+<!--                <div class="col-md-2">-->
+<!--                    <label class="form-label">Status</label>-->
+<!--                    <select name="status" class="form-select">-->
+<!--                        <option value="">Wszystkie</option>-->
+<!--                        <option value="PLANNED" th:selected="${statusParam == 'PLANNED'}">Planowane</option>-->
+<!--                        <option value="CONFIRMED" th:selected="${statusParam == 'CONFIRMED'}">Potwierdzone</option>-->
+<!--                        <option value="COMPLETED" th:selected="${statusParam == 'COMPLETED'}">Zakończone</option>-->
+<!--                        <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+
+<!--                <div class="col-md-3">-->
+<!--                    <label class="form-label">Kategoria</label>-->
+<!--                    <select name="categoryId" class="form-select">-->
+<!--                        <option value="">Wszystkie kategorie</option>-->
+<!--                        <option th:each="category : ${userCategories}"-->
+<!--                                th:value="${category.id}"-->
+<!--                                th:text="${category.name}"></option>-->
+<!--                    </select>-->
+<!--                </div>-->
+
+<!--                <div class="col-md-2 d-flex align-items-end">-->
+<!--                    <div class="d-flex gap-2">-->
+<!--                        <button type="submit" class="btn btn-primary">-->
+<!--                            <i class="bi bi-search me-1"></i>Filtruj-->
+<!--                        </button>-->
+<!--                        <a th:href="@{/meetings}" class="btn btn-outline-secondary">-->
+<!--                            <i class="bi bi-x-lg"></i>-->
+<!--                        </a>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </form>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Lista spotkań &ndash;&gt;-->
+<!--    <div class="row" th:unless="${meetings.empty}">-->
+<!--        &lt;!&ndash; ✅ POPRAWIONE: Dodano sprawdzenie null w pętli &ndash;&gt;-->
+<!--        <div th:each="meeting : ${meetings}" th:if="${meeting != null}" class="col-lg-6 mb-4">-->
+<!--            &lt;!&ndash; ✅ POPRAWIONE: Łączenie wszystkich warunków th:classappend w jeden &ndash;&gt;-->
+<!--            <div class="card h-100 meeting-card"-->
+<!--                 th:classappend="${(meeting.template ? 'template ' : '') + -->
+<!--                                 (meeting.recurring ? 'recurring ' : '') + -->
+<!--                                 (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">-->
+
+<!--                <div class="card-body">-->
+<!--                    &lt;!&ndash; Nagłówek karty &ndash;&gt;-->
+<!--                    <div class="d-flex justify-content-between align-items-start mb-2">-->
+<!--                        <h5 class="card-title">-->
+<!--                            <span th:text="${meeting.title}"></span>-->
+<!--                            <span th:if="${meeting?.recurring}" class="badge bg-success ms-2">-->
+<!--                                <i class="bi bi-repeat me-1"></i>Cykl-->
+<!--                            </span>-->
+<!--                            <span th:if="${meeting?.template}" class="badge badge-purple ms-2">-->
+<!--                                <i class="bi bi-file-earmark me-1"></i>Szablon-->
+<!--                            </span>-->
+<!--                        </h5>-->
+<!--                        <div class="dropdown">-->
+<!--                            <button class="btn btn-sm btn-outline-secondary" type="button"-->
+<!--                                    data-bs-toggle="dropdown">-->
+<!--                                <i class="bi bi-three-dots"></i>-->
+<!--                            </button>-->
+<!--                            <ul class="dropdown-menu dropdown-menu-end">-->
+<!--                                <li><a class="dropdown-item" th:href="@{/meetings/{id}(id=${meeting.id})}">-->
+<!--                                    <i class="bi bi-eye me-2"></i>Szczegóły-->
+<!--                                </a></li>-->
+
+<!--                                &lt;!&ndash; ✅ POPRAWIONE: Bezpieczne sprawdzenie właściwości &ndash;&gt;-->
+<!--                                <li th:if="${meeting?.userIsOrganizer}">-->
+<!--                                    <a class="dropdown-item" th:href="@{/meetings/{id}/edit(id=${meeting.id})}">-->
+<!--                                        <i class="bi bi-pencil me-2"></i>Edytuj-->
+<!--                                    </a>-->
+<!--                                </li>-->
+
+<!--                                <li th:if="${meeting?.userIsOrganizer}">-->
+<!--                                    <form th:action="@{/meetings/{id}/save-as-template(id=${meeting.id})}"-->
+<!--                                          method="post" class="d-inline">-->
+<!--                                        <input type="hidden" name="templateName" th:value="${meeting.title}">-->
+<!--                                        <button type="submit" class="dropdown-item">-->
+<!--                                            <i class="bi bi-file-earmark me-2"></i>Zapisz jako szablon-->
+<!--                                        </button>-->
+<!--                                    </form>-->
+<!--                                </li>-->
+
+<!--                                <li th:if="${meeting?.recurring and meeting?.userIsOrganizer}">-->
+<!--                                    <a class="dropdown-item"-->
+<!--                                       th:href="@{/meetings/{id}/recurrence(id=${meeting.id})}">-->
+<!--                                        <i class="bi bi-repeat me-2"></i>Zarządzaj cyklem-->
+<!--                                    </a>-->
+<!--                                </li>-->
+
+<!--                                <li><hr class="dropdown-divider"></li>-->
+
+<!--                                <li th:if="${meeting?.userIsOrganizer}">-->
+<!--                                    <form th:action="@{/meetings/{id}/duplicate(id=${meeting.id})}"-->
+<!--                                          method="post" class="d-inline">-->
+<!--                                        <button type="submit" class="dropdown-item text-info">-->
+<!--                                            <i class="bi bi-copy me-2"></i>Duplikuj-->
+<!--                                        </button>-->
+<!--                                    </form>-->
+<!--                                </li>-->
+
+<!--                                <li th:if="${meeting?.userIsOrganizer}">-->
+<!--                                    <form th:action="@{/meetings/{id}/delete(id=${meeting.id})}"-->
+<!--                                          method="post"-->
+<!--                                          onsubmit="return confirm('Czy na pewno chcesz usunąć to spotkanie?')"-->
+<!--                                          class="d-inline">-->
+<!--                                        <button type="submit" class="dropdown-item text-danger">-->
+<!--                                            <i class="bi bi-trash me-2"></i>Usuń-->
+<!--                                        </button>-->
+<!--                                    </form>-->
+<!--                                </li>-->
+<!--                            </ul>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Informacje o spotkaniu &ndash;&gt;-->
+<!--                    <p class="card-text text-muted mb-3"-->
+<!--                       th:text="${meeting.description ?: 'Brak opisu'}"></p>-->
+
+<!--                    &lt;!&ndash; Kategorie i tagi &ndash;&gt;-->
+<!--                    <div class="mb-3">-->
+<!--                        <div th:if="${meeting?.categories != null and not meeting.categories.empty}">-->
+<!--                            <div class="d-flex flex-wrap gap-1 mb-2">-->
+<!--                                <span th:each="category : ${meeting.categories}"-->
+<!--                                      class="badge d-flex align-items-center"-->
+<!--                                      th:style="'background-color: ' + ${category?.colorCode} + '; color: white;'">-->
+<!--                                    <span class="category-badge"-->
+<!--                                          th:style="'background-color: white;'"></span>-->
+<!--                                    <span th:text="${category?.name}"></span>-->
+<!--                                </span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        <div th:if="${meeting?.tags != null and not meeting.tags.empty}">-->
+<!--                            <div class="d-flex flex-wrap gap-1">-->
+<!--                                <span th:each="tag : ${#strings.arraySplit(meeting.tags, ',')}"-->
+<!--                                      class="badge bg-light text-dark small">-->
+<!--                                    <i class="bi bi-tag me-1"></i>-->
+<!--                                    <span th:text="${#strings.trim(tag)}"></span>-->
+<!--                                </span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Metadane &ndash;&gt;-->
+<!--                    <div class="meeting-meta small text-muted mb-3">-->
+<!--                        <div class="d-flex justify-content-between mb-1">-->
+<!--                            <span>-->
+<!--                                <i class="bi bi-calendar me-1"></i>-->
+<!--                                <span th:if="${meeting?.startDate}"-->
+<!--                                      th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>-->
+<!--                                <span th:unless="${meeting?.startDate}">Brak daty</span>-->
+<!--                            </span>-->
+<!--                            &lt;!&ndash; ✅ POPRAWIONE: Użyj operatora bezpiecznego dostępu ?. &ndash;&gt;-->
+<!--                            <span th:class="${meeting?.status?.name() == 'CONFIRMED' ? 'text-success' :-->
+<!--                                            meeting?.status?.name() == 'CANCELLED' ? 'text-danger' : 'text-warning'}"-->
+<!--                                  th:text="${meeting?.status?.displayName ?: meeting?.status?.name()}"></span>-->
+<!--                        </div>-->
+
+<!--                        <div class="d-flex justify-content-between mb-1">-->
+<!--                            <span>-->
+<!--                                <i class="bi bi-person me-1"></i>-->
+<!--                                <span th:if="${meeting?.organizer}"-->
+<!--                                      th:text="${meeting.organizer.firstName + ' ' + meeting.organizer.lastName}"></span>-->
+<!--                                <span th:unless="${meeting?.organizer}">Brak organizatora</span>-->
+<!--                            </span>-->
+<!--                            <span>-->
+<!--                                <i class="bi bi-people me-1"></i>-->
+<!--                                <span th:text="${meeting?.confirmedParticipantsCount ?: 0}"></span>/-->
+<!--                                <span th:text="${meeting?.maxParticipants ?: '∞'}"></span>-->
+<!--                            </span>-->
+<!--                        </div>-->
+
+<!--                        <div class="d-flex justify-content-between">-->
+<!--                            <span>-->
+<!--                                <i class="bi bi-geo-alt me-1"></i>-->
+<!--                                <span th:text="${meeting?.type?.displayName ?: meeting?.type?.name()}"></span>-->
+<!--                            </span>-->
+<!--                            &lt;!&ndash; ✅ POPRAWIONE: Bezpieczny dostęp do visibility &ndash;&gt;-->
+<!--                            <span class="badge"-->
+<!--                                  th:class="${meeting?.visibility?.name() == 'PUBLIC' ? 'bg-info' :-->
+<!--                                            meeting?.visibility?.name() == 'PRIVATE' ? 'bg-warning' : 'bg-secondary'}"-->
+<!--                                  th:text="${meeting?.visibility?.displayName ?: meeting?.visibility?.name()}"></span>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Akcje użytkownika &ndash;&gt;-->
+<!--                    &lt;!&ndash; ✅ POPRAWIONE: Usunięto zbędne th:if="${meeting != null}" &ndash;&gt;-->
+<!--                    <div class="participant-actions mt-3 pt-3 border-top">-->
+<!--                        <div class="d-flex justify-content-between align-items-center">-->
+<!--                            &lt;!&ndash; Status użytkownika &ndash;&gt;-->
+<!--                            <div>-->
+<!--                                &lt;!&ndash; ✅ POPRAWIONE: Bezpieczny dostęp do właściwości &ndash;&gt;-->
+<!--                                <span th:if="${meeting?.userIsConfirmed}"-->
+<!--                                      class="badge bg-success">-->
+<!--                                    <i class="bi bi-check-circle me-1"></i>Uczestnik-->
+<!--                                </span>-->
+<!--                                <span th:if="${meeting?.userIsPending}"-->
+<!--                                      class="badge bg-warning">-->
+<!--                                    <i class="bi bi-clock me-1"></i>Oczekuje-->
+<!--                                </span>-->
+<!--                                <span th:if="${meeting?.userIsInvited}"-->
+<!--                                      class="badge bg-primary">-->
+<!--                                    <i class="bi bi-envelope me-1"></i>Zaproszony-->
+<!--                                </span>-->
+<!--                            </div>-->
+
+<!--                            &lt;!&ndash; Przyciski akcji &ndash;&gt;-->
+<!--                            <div class="d-flex gap-1">-->
+<!--&lt;!&ndash;                                &lt;!&ndash; Dołączanie &ndash;&gt;&ndash;&gt;-->
+<!--&lt;!&ndash;                                &lt;!&ndash; ✅ POPRAWIONE: Bezpieczny dostęp &ndash;&gt;&ndash;&gt;-->
+<!--&lt;!&ndash;                                <div th:if="${meeting.status.name() == 'ONGOING'}">&ndash;&gt;-->
+<!--&lt;!&ndash;                                    <button class="btn btn-success btn-sm"&ndash;&gt;-->
+<!--&lt;!&ndash;                                            data-bs-toggle="modal"&ndash;&gt;-->
+<!--&lt;!&ndash;                                            th:data-bs-target="'#joinModal-' + ${meeting.id}">&ndash;&gt;-->
+<!--&lt;!&ndash;                                        <i class="bi bi-camera-video"></i> Dołącz&ndash;&gt;-->
+<!--&lt;!&ndash;                                    </button>&ndash;&gt;-->
+<!--&lt;!&ndash;                                </div>&ndash;&gt;-->
+
+
+<!--                                <div class="row" th:unless="${meetings.empty}">-->
+<!--                                    <div th:each="meeting : ${meetings}" th:if="${meeting != null}" class="col-lg-6 mb-4">-->
+<!--                                        <div class="card h-100 meeting-card"-->
+<!--                                             th:classappend="${(meeting.template ? 'template ' : '') +-->
+<!--                              (meeting.recurring ? 'recurring ' : '') +-->
+<!--                              (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">-->
+<!--                                            <div class="card-body">-->
+<!--                                                <h5 class="card-title" th:text="${meeting.title}"></h5>-->
+
+<!--                                                &lt;!&ndash; Status spotkania i metadane &ndash;&gt;-->
+<!--                                                <p class="text-muted mb-3">-->
+<!--                                                    <span th:text="${meeting.description ?: 'Brak opisu'}"></span>-->
+<!--                                                </p>-->
+
+<!--                                                <div class="d-flex justify-content-between">-->
+<!--                    <span>-->
+<!--                        <i class="bi bi-calendar me-1"></i>-->
+<!--                        <span th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>-->
+<!--                    </span>-->
+<!--                                                    <span th:text="${meeting.status.displayName ?: meeting.status.name()}"></span>-->
+<!--                                                </div>-->
+
+<!--                                                &lt;!&ndash; Przycisk Dołącz dla spotkań ONGOING &ndash;&gt;-->
+<!--                                                <div class="mt-3" th:if="${meeting.status.name() == 'ONGOING'}">-->
+<!--                                                    <button class="btn btn-success btn-sm"-->
+<!--                                                            data-bs-toggle="modal"-->
+<!--                                                            th:data-bs-target="'#joinModal-' + ${meeting.id}">-->
+<!--                                                        <i class="bi bi-camera-video"></i> Dołącz-->
+<!--                                                    </button>-->
+<!--                                                </div>-->
+
+<!--                                                &lt;!&ndash; Modal z formularzem tokenu &ndash;&gt;-->
+<!--                                                <div class="modal fade" th:id="'joinModal-' + ${meeting.id}" tabindex="-1">-->
+<!--                                                    <div class="modal-dialog">-->
+<!--                                                        <div class="modal-content">-->
+<!--                                                            <div class="modal-header">-->
+<!--                                                                <h5 class="modal-title" th:text="'Dołącz do spotkania: ' + ${meeting.title}"></h5>-->
+<!--                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>-->
+<!--                                                            </div>-->
+<!--                                                            <div class="modal-body">-->
+<!--                                                                <form th:action="@{/meetings/{id}/join(id=${meeting.id})}" method="post">-->
+<!--                                                                    <div class="mb-3">-->
+<!--                                                                        <label for="tokenInput" class="form-label">Wprowadź token</label>-->
+<!--                                                                        <input type="text" name="token" class="form-control" id="tokenInput" placeholder="Token uczestnika" required>-->
+<!--                                                                    </div>-->
+<!--                                                                    <div class="text-end">-->
+<!--                                                                        <button type="submit" class="btn btn-primary">Dołącz</button>-->
+<!--                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>-->
+<!--                                                                    </div>-->
+<!--                                                                </form>-->
+<!--                                                            </div>-->
+<!--                                                        </div>-->
+<!--                                                    </div>-->
+<!--                                                </div>-->
+<!--                                                &lt;!&ndash; Koniec modal &ndash;&gt;-->
+<!--                                            </div>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+
+
+
+<!--                                <div th:if="${meeting?.canJoin and not meeting?.userIsOrganizer}">-->
+<!--                                    <form th:action="@{/meetings/{id}/join(id=${meeting.id})}"-->
+<!--                                          method="post" class="d-inline">-->
+<!--                                        <button type="submit"-->
+<!--                                                class="btn btn-sm"-->
+<!--                                                th:class="${meeting?.visibility?.name() == 'PRIVATE'} ? 'btn-warning' : 'btn-success'">-->
+<!--                                            <span th:if="${meeting?.visibility?.name() == 'PRIVATE'}">-->
+<!--                                                <i class="bi bi-envelope me-1"></i>Zgłoś-->
+<!--                                            </span>-->
+<!--                                            <span th:if="${meeting?.visibility?.name() != 'PRIVATE'}">-->
+<!--                                                <i class="bi bi-plus-circle me-1"></i>Dołącz-->
+<!--                                            </span>-->
+<!--                                        </button>-->
+<!--                                    </form>-->
+<!--                                </div>-->
+
+<!--                                &lt;!&ndash; Opuszczanie &ndash;&gt;-->
+<!--                                <div th:if="${meeting?.canLeave}">-->
+<!--                                    <form th:action="@{/meetings/{id}/leave(id=${meeting.id})}"-->
+<!--                                          method="post"-->
+<!--                                          onsubmit="return confirm('Czy na pewno chcesz opuścić to spotkanie?')"-->
+<!--                                          class="d-inline">-->
+<!--                                        <button type="submit" class="btn btn-sm btn-outline-danger">-->
+<!--                                            <i class="bi bi-box-arrow-right me-1"></i>Opuść-->
+<!--                                        </button>-->
+<!--                                    </form>-->
+<!--                                </div>-->
+
+<!--                                &lt;!&ndash; Szczegóły &ndash;&gt;-->
+<!--                                <a th:href="@{/meetings/{id}(id=${meeting.id})}"-->
+<!--                                   class="btn btn-sm btn-outline-primary">-->
+<!--                                    <i class="bi bi-eye me-1"></i>Szczegóły-->
+<!--                                </a>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Pusta lista &ndash;&gt;-->
+<!--    <div th:if="${meetings.empty}" class="text-center py-5">-->
+<!--        <i class="bi bi-calendar-x display-1 text-muted"></i>-->
+<!--        <h4 class="text-muted mt-3">Brak spotkań</h4>-->
+<!--        <p class="text-muted">Nie znaleziono spotkań spełniających kryteria</p>-->
+<!--        <div class="mt-4">-->
+<!--            <a th:href="@{/meetings/create}" class="btn btn-primary me-2">-->
+<!--                <i class="bi bi-plus-circle me-2"></i>Utwórz pierwsze spotkanie-->
+<!--            </a>-->
+<!--            <a th:href="@{/meetings/templates}" class="btn btn-outline-primary">-->
+<!--                <i class="bi bi-file-earmark me-2"></i>Użyj szablonu-->
+<!--            </a>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    &lt;!&ndash; Paginacja &ndash;&gt;-->
+<!--    <nav th:if="${totalPages > 1}" class="mt-4">-->
+<!--        <ul class="pagination justify-content-center">-->
+<!--            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">-->
+<!--                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1},-->
+<!--                                                         search=${searchParam},-->
+<!--                                                         type=${typeParam},-->
+<!--                                                         status=${statusParam})}">-->
+<!--                    <i class="bi bi-chevron-left"></i>-->
+<!--                </a>-->
+<!--            </li>-->
+
+<!--            <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"-->
+<!--                class="page-item" th:classappend="${page == currentPage} ? 'active'">-->
+<!--                <a class="page-link"-->
+<!--                   th:href="@{/meetings(page=${page},-->
+<!--                                        search=${searchParam},-->
+<!--                                        type=${typeParam},-->
+<!--                                        status=${statusParam})}"-->
+<!--                   th:text="${page + 1}"></a>-->
+<!--            </li>-->
+
+<!--            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">-->
+<!--                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1},-->
+<!--                                                         search=${searchParam},-->
+<!--                                                         type=${typeParam},-->
+<!--                                                         status=${statusParam})}">-->
+<!--                    <i class="bi bi-chevron-right"></i>-->
+<!--                </a>-->
+<!--            </li>-->
+<!--        </ul>-->
+<!--    </nav>-->
+
+<!--    &lt;!&ndash; Modal szybkich szablonów &ndash;&gt;-->
+<!--    <div class="modal fade" id="quickTemplateModal" tabindex="-1">-->
+<!--        <div class="modal-dialog">-->
+<!--            <div class="modal-content">-->
+<!--                <div class="modal-header">-->
+<!--                    <h5 class="modal-title">Szybkie szablony</h5>-->
+<!--                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>-->
+<!--                </div>-->
+<!--                <div class="modal-body">-->
+<!--                    <div class="row g-3">-->
+<!--                        <div class="col-6">-->
+<!--                            <div class="card h-100 text-center">-->
+<!--                                <div class="card-body">-->
+<!--                                    <i class="bi bi-people display-5 text-primary mb-3"></i>-->
+<!--                                    <h6>Spotkanie zespołu</h6>-->
+<!--                                    <p class="small text-muted">Cotygodniowa synchronizacja</p>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="col-6">-->
+<!--                            <div class="card h-100 text-center">-->
+<!--                                <div class="card-body">-->
+<!--                                    <i class="bi bi-bar-chart display-5 text-success mb-3"></i>-->
+<!--                                    <h6>Przegląd projektu</h6>-->
+<!--                                    <p class="small text-muted">Miesięczny przegląd postępów</p>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--                <div class="modal-footer">-->
+<!--                    <a th:href="@{/meetings/templates}" class="btn btn-outline-primary">-->
+<!--                        Zobacz wszystkie szablony-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<script>-->
+<!--    document.addEventListener('DOMContentLoaded', function() {-->
+<!--        // Inicjalizacja tooltipów-->
+<!--        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));-->
+<!--        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {-->
+<!--            return new bootstrap.Tooltip(tooltipTriggerEl);-->
+<!--        });-->
+
+<!--        // Automatyczne ukrywanie alertów po 5 sekundach-->
+<!--        setTimeout(function() {-->
+<!--            var alerts = document.querySelectorAll('.alert:not(.alert-persistent)');-->
+<!--            alerts.forEach(function(alert) {-->
+<!--                var bsAlert = new bootstrap.Alert(alert);-->
+<!--                bsAlert.close();-->
+<!--            });-->
+<!--        }, 5000);-->
+<!--    });-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
@@ -14,15 +597,9 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .meeting-card.template {
-            border-left-color: #6f42c1;
-        }
-        .meeting-card.recurring {
-            border-left-color: #20c997;
-        }
-        .meeting-card.categorized {
-            border-left-color: #fd7e14;
-        }
+        .meeting-card.template { border-left-color: #6f42c1; }
+        .meeting-card.recurring { border-left-color: #20c997; }
+        .meeting-card.categorized { border-left-color: #fd7e14; }
         .category-badge {
             display: inline-block;
             width: 12px;
@@ -30,20 +607,12 @@
             border-radius: 50%;
             margin-right: 4px;
         }
-        .advanced-filters {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        .badge-purple {
-            background-color: #6f42c1 !important;
-            color: white !important;
-        }
+        .badge-purple { background-color: #6f42c1 !important; color: white !important; }
     </style>
 </head>
 <body>
 <div th:fragment="content">
+
     <!-- Nagłówek z akcjami -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -69,69 +638,25 @@
                     </a></li>
                 </ul>
             </div>
-            <a th:href="@{/meetings/advanced}" class="btn btn-outline-primary">
+            <a th:href="@{/meetings/search}" class="btn btn-outline-primary">
                 <i class="bi bi-funnel me-2"></i>Zaawansowane
             </a>
         </div>
     </div>
 
-    <!-- Szybkie akcje -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary bg-opacity-10 border-primary">
-                <div class="card-body py-3">
-                    <a th:href="@{/meetings/recurring}" class="text-decoration-none text-primary">
-                        <i class="bi bi-repeat me-2"></i>Powtarzające się
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success bg-opacity-10 border-success">
-                <div class="card-body py-3">
-                    <a th:href="@{/meetings/templates}" class="text-decoration-none text-success">
-                        <i class="bi bi-file-earmark me-2"></i>Moje szablony
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning bg-opacity-10 border-warning">
-                <div class="card-body py-3">
-                    <a th:href="@{/categories}" class="text-decoration-none text-warning">
-                        <i class="bi bi-tags me-2"></i>Kategorie
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info bg-opacity-10 border-info">
-                <div class="card-body py-3">
-                    <a th:href="@{/meetings?status=UPCOMING}" class="text-decoration-none text-info">
-                        <i class="bi bi-clock me-2"></i>Nadchodzące
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Zaawansowane filtry (rozszerzone) -->
+    <!-- Wyszukiwanie i filtrowanie -->
     <div class="card mb-4">
         <div class="card-header">
-            <h6 class="card-title mb-0">
-                <i class="bi bi-funnel me-2"></i>Filtrowanie i wyszukiwanie
-            </h6>
+            <h6 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>Filtrowanie i wyszukiwanie</h6>
         </div>
         <div class="card-body">
             <form th:action="@{/meetings}" method="get" class="row g-3">
-                <!-- Podstawowe filtry -->
                 <div class="col-md-3">
                     <label class="form-label">Szukaj</label>
                     <input type="text" name="search" class="form-control"
-                           th:value="${searchParam}"
-                           placeholder="Tytuł, opis, tagi...">
+                           th:value="${searchParam}" placeholder="Tytuł, opis, tagi...">
                 </div>
-
                 <div class="col-md-2">
                     <label class="form-label">Typ</label>
                     <select name="type" class="form-select">
@@ -141,7 +666,6 @@
                         <option value="HYBRID" th:selected="${typeParam == 'HYBRID'}">Hybrydowe</option>
                     </select>
                 </div>
-
                 <div class="col-md-2">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
@@ -152,17 +676,16 @@
                         <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>
                     </select>
                 </div>
-
                 <div class="col-md-3">
                     <label class="form-label">Kategoria</label>
                     <select name="categoryId" class="form-select">
                         <option value="">Wszystkie kategorie</option>
                         <option th:each="category : ${userCategories}"
                                 th:value="${category.id}"
-                                th:text="${category.name}"></option>
+                                th:text="${category.name}"
+                                th:selected="${category.id == categoryParam}"></option>
                     </select>
                 </div>
-
                 <div class="col-md-2 d-flex align-items-end">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
@@ -178,17 +701,14 @@
     </div>
 
     <!-- Lista spotkań -->
-    <div class="row" th:unless="${meetings.empty}">
-        <!-- ✅ POPRAWIONE: Dodano sprawdzenie null w pętli -->
-        <div th:each="meeting : ${meetings}" th:if="${meeting != null}" class="col-lg-6 mb-4">
-            <!-- ✅ POPRAWIONE: Łączenie wszystkich warunków th:classappend w jeden -->
+    <div class="row" th:if="${!meetings.empty}">
+        <div th:each="meeting : ${meetings}" class="col-lg-6 mb-4">
             <div class="card h-100 meeting-card"
-                 th:classappend="${(meeting.template ? 'template ' : '') + 
-                                 (meeting.recurring ? 'recurring ' : '') + 
-                                 (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">
-
+                 th:classappend="${(meeting.template ? 'template ' : '') +
+                                  (meeting.recurring ? 'recurring ' : '') +
+                                  (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">
                 <div class="card-body">
-                    <!-- Nagłówek karty -->
+                    <!-- Nagłówek -->
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h5 class="card-title">
                             <span th:text="${meeting.title}"></span>
@@ -199,68 +719,10 @@
                                 <i class="bi bi-file-earmark me-1"></i>Szablon
                             </span>
                         </h5>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary" type="button"
-                                    data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" th:href="@{/meetings/{id}(id=${meeting.id})}">
-                                    <i class="bi bi-eye me-2"></i>Szczegóły
-                                </a></li>
-
-                                <!-- ✅ POPRAWIONE: Bezpieczne sprawdzenie właściwości -->
-                                <li th:if="${meeting?.userIsOrganizer}">
-                                    <a class="dropdown-item" th:href="@{/meetings/{id}/edit(id=${meeting.id})}">
-                                        <i class="bi bi-pencil me-2"></i>Edytuj
-                                    </a>
-                                </li>
-
-                                <li th:if="${meeting?.userIsOrganizer}">
-                                    <form th:action="@{/meetings/{id}/save-as-template(id=${meeting.id})}"
-                                          method="post" class="d-inline">
-                                        <input type="hidden" name="templateName" th:value="${meeting.title}">
-                                        <button type="submit" class="dropdown-item">
-                                            <i class="bi bi-file-earmark me-2"></i>Zapisz jako szablon
-                                        </button>
-                                    </form>
-                                </li>
-
-                                <li th:if="${meeting?.recurring and meeting?.userIsOrganizer}">
-                                    <a class="dropdown-item"
-                                       th:href="@{/meetings/{id}/recurrence(id=${meeting.id})}">
-                                        <i class="bi bi-repeat me-2"></i>Zarządzaj cyklem
-                                    </a>
-                                </li>
-
-                                <li><hr class="dropdown-divider"></li>
-
-                                <li th:if="${meeting?.userIsOrganizer}">
-                                    <form th:action="@{/meetings/{id}/duplicate(id=${meeting.id})}"
-                                          method="post" class="d-inline">
-                                        <button type="submit" class="dropdown-item text-info">
-                                            <i class="bi bi-copy me-2"></i>Duplikuj
-                                        </button>
-                                    </form>
-                                </li>
-
-                                <li th:if="${meeting?.userIsOrganizer}">
-                                    <form th:action="@{/meetings/{id}/delete(id=${meeting.id})}"
-                                          method="post"
-                                          onsubmit="return confirm('Czy na pewno chcesz usunąć to spotkanie?')"
-                                          class="d-inline">
-                                        <button type="submit" class="dropdown-item text-danger">
-                                            <i class="bi bi-trash me-2"></i>Usuń
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
                     </div>
 
-                    <!-- Informacje o spotkaniu -->
-                    <p class="card-text text-muted mb-3"
-                       th:text="${meeting.description ?: 'Brak opisu'}"></p>
+                    <!-- Opis -->
+                    <p class="card-text text-muted mb-3" th:text="${meeting.description ?: 'Brak opisu'}"></p>
 
                     <!-- Kategorie i tagi -->
                     <div class="mb-3">
@@ -269,13 +731,11 @@
                                 <span th:each="category : ${meeting.categories}"
                                       class="badge d-flex align-items-center"
                                       th:style="'background-color: ' + ${category?.colorCode} + '; color: white;'">
-                                    <span class="category-badge"
-                                          th:style="'background-color: white;'"></span>
+                                    <span class="category-badge" th:style="'background-color: white;'"></span>
                                     <span th:text="${category?.name}"></span>
                                 </span>
                             </div>
                         </div>
-
                         <div th:if="${meeting?.tags != null and not meeting.tags.empty}">
                             <div class="d-flex flex-wrap gap-1">
                                 <span th:each="tag : ${#strings.arraySplit(meeting.tags, ',')}"
@@ -289,178 +749,77 @@
 
                     <!-- Metadane -->
                     <div class="meeting-meta small text-muted mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>
-                                <i class="bi bi-calendar me-1"></i>
-                                <span th:if="${meeting?.startDate}"
-                                      th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
-                                <span th:unless="${meeting?.startDate}">Brak daty</span>
-                            </span>
-                            <!-- ✅ POPRAWIONE: Użyj operatora bezpiecznego dostępu ?. -->
-                            <span th:class="${meeting?.status?.name() == 'CONFIRMED' ? 'text-success' :
-                                            meeting?.status?.name() == 'CANCELLED' ? 'text-danger' : 'text-warning'}"
-                                  th:text="${meeting?.status?.displayName ?: meeting?.status?.name()}"></span>
-                        </div>
-
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>
-                                <i class="bi bi-person me-1"></i>
-                                <span th:if="${meeting?.organizer}"
-                                      th:text="${meeting.organizer.firstName + ' ' + meeting.organizer.lastName}"></span>
-                                <span th:unless="${meeting?.organizer}">Brak organizatora</span>
-                            </span>
-                            <span>
-                                <i class="bi bi-people me-1"></i>
-                                <span th:text="${meeting?.confirmedParticipantsCount ?: 0}"></span>/
-                                <span th:text="${meeting?.maxParticipants ?: '∞'}"></span>
-                            </span>
-                        </div>
-
                         <div class="d-flex justify-content-between">
                             <span>
-                                <i class="bi bi-geo-alt me-1"></i>
-                                <span th:text="${meeting?.type?.displayName ?: meeting?.type?.name()}"></span>
+                                <i class="bi bi-calendar me-1"></i>
+                                <span th:text="${meeting?.startDate != null ? #temporals.format(meeting.startDate,'dd.MM.yyyy HH:mm') : 'Brak daty'}"></span>
                             </span>
-                            <!-- ✅ POPRAWIONE: Bezpieczny dostęp do visibility -->
-                            <span class="badge"
-                                  th:class="${meeting?.visibility?.name() == 'PUBLIC' ? 'bg-info' :
-                                            meeting?.visibility?.name() == 'PRIVATE' ? 'bg-warning' : 'bg-secondary'}"
-                                  th:text="${meeting?.visibility?.displayName ?: meeting?.visibility?.name()}"></span>
+                            <span th:class="${meeting?.status?.name() == 'CONFIRMED' ? 'text-success' :
+                                             meeting?.status?.name() == 'CANCELLED' ? 'text-danger' : 'text-warning'}"
+                                  th:text="${meeting?.status?.displayName ?: meeting?.status?.name()}"></span>
                         </div>
                     </div>
 
                     <!-- Akcje użytkownika -->
-                    <!-- ✅ POPRAWIONE: Usunięto zbędne th:if="${meeting != null}" -->
-                    <div class="participant-actions mt-3 pt-3 border-top">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <!-- Status użytkownika -->
-                            <div>
-                                <!-- ✅ POPRAWIONE: Bezpieczny dostęp do właściwości -->
-                                <span th:if="${meeting?.userIsConfirmed}"
-                                      class="badge bg-success">
-                                    <i class="bi bi-check-circle me-1"></i>Uczestnik
-                                </span>
-                                <span th:if="${meeting?.userIsPending}"
-                                      class="badge bg-warning">
-                                    <i class="bi bi-clock me-1"></i>Oczekuje
-                                </span>
-                                <span th:if="${meeting?.userIsInvited}"
-                                      class="badge bg-primary">
-                                    <i class="bi bi-envelope me-1"></i>Zaproszony
-                                </span>
+                    <div class="participant-actions mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                        <!-- Status użytkownika -->
+                        <div>
+                            <span th:if="${meeting?.userIsConfirmed}" class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Uczestnik
+                            </span>
+                            <span th:if="${meeting?.userIsPending}" class="badge bg-warning">
+                                <i class="bi bi-clock me-1"></i>Oczekuje
+                            </span>
+                            <span th:if="${meeting?.userIsInvited}" class="badge bg-primary">
+                                <i class="bi bi-envelope me-1"></i>Zaproszony
+                            </span>
+                        </div>
+
+                        <!-- Przyciski -->
+                        <div class="d-flex gap-1">
+                            <!-- Przycisk Dołącz tylko dla ONGOING -->
+                            <div th:if="${meeting?.status?.name() == 'ONGOING'}">
+                                <button class="btn btn-success btn-sm"
+                                        data-bs-toggle="modal"
+                                        th:data-bs-target="'#joinModal-' + ${meeting.id}">
+                                    <i class="bi bi-camera-video"></i> Dołącz
+                                </button>
                             </div>
 
-                            <!-- Przyciski akcji -->
-                            <div class="d-flex gap-1">
-<!--                                &lt;!&ndash; Dołączanie &ndash;&gt;-->
-<!--                                &lt;!&ndash; ✅ POPRAWIONE: Bezpieczny dostęp &ndash;&gt;-->
-<!--                                <div th:if="${meeting.status.name() == 'ONGOING'}">-->
-<!--                                    <button class="btn btn-success btn-sm"-->
-<!--                                            data-bs-toggle="modal"-->
-<!--                                            th:data-bs-target="'#joinModal-' + ${meeting.id}">-->
-<!--                                        <i class="bi bi-camera-video"></i> Dołącz-->
-<!--                                    </button>-->
-<!--                                </div>-->
-
-
-                                <div class="row" th:unless="${meetings.empty}">
-                                    <div th:each="meeting : ${meetings}" th:if="${meeting != null}" class="col-lg-6 mb-4">
-                                        <div class="card h-100 meeting-card"
-                                             th:classappend="${(meeting.template ? 'template ' : '') +
-                              (meeting.recurring ? 'recurring ' : '') +
-                              (meeting.categories != null and not meeting.categories.empty ? 'categorized' : '')}">
-                                            <div class="card-body">
-                                                <h5 class="card-title" th:text="${meeting.title}"></h5>
-
-                                                <!-- Status spotkania i metadane -->
-                                                <p class="text-muted mb-3">
-                                                    <span th:text="${meeting.description ?: 'Brak opisu'}"></span>
-                                                </p>
-
-                                                <div class="d-flex justify-content-between">
-                    <span>
-                        <i class="bi bi-calendar me-1"></i>
-                        <span th:text="${#temporals.format(meeting.startDate, 'dd.MM.yyyy HH:mm')}"></span>
-                    </span>
-                                                    <span th:text="${meeting.status.displayName ?: meeting.status.name()}"></span>
+                            <!-- Modal tokenu -->
+                            <div class="modal fade" th:id="'joinModal-' + ${meeting.id}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" th:text="'Dołącz do spotkania: ' + ${meeting.title}"></h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form th:action="@{/meetings/{id}/attend(id=${meeting.id})}" method="post">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Wprowadź token</label>
+                                                    <input type="text" name="token"
+                                                           class="form-control"
+                                                           th:id="'tokenInput-' + ${meeting.id}"
+                                                           placeholder="Token uczestnika" required>
                                                 </div>
-
-                                                <!-- Przycisk Dołącz dla spotkań ONGOING -->
-                                                <div class="mt-3" th:if="${meeting.status.name() == 'ONGOING'}">
-                                                    <button class="btn btn-success btn-sm"
-                                                            data-bs-toggle="modal"
-                                                            th:data-bs-target="'#joinModal-' + ${meeting.id}">
-                                                        <i class="bi bi-camera-video"></i> Dołącz
-                                                    </button>
+                                                <div class="text-end">
+                                                    <button type="submit" class="btn btn-primary">Dołącz</button>
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
                                                 </div>
-
-                                                <!-- Modal z formularzem tokenu -->
-                                                <div class="modal fade" th:id="'joinModal-' + ${meeting.id}" tabindex="-1">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" th:text="'Dołącz do spotkania: ' + ${meeting.title}"></h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <form th:action="@{/meetings/{id}/join(id=${meeting.id})}" method="post">
-                                                                    <div class="mb-3">
-                                                                        <label for="tokenInput" class="form-label">Wprowadź token</label>
-                                                                        <input type="text" name="token" class="form-control" id="tokenInput" placeholder="Token uczestnika" required>
-                                                                    </div>
-                                                                    <div class="text-end">
-                                                                        <button type="submit" class="btn btn-primary">Dołącz</button>
-                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- Koniec modal -->
-                                            </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
-
-
-
-                                <div th:if="${meeting?.canJoin and not meeting?.userIsOrganizer}">
-                                    <form th:action="@{/meetings/{id}/join(id=${meeting.id})}"
-                                          method="post" class="d-inline">
-                                        <button type="submit"
-                                                class="btn btn-sm"
-                                                th:class="${meeting?.visibility?.name() == 'PRIVATE'} ? 'btn-warning' : 'btn-success'">
-                                            <span th:if="${meeting?.visibility?.name() == 'PRIVATE'}">
-                                                <i class="bi bi-envelope me-1"></i>Zgłoś
-                                            </span>
-                                            <span th:if="${meeting?.visibility?.name() != 'PRIVATE'}">
-                                                <i class="bi bi-plus-circle me-1"></i>Dołącz
-                                            </span>
-                                        </button>
-                                    </form>
-                                </div>
-
-                                <!-- Opuszczanie -->
-                                <div th:if="${meeting?.canLeave}">
-                                    <form th:action="@{/meetings/{id}/leave(id=${meeting.id})}"
-                                          method="post"
-                                          onsubmit="return confirm('Czy na pewno chcesz opuścić to spotkanie?')"
-                                          class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-box-arrow-right me-1"></i>Opuść
-                                        </button>
-                                    </form>
-                                </div>
-
-                                <!-- Szczegóły -->
-                                <a th:href="@{/meetings/{id}(id=${meeting.id})}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye me-1"></i>Szczegóły
-                                </a>
                             </div>
+
+                            <!-- Szczegóły -->
+                            <a th:href="@{/meetings/{id}(id=${meeting.id})}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>Szczegóły
+                            </a>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -471,104 +830,40 @@
         <i class="bi bi-calendar-x display-1 text-muted"></i>
         <h4 class="text-muted mt-3">Brak spotkań</h4>
         <p class="text-muted">Nie znaleziono spotkań spełniających kryteria</p>
-        <div class="mt-4">
-            <a th:href="@{/meetings/create}" class="btn btn-primary me-2">
-                <i class="bi bi-plus-circle me-2"></i>Utwórz pierwsze spotkanie
-            </a>
-            <a th:href="@{/meetings/templates}" class="btn btn-outline-primary">
-                <i class="bi bi-file-earmark me-2"></i>Użyj szablonu
-            </a>
-        </div>
     </div>
 
     <!-- Paginacja -->
     <nav th:if="${totalPages > 1}" class="mt-4">
         <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1},
-                                                         search=${searchParam},
-                                                         type=${typeParam},
-                                                         status=${statusParam})}">
+                <a class="page-link" th:href="@{/meetings(page=${currentPage - 1}, search=${searchParam}, type=${typeParam}, status=${statusParam})}">
                     <i class="bi bi-chevron-left"></i>
                 </a>
             </li>
-
             <li th:each="page : ${#numbers.sequence(0, totalPages - 1)}"
                 class="page-item" th:classappend="${page == currentPage} ? 'active'">
                 <a class="page-link"
-                   th:href="@{/meetings(page=${page},
-                                        search=${searchParam},
-                                        type=${typeParam},
-                                        status=${statusParam})}"
+                   th:href="@{/meetings(page=${page}, search=${searchParam}, type=${typeParam}, status=${statusParam})}"
                    th:text="${page + 1}"></a>
             </li>
-
             <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
-                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1},
-                                                         search=${searchParam},
-                                                         type=${typeParam},
-                                                         status=${statusParam})}">
+                <a class="page-link" th:href="@{/meetings(page=${currentPage + 1}, search=${searchParam}, type=${typeParam}, status=${statusParam})}">
                     <i class="bi bi-chevron-right"></i>
                 </a>
             </li>
         </ul>
     </nav>
 
-    <!-- Modal szybkich szablonów -->
-    <div class="modal fade" id="quickTemplateModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Szybkie szablony</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="card h-100 text-center">
-                                <div class="card-body">
-                                    <i class="bi bi-people display-5 text-primary mb-3"></i>
-                                    <h6>Spotkanie zespołu</h6>
-                                    <p class="small text-muted">Cotygodniowa synchronizacja</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card h-100 text-center">
-                                <div class="card-body">
-                                    <i class="bi bi-bar-chart display-5 text-success mb-3"></i>
-                                    <h6>Przegląd projektu</h6>
-                                    <p class="small text-muted">Miesięczny przegląd postępów</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <a th:href="@{/meetings/templates}" class="btn btn-outline-primary">
-                        Zobacz wszystkie szablony
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicjalizacja tooltipów
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
 
-        // Automatyczne ukrywanie alertów po 5 sekundach
         setTimeout(function() {
             var alerts = document.querySelectorAll('.alert:not(.alert-persistent)');
-            alerts.forEach(function(alert) {
-                var bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
+            alerts.forEach(function(alert) { new bootstrap.Alert(alert).close(); });
         }, 5000);
     });
 </script>

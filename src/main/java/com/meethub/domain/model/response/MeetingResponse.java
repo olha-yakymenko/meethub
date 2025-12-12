@@ -1,5 +1,6 @@
 package com.meethub.domain.model.response;
 
+import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
@@ -11,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 //@SuperBuilder(toBuilder = true)
@@ -116,7 +118,7 @@ public class MeetingResponse {
         this.canLeave = canLeave;
         this.canEdit = canEdit;
         this.canDelete = canDelete;
-        this.userIsConfirmed = userIsConfirmed;
+//        this.userIsConfirmed = userIsConfirmed;
         this.userIsPending = userIsPending;
         this.userIsInvited = userIsInvited;
         this.userIsDeclined = userIsDeclined;
@@ -231,7 +233,7 @@ public class MeetingResponse {
     public String getUserRoleBadgeColor() {
         switch (userRole) {
             case "ORGANIZER": return "danger";
-            case "CONFIRMED_PARTICIPANT": return "success";
+            case "CONFIRMED": return "success";
             case "PENDING": return "warning";
             case "INVITED": return "primary";
             case "VIEWER": return "info";
@@ -244,7 +246,7 @@ public class MeetingResponse {
     public String getUserRoleDisplayName() {
         switch (userRole) {
             case "ORGANIZER": return "Organizator";
-            case "CONFIRMED_PARTICIPANT": return "Uczestnik";
+            case "CONFIRMED": return "Uczestnik";
             case "PENDING": return "Oczekujący";
             case "INVITED": return "Zaproszony";
             case "VIEWER": return "Obserwator";
@@ -525,4 +527,77 @@ public class MeetingResponse {
     }
 
 
+    public static MeetingResponse fromEntity(Meeting meeting, Long currentUserId) {
+        if (meeting == null) return null;
+
+        boolean isOrganizer = meeting.getOrganizer() != null
+                && meeting.getOrganizer().getId().equals(currentUserId);
+        boolean isParticipant = meeting.getParticipants() != null
+                && meeting.getParticipants().stream()
+                .anyMatch(p -> p.getUser().getId().equals(currentUserId));
+
+        Integer confirmedCount = meeting.getParticipants() != null
+                ? (int) meeting.getParticipants().stream()
+                .filter(p -> p.getStatus() == ParticipationStatus.CONFIRMED)
+                .count()
+                : 0;
+
+        Integer waitingCount = meeting.getParticipants() != null
+                ? (int) meeting.getParticipants().stream()
+                .filter(p -> p.getStatus() == ParticipationStatus.WAITING_LIST)
+                .count()
+                : 0;
+
+        return MeetingResponse.builder()
+                .id(meeting.getId())
+                .title(meeting.getTitle())
+                .description(meeting.getDescription())
+                .agenda(meeting.getAgenda())
+                .type(meeting.getType())
+                .status(meeting.getStatus())
+                .visibility(meeting.getVisibility())
+                .startDate(meeting.getStartDate())
+                .endDate(meeting.getEndDate())
+                .maxParticipants(meeting.getMaxParticipants())
+                .organizer(meeting.getOrganizer() != null
+                        ? UserResponse.builder()
+                        .id(meeting.getOrganizer().getId())
+                        .firstName(meeting.getOrganizer().getFirstName())
+                        .lastName(meeting.getOrganizer().getLastName())
+                        .email(meeting.getOrganizer().getEmail())
+                        .build()
+                        : null)
+                .tags(meeting.getTags())
+                .createdAt(meeting.getCreatedAt())
+                .updatedAt(meeting.getUpdatedAt())
+                .recurring(meeting.isRecurring())
+                .recurrencePattern(meeting.getRecurrencePattern())
+                .recurrenceEndDate(meeting.getRecurrenceEndDate())
+                .isTemplate(meeting.isTemplate())
+                .originalMeetingId(meeting.getOriginalMeetingId())
+                .categories(meeting.getCategories() != null
+                        ? meeting.getCategories().stream()
+                        .map(c -> CategoryResponse.builder()
+                                .id(c.getId())
+                                .name(c.getName())
+                                .build())
+                        .collect(Collectors.toSet())
+                        : null)
+                .userIsOrganizer(isOrganizer)
+                .userIsParticipant(isParticipant)
+                .confirmedParticipantsCount(confirmedCount)
+                .waitingListCount(waitingCount)
+                .availableSpots(meeting.getMaxParticipants() != null
+                        ? meeting.getMaxParticipants() - confirmedCount
+                        : null)
+                .build();
+    }
+
+
+
+
+
+
 }
+
+

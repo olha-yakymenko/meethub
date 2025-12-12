@@ -16,7 +16,7 @@ class MeetingStatusTest {
     @DisplayName("MeetingStatus powinien mieć 6 wartości")
     void meetingStatus_ShouldHaveSixValues() {
         // When & Then
-        assertThat(MeetingStatus.values()).hasSize(6);
+        assertThat(MeetingStatus.values()).hasSize(4);
     }
 
     @Test
@@ -43,9 +43,7 @@ class MeetingStatusTest {
     @ParameterizedTest
     @CsvSource({
             "PLANNED, Planned",
-            "CONFIRMED, Confirmed",
             "CANCELLED, Cancelled",
-            "POSTPONED, Postponed",
             "COMPLETED, Completed",
             "ONGOING, Ongoing"
     })

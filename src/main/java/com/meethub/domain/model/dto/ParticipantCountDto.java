@@ -1,6 +1,7 @@
 package com.meethub.domain.model.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ParticipantCountDto {
@@ -18,6 +20,8 @@ public class ParticipantCountDto {
     private Long cancelled;
     private Long invited;
     private Long pending;
+
+
 
     public BigDecimal getAttendanceRate() {
         return calculateRate(attended, total);
