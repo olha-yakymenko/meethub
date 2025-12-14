@@ -266,6 +266,7 @@ import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.enums.ParticipationStatus;
+import com.meethub.domain.model.request.SearchCriteria;
 import jakarta.persistence.criteria.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
@@ -638,4 +639,96 @@ public class MeetingSpecification {
     public static Specification<Meeting> hasAttachments() {
         return (root, query, cb) -> cb.isNotEmpty(root.get("attachments"));
     }
+
+
+
+
+
+    public static Specification<Meeting> buildSpecification(SearchCriteria criteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // ✅ 1. Kryteria tekstowe
+            if (StringUtils.hasText(criteria.getKeywords())) {
+                predicates.add(buildTextPredicate(root, cb, criteria.getKeywords(), criteria.getSearchFields()));
+            }
+
+            // ✅ 2. Tagi
+            if (StringUtils.hasText(criteria.getTags())) {
+                predicates.add(buildTagsPredicate(root, cb, criteria.getTags()));
+            }
+
+            // ✅ 3. Zakres dat
+            if (criteria.getDateFrom() != null || criteria.getDateTo() != null) {
+                predicates.add(buildDateRangePredicate(root, cb, criteria.getDateFrom(), criteria.getDateTo()));
+            }
+
+            // ✅ 4. Typ spotkania
+            if (criteria.hasType()) {
+                predicates.add(cb.equal(root.get("type"), criteria.getType()));
+            }
+
+            // ✅ 5. Statusy spotkań
+            if (criteria.hasStatuses()) {
+                predicates.add(buildStatusPredicate(root, cb, criteria.getStatuses()));
+            }
+
+            // ✅ 6. Liczba uczestników
+            if (criteria.getMinParticipants() != null && criteria.getMinParticipants() > 0) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("maxParticipants"), criteria.getMinParticipants()));
+            }
+
+            if (criteria.getMaxParticipants() != null && criteria.getMaxParticipants() < 100) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("maxParticipants"), criteria.getMaxParticipants()));
+            }
+
+            // ✅ 7. Organizator
+            if (StringUtils.hasText(criteria.getOrganizerName())) {
+                predicates.add(buildOrganizerPredicate(root, query, cb, criteria.getOrganizerName()));
+            }
+
+            // ✅ 8. Mój udział
+            if (criteria.getCurrentUserId() != null && StringUtils.hasText(criteria.getMyParticipation())) {
+                predicates.add(buildMyParticipationPredicate(root, query, cb,
+                        criteria.getCurrentUserId(), criteria.getMyParticipation()));
+            }
+
+            // ✅ 9. Widoczność i kontrola dostępu
+            predicates.add(buildVisibilityPredicate(root, query, cb,
+                    criteria.getCurrentUserId(), criteria.getVisibility()));
+
+            // ✅ 10. Tylko cykliczne
+            if (criteria.hasRecurringFilter()) {
+                predicates.add(cb.isTrue(root.get("recurring")));
+            }
+
+            // ✅ 11. Tylko szablony
+            if (criteria.hasTemplatesFilter()) {
+                predicates.add(cb.isTrue(root.get("template")));
+            }
+
+            // ✅ 12. Kategorie
+            if (criteria.hasCategoryFilter()) {
+                predicates.add(buildCategoriesPredicate(root, cb, criteria.getCategoryIds()));
+            }
+
+            // ✅ 13. Spotkania z załącznikami
+            if (criteria.hasAttachmentsFilter()) {
+                predicates.add(cb.isNotEmpty(root.get("attachments")));
+            }
+
+            // ✅ Ustaw distinct
+            query.distinct(true);
+
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    // ✅ METODA POMOCNICZA dla kategorii
+    private static Predicate buildCategoriesPredicate(Root<Meeting> root, CriteriaBuilder cb,
+                                                      List<Long> categoryIds) {
+        Join<Meeting, ?> categoryJoin = root.join("categories", JoinType.INNER);
+        return categoryJoin.get("id").in(categoryIds);
+    }
+
 }

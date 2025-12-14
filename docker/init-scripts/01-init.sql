@@ -1585,23 +1585,6 @@ EXECUTE FUNCTION update_meeting_statistics_updated_at();
 ALTER TABLE feedbacks ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT NOW();
 
 
-CREATE TABLE meeting_predictions (
-    id BIGSERIAL PRIMARY KEY,
-    organizer_id BIGINT NOT NULL,
-    prediction_date DATE NOT NULL,
-    predicted_meetings INTEGER,
-    predicted_participants INTEGER,
-    predicted_attendance_rate DOUBLE PRECISION,
-    best_day VARCHAR(255),
-    best_time VARCHAR(255),
-    confidence_score DOUBLE PRECISION,
-    factors_json TEXT,
-    CONSTRAINT fk_meeting_prediction_organizer
-        FOREIGN KEY (organizer_id)
-        REFERENCES users(id)
-        ON DELETE CASCADE
-);
-
 -- Sprawdź czy tabela istnieje
 SELECT EXISTS (
     SELECT FROM information_schema.tables

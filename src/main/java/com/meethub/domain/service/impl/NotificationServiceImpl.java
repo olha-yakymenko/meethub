@@ -11,6 +11,8 @@ import com.meethub.domain.service.AttendanceTokenService;
 import com.meethub.domain.service.EmailService;
 import com.meethub.domain.service.NotificationService;
 import com.meethub.exception.ResourceNotFoundException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,12 +21,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
+@Validated
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -81,6 +85,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void markAsRead(Long notificationId, Long userId) {
+
         Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
 
@@ -93,6 +98,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void markAllAsRead(Long userId) {
+
         List<Notification> unreadNotifications = notificationRepository.findByUserIdAndStatus(userId, NotificationStatus.SENT);
         LocalDateTime now = LocalDateTime.now();
 
@@ -107,6 +113,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getUserNotifications(Long userId, Pageable pageable) {
+
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::mapToNotificationResponse);
     }
@@ -123,11 +130,14 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public Long getUnreadCount(Long userId) {
-        return notificationRepository.countByUserIdAndStatus(userId, NotificationStatus.SENT);
+
+
+    return notificationRepository.countByUserIdAndStatus(userId, NotificationStatus.SENT);
     }
 
     @Override
     public void scheduleMeetingReminder(Long meetingId, Long userId, LocalDateTime reminderTime) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -242,6 +252,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void updateNotificationPreferences(Long userId, NotificationPreferencesRequest request) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -281,6 +292,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfileWithPreferences(Long userId) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -342,6 +354,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendParticipantJoinedNotification(User organizer, User participant, Meeting meeting) {
+
+
         log.info("Sending participant joined notification for meeting {} to organizer {}",
                 meeting.getId(), organizer.getId());
 
@@ -375,6 +389,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendJoinRequestNotification(User organizer, User requester, Meeting meeting) {
+
         log.info("Sending join request notification for meeting {} to organizer {}",
                 meeting.getId(), organizer.getId());
 
@@ -408,6 +423,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendRequestApprovedNotification(User user, Meeting meeting) {
+
         log.info("Sending request approved notification for meeting {} to user {}",
                 meeting.getId(), user.getId());
 
@@ -448,6 +464,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendRequestRejectedNotification(User user, Meeting meeting) {
+
         log.info("Sending request rejected notification for meeting {} to user {}",
                 meeting.getId(), user.getId());
 
@@ -485,6 +502,7 @@ public class NotificationServiceImpl implements NotificationService {
                                                        Map<String, String> variables,
                                                        NotificationType type,
                                                        NotificationChannel channel) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -1001,6 +1019,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public List<String> getInAppMessages(Long userId) {
+
         log.info("Pobieram wiadomości IN_APP dla użytkownika: {}", userId);
         return notificationRepository.findInAppMessagesByUserId(userId);
     }
@@ -1008,6 +1027,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public List<String> getRecentInAppMessages(Long userId, int limit) {
+
         log.info("Pobieram ostatnie {} wiadomości IN_APP dla użytkownika: {}", limit, userId);
 
         if (limit <= 0 || limit > 100) {

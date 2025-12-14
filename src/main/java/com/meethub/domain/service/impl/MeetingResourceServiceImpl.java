@@ -15,6 +15,10 @@ import com.meethub.domain.repository.jpa.MeetingResourceRepository;
 import com.meethub.domain.repository.jpa.UserRepository;
 import com.meethub.domain.service.MeetingParticipantService;
 import com.meethub.domain.service.MeetingResourceService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +26,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -33,6 +38,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Validated
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -49,6 +55,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional
     public MeetingResourceResponse addResource(Long meetingId, MeetingResourceRequest request, Long userId) {
+
         log.info("Adding resource to meeting {} by user {}", meetingId, userId);
 
         Meeting meeting = meetingRepository.findById(meetingId)
@@ -113,6 +120,8 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional(readOnly = true)
     public List<MeetingResourceResponse> getMeetingResources(Long meetingId, Long userId) {
+
+
         log.debug("Getting resources for meeting {} by user {}", meetingId, userId);
 
         Meeting meeting = meetingRepository.findById(meetingId)
@@ -132,6 +141,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional(readOnly = true)
     public MeetingResourceResponse getResource(Long resourceId, Long userId) {
+
         log.debug("Getting resource {} by user {}", resourceId, userId);
 
         MeetingResource resource = meetingResourceRepository.findById(resourceId)
@@ -151,6 +161,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional
     public MeetingResourceResponse updateResource(Long resourceId, UpdateMeetingResourceRequest request, Long userId) {
+
         log.info("Updating resource {} by user {}", resourceId, userId);
 
         MeetingResource resource = meetingResourceRepository.findById(resourceId)
@@ -182,6 +193,8 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional
     public void deleteResource(Long resourceId, Long userId) {
+
+
         log.info("Deleting resource {} by user {}", resourceId, userId);
 
         MeetingResource resource = meetingResourceRepository.findById(resourceId)
@@ -205,6 +218,8 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional(readOnly = true)
     public List<MeetingResourceResponse> getResourcesByType(Long meetingId, ResourceType resourceType, Long userId) {
+
+
         log.debug("Getting resources of type {} for meeting {} by user {}", resourceType, meetingId, userId);
 
         Meeting meeting = meetingRepository.findById(meetingId)
@@ -224,6 +239,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional(readOnly = true)
     public List<MeetingResourceResponse> getResourcesByTag(Long meetingId, String tag, Long userId) {
+
         log.debug("Getting resources with tag '{}' for meeting {} by user {}", tag, meetingId, userId);
 
         Meeting meeting = meetingRepository.findById(meetingId)
@@ -243,6 +259,7 @@ public class MeetingResourceServiceImpl implements MeetingResourceService {
     @Override
     @Transactional(readOnly = true)
     public MeetingResourceStats getMeetingResourceStats(Long meetingId, Long userId) {
+
         log.debug("Getting resource stats for meeting {} by user {}", meetingId, userId);
 
         Meeting meeting = meetingRepository.findById(meetingId)

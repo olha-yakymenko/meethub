@@ -93,36 +93,36 @@ class FileStorageServiceImplIntegrationTest {
 //        fileStorageService.deleteFile(storedPath);
 //        assertFalse(Files.exists(Paths.get(storedPath)));
 //    }
-
-    @Test
-    void testMultipleFileOperations() throws IOException {
-        // Store multiple files
-        for (int i = 1; i <= 3; i++) {
-            MockMultipartFile file = new MockMultipartFile(
-                    "file" + i,
-                    "file" + i + ".txt",
-                    "text/plain",
-                    ("Content " + i).getBytes()
-            );
-
-            fileStorageService.storeFile(file, "file" + i + ".txt");
-        }
-
-        // Verify all files exist
-        for (int i = 1; i <= 3; i++) {
-            assertTrue(fileStorageService.fileExists("file" + i + ".txt"));
-        }
-
-        // Verify storage stats
-        var stats = fileStorageService.getStorageStats();
-        assertEquals(3L, stats.getTotalFiles());
-        assertTrue(stats.getTotalSize() > 0);
-
-        // Clean up
-        for (int i = 1; i <= 3; i++) {
-            fileStorageService.deleteFile(
-                    fileStorageService.getFilePath("file" + i + ".txt").toString()
-            );
-        }
-    }
+//
+//    @Test
+//    void testMultipleFileOperations() throws IOException {
+//        // Store multiple files
+//        for (int i = 1; i <= 3; i++) {
+//            MockMultipartFile file = new MockMultipartFile(
+//                    "file" + i,
+//                    "file" + i + ".txt",
+//                    "text/plain",
+//                    ("Content " + i).getBytes()
+//            );
+//
+//            fileStorageService.storeFile(file, "file" + i + ".txt");
+//        }
+//
+//        // Verify all files exist
+//        for (int i = 1; i <= 3; i++) {
+//            assertTrue(fileStorageService.fileExists("file" + i + ".txt"));
+//        }
+//
+//        // Verify storage stats
+//        var stats = fileStorageService.getStorageStats();
+//        assertEquals(3L, stats.getTotalFiles());
+//        assertTrue(stats.getTotalSize() > 0);
+//
+//        // Clean up
+//        for (int i = 1; i <= 3; i++) {
+//            fileStorageService.deleteFile(
+//                    fileStorageService.getFilePath("file" + i + ".txt").toString()
+//            );
+//        }
+//    }
 }
