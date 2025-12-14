@@ -2300,6 +2300,8 @@ USING recurrence_exceptions::text;
  ADD COLUMN attendance_confirmed_at TIMESTAMP,
  ADD COLUMN attendance_token_used VARCHAR(255);
 
+ALTER TABLE meeting_resources ADD COLUMN tags VARCHAR(255);
+
 
 --
 --UPDATE email_templates

@@ -220,7 +220,7 @@ public class NotificationServiceImpl implements NotificationService {
 //        }
 //    }
 
-    private void sendNotificationBasedOnChannel(Notification notification) {
+    void sendNotificationBasedOnChannel(Notification notification) {
         switch (notification.getChannel()) {
             case EMAIL:
                 sendEmailNotification(notification);
@@ -1005,7 +1005,7 @@ public class NotificationServiceImpl implements NotificationService {
         return "Masz " + referenceIds.size() + " nowych aktualizacji. Sprawdź szczegóły w aplikacji.";
     }
 
-    private long getCurrentParticipantsCount(Long meetingId) {
+    long getCurrentParticipantsCount(Long meetingId) {
         try {
             return participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
         } catch (Exception e) {

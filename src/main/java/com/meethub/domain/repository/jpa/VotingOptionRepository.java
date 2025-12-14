@@ -11,9 +11,6 @@ public interface VotingOptionRepository extends JpaRepository<VotingOption, Long
 
     List<VotingOption> findByVotingId(Long votingId);
 
-    @Query("SELECT vo FROM VotingOption vo WHERE vo.voting.id = :votingId ORDER BY vo.optionDate ASC")
-    List<VotingOption> findByVotingIdOrderByDate(@Param("votingId") Long votingId);
-
     @Query("SELECT COUNT(vo) FROM VotingOption vo WHERE vo.voting.id = :votingId")
     long countByVotingId(@Param("votingId") Long votingId);
 }

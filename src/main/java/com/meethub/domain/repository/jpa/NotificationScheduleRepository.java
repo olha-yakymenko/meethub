@@ -7,6 +7,5 @@ import java.util.List;
 
 @Repository
 public interface NotificationScheduleRepository extends JpaRepository<NotificationSchedule, Long> {
-    List<NotificationSchedule> findByUserIdAndEnabledTrue(Long userId);
     List<NotificationSchedule> findByUserId(Long userId);
 }

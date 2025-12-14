@@ -4,24 +4,16 @@ import com.meethub.domain.model.entity.*;
 import com.meethub.domain.model.enums.AssignmentStatus;
 import com.meethub.domain.model.enums.TaskStatus;
 import com.meethub.domain.model.request.CreateTaskRequest;
-import com.meethub.domain.model.request.UpdateTaskRequest;
 import com.meethub.domain.repository.jpa.*;
-import com.meethub.domain.service.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 

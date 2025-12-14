@@ -31,9 +31,9 @@ public interface AuthService {
             @NotNull(message = "Dane rejestracji nie mogą być puste")
             UserRegistrationRequest request
     );
-
-    AuthResponse refreshToken(
-            @NotBlank(message = "Refresh token nie może być pusty")
-            String refreshToken
-    );
+//
+//    AuthResponse refreshToken(
+//            @NotBlank(message = "Refresh token nie może być pusty")
+//            String refreshToken
+//    );
 }

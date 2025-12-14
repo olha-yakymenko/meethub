@@ -48,17 +48,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
             @Param("userId") Long userId,
             @Param("now") LocalDateTime now);
 
-    /**
-     * Znajdź ostatnie wystąpienie w serii cyklicznej
-     */
-    @Query("""
-        SELECT m FROM Meeting m 
-        WHERE m.originalMeetingId = :originalMeetingId 
-        ORDER BY m.startDate DESC 
-        LIMIT 1
-        """)
-    Optional<Meeting> findLastOccurrenceByOriginalMeetingId(
-            @Param("originalMeetingId") Long originalMeetingId);
 
     // ✅ ISTNIEJĄCE METODY (pozostałe bez zmian):
     Page<Meeting> findByOrganizerId(Long organizerId, Pageable pageable);
@@ -145,6 +134,8 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
     @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END " +
             "FROM Meeting m WHERE m.id = :meetingId AND m.organizer.id = :userId")
     boolean isUserOrganizer(@Param("meetingId") Long meetingId, @Param("userId") Long userId);
+
+    Optional<Meeting> findByTitle(String title);
 }
 
 
