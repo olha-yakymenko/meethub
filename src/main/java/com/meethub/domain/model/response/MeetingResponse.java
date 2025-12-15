@@ -544,7 +544,7 @@ public class MeetingResponse {
 
         Integer waitingCount = meeting.getParticipants() != null
                 ? (int) meeting.getParticipants().stream()
-                .filter(p -> p.getStatus() == ParticipationStatus.WAITING_LIST)
+                .filter(p -> p.getStatus() == ParticipationStatus.PENDING)
                 .count()
                 : 0;
 

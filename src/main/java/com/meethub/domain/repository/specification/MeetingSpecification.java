@@ -488,9 +488,9 @@ public class MeetingSpecification {
                 return buildParticipationStatusPredicate(root, query, cb, currentUserId,
                         ParticipationStatus.DECLINED);
 
-            case "WAITING":
-                return buildParticipationStatusPredicate(root, query, cb, currentUserId,
-                        ParticipationStatus.WAITING_LIST);
+//            case "WAITING":
+//                return buildParticipationStatusPredicate(root, query, cb, currentUserId,
+//                        ParticipationStatus.WAITING_LIST);
 
             case "ATTENDED":
                 return buildParticipationStatusPredicate(root, query, cb, currentUserId,

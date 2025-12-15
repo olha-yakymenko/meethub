@@ -112,6 +112,29 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     """)
     List<ParticipantProjection> findActiveParticipantsProjection(@Param("meetingId") Long meetingId);
 
+    @Query("""
+    SELECT
+        p.id as id,
+            u.id as userId,
+            u.firstName as firstName,
+            u.lastName as lastName,
+            u.email as email,
+            p.status as status
+    FROM MeetingParticipant p
+    JOIN p.user u
+    WHERE p.meeting.id = :meetingId
+    ORDER BY 
+        CASE p.status 
+            WHEN 'CONFIRMED' THEN 1
+            WHEN 'ATTENDED' THEN 2
+            WHEN 'PENDING' THEN 3
+            WHEN 'INVITED' THEN 4
+            WHEN 'DECLINED' THEN 5
+            ELSE 6
+        END,
+        u.lastName, u.firstName
+""")
+    List<ParticipantProjection> findAllParticipantsByMeetingId(@Param("meetingId") Long meetingId);
 
     @Query("""
         SELECT 

@@ -2303,6 +2303,24 @@ USING recurrence_exceptions::text;
 ALTER TABLE meeting_resources ADD COLUMN tags VARCHAR(255);
 
 
+ALTER TABLE tasks
+ADD COLUMN IF NOT EXISTS max_files_per_user INTEGER DEFAULT 10,
+ADD COLUMN IF NOT EXISTS max_file_size BIGINT DEFAULT 10485760; -- 10MB w bajtach
+
+ALTER TABLE task_files
+ADD COLUMN IF NOT EXISTS task_id BIGINT,
+ADD COLUMN IF NOT EXISTS uploaded_by BIGINT;
+
+-- Klucz obcy do tasks
+ALTER TABLE task_files
+ADD CONSTRAINT fk_task_files_task
+FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+-- Klucz obcy do users
+ALTER TABLE task_files
+ADD CONSTRAINT fk_task_files_uploaded_by
+FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL;
+
 --
 --UPDATE email_templates
 --SET body_template = REPLACE(

@@ -48,13 +48,18 @@ public class Task {
     @Builder.Default
     private Boolean allowSelfAssignment = true;
 
-//    @Builder.Default
-//    private Integer maxFilesPerUser = 10;
-
-//    @Builder.Default
-//    private Long maxFileSize = 10 * 1024 * 1024L; // 10MB
-
     // ZAMIENIĆ NA POJEDYNCZĄ KOLUMNĘ
     @Column(name = "allowed_file_types", length = 500)
     private String allowedFileTypes; // np. "pdf,docx,jpg,png"
+
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<TaskFile> files = new ArrayList<>();
+
+    @Builder.Default
+    private Integer maxFilesPerUser = 10;
+
+    @Builder.Default
+    private Long maxFileSize = 10 * 1024 * 1024L;
 }

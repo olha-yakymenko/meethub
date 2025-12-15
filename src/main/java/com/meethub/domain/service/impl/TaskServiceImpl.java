@@ -26,9 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -68,6 +66,11 @@ public class TaskServiceImpl implements TaskService {
                 .createdBy(organizer)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .allowedFileTypes(request.getAllowedFileTypesAsString())
+                .maxFileSize(request.getMaxFileSize() != null ?
+                        request.getMaxFileSize() : 10 * 1024 * 1024L)
+                .maxFilesPerUser(request.getMaxFilesPerUser() != null ?
+                        request.getMaxFilesPerUser() : 10)
                 .build();
 
         Task savedTask = taskRepository.save(task);
@@ -369,31 +372,31 @@ public class TaskServiceImpl implements TaskService {
         return fileRepository.findByAssignmentId(assignmentId);
     }
 
-    @Override
-    @Transactional
-    public void deleteFile(Long fileId, Long userId) {
-        log.info("Deleting file: {}, user: {}", fileId, userId);
-
-        TaskFile taskFile = fileRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("Plik nie został znaleziony"));
-
-        validateFileAccess(taskFile, userId);
-
-        try {
-            // Usuń plik fizycznie
-            Path filePath = Paths.get(taskFile.getFilePath());
-            Files.deleteIfExists(filePath);
-
-            // Usuń z bazy
-            fileRepository.delete(taskFile);
-            log.info("File deleted successfully: {}", fileId);
-        } catch (IOException e) {
-            log.error("Error deleting file: {}", e.getMessage());
-            throw new RuntimeException("Błąd podczas usuwania pliku: " + e.getMessage());
-        }
-    }
-
-    @Override
+//    @Override
+//    @Transactional
+//    public void deleteFile(Long fileId, Long userId) {
+//        log.info("Deleting file: {}, user: {}", fileId, userId);
+//
+//        TaskFile taskFile = fileRepository.findById(fileId)
+//                .orElseThrow(() -> new RuntimeException("Plik nie został znaleziony"));
+//
+//        validateFileAccess(taskFile, userId);
+//
+//        try {
+//            // Usuń plik fizycznie
+//            Path filePath = Paths.get(taskFile.getFilePath());
+//            Files.deleteIfExists(filePath);
+//
+//            // Usuń z bazy
+//            fileRepository.delete(taskFile);
+//            log.info("File deleted successfully: {}", fileId);
+//        } catch (IOException e) {
+//            log.error("Error deleting file: {}", e.getMessage());
+//            throw new RuntimeException("Błąd podczas usuwania pliku: " + e.getMessage());
+//        }
+//    }
+//
+//    @Override
     @Transactional(readOnly = true)
     public List<TaskAssignment> getAssignmentsByStatus(Long taskId, AssignmentStatus status) {
         log.debug("Getting assignments for task: {} with status: {}", taskId, status);
@@ -646,23 +649,23 @@ public class TaskServiceImpl implements TaskService {
         return fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Plik nie został znaleziony"));
     }
-//
-//    @Override
-//    @Transactional
-//    public TaskFile uploadFileToAssignment(Long assignmentId, MultipartFile file, Long userId, String description) {
-//        log.info("Uploading file to assignment: {}, user: {}, filename: {}",
-//                assignmentId, userId, file.getOriginalFilename());
-//
-//        TaskAssignment assignment = getAssignmentById(assignmentId);
-//        validateAssignmentAccess(assignment, userId);
-//
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("Użytkownik nie został znaleziony"));
-//
-//        Task task = assignment.getTask();
-//
-//        return saveFile(file, user, description, task, assignment);
-//    }
+
+    @Transactional
+    @Override
+    public TaskFile uploadFileToAssignment(Long assignmentId, MultipartFile file, Long userId, String description) {
+        log.info("Uploading file to assignment: {}, user: {}, filename: {}",
+                assignmentId, userId, file.getOriginalFilename());
+
+        TaskAssignment assignment = getAssignmentById(assignmentId);
+        validateAssignmentAccess(assignment, userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Użytkownik nie został znaleziony"));
+
+        Task task = assignment.getTask();
+
+        return saveFile(file, user, description, task, assignment);
+    }
 
     @Transactional
     @Override
@@ -690,6 +693,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         try {
+            validateFileAgainstTaskSettings(file, task);
             // Bezpieczna nazwa katalogu użytkownika
             String userEmail = user.getEmail();
             String safeUserDir = userEmail.replace("@", "_at_").replace(".", "_");
@@ -725,6 +729,8 @@ public class TaskServiceImpl implements TaskService {
                     .fileSize(file.getSize())
                     .contentType(file.getContentType())
                     .assignment(assignment)
+                    .task(task) // DODAJ
+                    .uploadedBy(user) // DODAJ
                     .uploadedAt(LocalDateTime.now())
                     .build();
 
@@ -738,56 +744,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-//    private void validateFileAgainstTaskSettings(MultipartFile file, Task task) {
-//        // Walidacja rozmiaru pliku
-//        if (task.getMaxFileSize() != null && task.getMaxFileSize() > 0) {
-//            long maxSizeBytes = task.getMaxFileSize();
-//            if (file.getSize() > maxSizeBytes) {
-//                throw new RuntimeException(
-//                        String.format("Plik przekracza maksymalny rozmiar %d MB",
-//                                task.getMaxFileSize() / (1024 * 1024))
-//                );
-//            }
-//        }
-//
-//        // Walidacja typu pliku
-//        if (task.getAllowedFileTypes() != null && !task.getAllowedFileTypes().isEmpty()) {
-//            String contentType = file.getContentType();
-//            String originalFilename = file.getOriginalFilename();
-//
-//            if (contentType == null) {
-//                contentType = "application/octet-stream";
-//            }
-//
-//            // Sprawdź czy typ jest dozwolony
-//            String[] allowedTypes = task.getAllowedFileTypes().split(",");
-//            boolean allowed = false;
-//
-//            for (String allowedType : allowedTypes) {
-//                String trimmedType = allowedType.trim().toLowerCase();
-//
-//                // Sprawdź typ MIME
-//                if (contentType.toLowerCase().contains(trimmedType)) {
-//                    allowed = true;
-//                    break;
-//                }
-//
-//                // Sprawdź rozszerzenie
-//                if (originalFilename != null &&
-//                        originalFilename.toLowerCase().endsWith("." + trimmedType)) {
-//                    allowed = true;
-//                    break;
-//                }
-//            }
-//
-//            if (!allowed) {
-//                throw new RuntimeException(
-//                        String.format("Typ pliku '%s' nie jest dozwolony. Dozwolone typy: %s",
-//                                contentType, task.getAllowedFileTypes())
-//                );
-//            }
-//        }
-//    }
 
     @Override
     @Transactional(readOnly = true)
@@ -813,32 +769,32 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-//    @Override
-//    @Transactional(readOnly = true)
-//    public List<TaskFile> getTaskFiles(Long taskId, Long userId) {
-//        log.debug("Getting all files for task: {}, user: {}", taskId, userId);
-//
-//        Task task = getTaskById(taskId);
-//
-//        if (!canUserViewTaskFiles(taskId, userId)) {
-//            throw new RuntimeException("Brak uprawnień do przeglądania plików tego zadania");
-//        }
-//
-//        // Pobierz wszystkie pliki związane z tym zadaniem
-//        // (zarówno powiązane z assignment, jak i bezpośrednio z task)
-//        List<TaskFile> files = new ArrayList<>();
-//
-//        // Pliki przypisań
-//        List<TaskAssignment> assignments = assignmentRepository.findByTaskId(taskId);
-//        for (TaskAssignment assignment : assignments) {
-//            files.addAll(fileRepository.findByAssignmentId(assignment.getId()));
-//        }
-//
-//        // Pliki bezpośrednio powiązane z zadaniem (dla organizatora)
-//        files.addAll(fileRepository.findByTaskIdAndAssignmentIsNull(taskId));
-//
-//        return files;
-//    }
+    @Transactional(readOnly = true)
+    @Override
+    public List<TaskFile> getTaskFiles(Long taskId, Long userId) {
+        log.debug("Getting all files for task: {}, user: {}", taskId, userId);
+
+        Task task = getTaskById(taskId);
+
+        if (!canUserViewTaskFiles(taskId, userId)) {
+            throw new RuntimeException("Brak uprawnień do przeglądania plików tego zadania");
+        }
+
+        // Pobierz wszystkie pliki związane z tym zadaniem
+        // (zarówno powiązane z assignment, jak i bezpośrednio z task)
+        List<TaskFile> files = new ArrayList<>();
+
+        // Pliki przypisań
+        List<TaskAssignment> assignments = assignmentRepository.findByTaskId(taskId);
+        for (TaskAssignment assignment : assignments) {
+            files.addAll(fileRepository.findByAssignmentId(assignment.getId()));
+        }
+
+        // Pliki bezpośrednio powiązane z zadaniem (dla organizatora)
+        files.addAll(fileRepository.findByTaskIdAndAssignmentIsNull(taskId));
+
+        return files;
+    }
 
 //    @Transactional(readOnly = true)
 //    @Override
@@ -855,39 +811,89 @@ public class TaskServiceImpl implements TaskService {
 //        return fileRepository.findByTaskId(taskId);
 //    }
 
+    @Override
+    @Transactional
+    public void deleteFile(Long fileId, Long userId) {
+        log.info("Deleting file: {}, user: {}", fileId, userId);
+
+        TaskFile taskFile = getFileById(fileId);
+
+        // Teraz możesz bezpośrednio pobrać task
+        Task task = taskFile.getTask();
+        if (task == null && taskFile.getAssignment() != null) {
+            task = taskFile.getAssignment().getTask();
+        }
+
+        Meeting meeting = task.getMeeting();
+        boolean isOrganizer = meeting.getOrganizer().getId().equals(userId);
+        boolean isUploader = taskFile.getUploadedBy().getId().equals(userId);
+
+        if (!isOrganizer && !isUploader) {
+            throw new RuntimeException("Brak uprawnień do usunięcia tego pliku");
+        }
+
+        try {
+            // Usuń plik fizycznie
+            Path filePath = Paths.get(taskFile.getFilePath());
+            Files.deleteIfExists(filePath);
+
+            // Usuń z bazy
+            fileRepository.delete(taskFile);
+            log.info("File deleted successfully: {}", fileId);
+        } catch (IOException e) {
+            log.error("Error deleting file: {}", e.getMessage());
+            throw new RuntimeException("Błąd podczas usuwania pliku: " + e.getMessage());
+        }
+    }
+
+//    @Transactional(readOnly = true)
 //    @Override
-//    @Transactional
-//    public void deleteFile(Long fileId, Long userId) {
-//        log.info("Deleting file: {}, user: {}", fileId, userId);
+//    public List<TaskFile> getUserFilesForTask(Long taskId, Long userId) {
+//        log.debug("Getting user files for task: {}, user: {}", taskId, userId);
 //
-//        TaskFile taskFile = getFileById(fileId);
+//        Task task = getTaskById(taskId);
 //
-//        // Sprawdź uprawnienia: organizator lub osoba która wrzuciła plik
-//        Task task = taskFile.getAssignment() != null ?
-//                taskFile.getAssignment().getTask() :
-//                getTaskById(taskFile.getId()); // potrzebujesz relacji TaskFile -> Task
-//
-//        Meeting meeting = task.getMeeting();
-//        boolean isOrganizer = meeting.getOrganizer().getId().equals(userId);
-//        boolean isUploader = taskFile.getUploadedBy().getId().equals(userId);
-//
-//        if (!isOrganizer && !isUploader) {
-//            throw new RuntimeException("Brak uprawnień do usunięcia tego pliku");
+//        if (!canUserUploadToTask(taskId, userId)) {
+//            throw new RuntimeException("Brak uprawnień do przeglądania plików");
 //        }
 //
-//        try {
-//            // Usuń plik fizycznie
-//            Path filePath = Paths.get(taskFile.getFilePath());
-//            Files.deleteIfExists(filePath);
-//
-//            // Usuń z bazy
-//            fileRepository.delete(taskFile);
-//            log.info("File deleted successfully: {}", fileId);
-//        } catch (IOException e) {
-//            log.error("Error deleting file: {}", e.getMessage());
-//            throw new RuntimeException("Błąd podczas usuwania pliku: " + e.getMessage());
-//        }
+//        // Pobierz pliki użytkownika dla tego zadania
+//        return fileRepository.findByTaskIdAndUploadedById(taskId, userId);
 //    }
+
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskFile> getUserFilesForTask(Long taskId, Long userId) {
+        log.debug("Getting user files for task: {}, user: {}", taskId, userId);
+
+        Task task = getTaskById(taskId);
+
+        // Sprawdź czy użytkownik ma dostęp do tego zadania
+        if (!canUserViewTaskFiles(taskId, userId)) {
+            throw new RuntimeException("Brak uprawnień do przeglądania plików tego zadania");
+        }
+
+        // ✅ Pobierz TYLKO pliki tego użytkownika dla tego zadania
+        return fileRepository.findByTaskIdAndUploadedById(taskId, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskFile> getAllTaskFilesForOrganizer(Long taskId, Long userId) {
+        log.debug("Getting all files for task (organizer view): {}, user: {}", taskId, userId);
+
+        Task task = getTaskById(taskId);
+        Meeting meeting = task.getMeeting();
+
+        if (!meeting.getOrganizer().getId().equals(userId)) {
+            throw new RuntimeException("Tylko organizator może przeglądać wszystkie pliki zadania");
+        }
+
+        // ✅ Pobierz WSZYSTKIE pliki dla tego zadania
+        return fileRepository.findByTaskId(taskId);
+    }
 
     @Transactional(readOnly = true)
     @Override
@@ -910,26 +916,83 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-//    @Transactional(readOnly = true)
-//    @Override
-//    public boolean canUserViewTaskFiles(Long taskId, Long userId) {
-//        try {
-//            Task task = getTaskById(taskId);
-//            Meeting meeting = task.getMeeting();
-//
-//            // Organizator może zawsze
-//            if (meeting.getOrganizer().getId().equals(userId)) {
-//                return true;
-//            }
-//
-//            // Użytkownik przypisany do zadania może
-//            boolean isAssigned = assignmentRepository.findByTaskIdAndUserId(taskId, userId).isPresent();
-//            return isAssigned;
-//
-//        } catch (Exception e) {
-//            return false;
-//        }
-//    }
+    @Transactional(readOnly = true)
+    @Override
+    public boolean canUserViewTaskFiles(Long taskId, Long userId) {
+        try {
+            Task task = getTaskById(taskId);
+            Meeting meeting = task.getMeeting();
+
+            // Organizator może zawsze
+            if (meeting.getOrganizer().getId().equals(userId)) {
+                return true;
+            }
+
+            // Użytkownik przypisany do zadania może
+            boolean isAssigned = assignmentRepository.findByTaskIdAndUserId(taskId, userId).isPresent();
+            return isAssigned;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
+    private void validateFileAgainstTaskSettings(MultipartFile file, Task task) {
+        // 1. Walidacja rozmiaru
+        validateFileSize(file, task);
+
+        // 2. Walidacja rozszerzenia (tylko jeśli zdefiniowano)
+        if (task.getAllowedFileTypes() != null && !task.getAllowedFileTypes().trim().isEmpty()) {
+            validateFileExtension(file, task.getAllowedFileTypes());
+        }
+    }
+
+    private void validateFileSize(MultipartFile file, Task task) {
+        // Konwertuj MB → bajty
+        long maxSizeMB = task.getMaxFileSize() != null && task.getMaxFileSize() > 0
+                ? task.getMaxFileSize()
+                : 10;
+
+        long maxSizeBytes = maxSizeMB * 1024L * 1024L;
+
+        if (file.getSize() > maxSizeBytes) {
+            double fileSizeMB = file.getSize() / (1024.0 * 1024.0);
+            throw new RuntimeException(
+                    String.format("Plik (%.2f MB) przekracza maksymalny rozmiar %d MB",
+                            fileSizeMB, maxSizeMB)
+            );
+        }
+    }
+
+    private void validateFileExtension(MultipartFile file, String allowedTypes) {
+        String filename = file.getOriginalFilename();
+
+        if (filename == null || !filename.contains(".")) {
+            throw new RuntimeException("Nie można określić typu pliku");
+        }
+
+        String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+
+        // Przygotuj listę dozwolonych rozszerzeń
+        Set<String> allowedExtensions = Arrays.stream(allowedTypes.split(","))
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.startsWith(".") ? s.substring(1) : s)
+                .collect(Collectors.toSet());
+
+        if (!allowedExtensions.contains(extension)) {
+            String allowedList = allowedExtensions.stream()
+                    .map(ext -> "." + ext)
+                    .collect(Collectors.joining(", "));
+
+            throw new RuntimeException(
+                    String.format("Plik .%s nie jest dozwolony. Dozwolone typy: %s",
+                            extension, allowedList)
+            );
+        }
+    }
 
 }
 

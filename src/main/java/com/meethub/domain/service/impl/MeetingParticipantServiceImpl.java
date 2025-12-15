@@ -59,7 +59,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 
     @Override
     public List<ParticipantProjection> getMeetingParticipants(Long meetingId) {
-        List<ParticipantProjection> participants = participantRepository.findActiveParticipantsProjection(meetingId);
+        List<ParticipantProjection> participants = participantRepository.findAllParticipantsByMeetingId(meetingId);
         log.info("UWAGA LISTA UŻYTKOWNIKÓW: {}", participants);
         return participants;
     }
@@ -646,7 +646,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         MeetingParticipant participant = MeetingParticipant.builder()
                 .meeting(meeting)
                 .user(user)
-                .status(ParticipationStatus.WAITING_LIST)
+                .status(ParticipationStatus.PENDING)
                 .permissionLevel(PermissionLevel.PARTICIPANT)
                 .build();
 
@@ -700,7 +700,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         }
         return waitlistEntryRepository.existsByMeetingIdAndUserId(meetingId, userId) ||
                 participantRepository.findByMeetingIdAndUserId(meetingId, userId)
-                        .map(participant -> participant.getStatus() == ParticipationStatus.WAITING_LIST)
+                        .map(participant -> participant.getStatus() == ParticipationStatus.PENDING)
                         .orElse(false);
     }
 
@@ -991,7 +991,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
 //            stats.put("confirmed", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED));
 //            stats.put("pending", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
 //            stats.put("invited", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.INVITED));
-//            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.WAITING_LIST));
+//            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
 //            stats.put("declined", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.DECLINED));
 //
 //            log.info("Participant stats for meeting {}: {}", meetingId, stats);
@@ -1037,7 +1037,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
             stats.put("confirmed", organizerIsParticipant ? confirmedFromDb : confirmedFromDb + 1);
             stats.put("pending", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
             stats.put("invited", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.INVITED));
-            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.WAITING_LIST));
+            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
             stats.put("declined", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.DECLINED));
             stats.put("organizerIncluded", organizerIsParticipant ? 1L : 0L); // dla debugu
 
@@ -1499,7 +1499,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         try {
             // ✅ Sprawdź czy ma status WAITING_LIST
             boolean isWaiting = participantRepository.existsByMeetingIdAndUserIdAndStatus(
-                    meetingId, userId, ParticipationStatus.WAITING_LIST
+                    meetingId, userId, ParticipationStatus.PENDING
             );
 
             log.debug("User {} waiting list status in meeting {}: {}", userId, meetingId, isWaiting);

@@ -1012,7 +1012,7 @@ class MeetingParticipantServiceImplTest {
     void isWaitingListParticipant_whenWaiting_shouldReturnTrue() {
         // Given
         when(participantRepository.existsByMeetingIdAndUserIdAndStatus(
-                100L, 2L, ParticipationStatus.WAITING_LIST))
+                100L, 2L, ParticipationStatus.PENDING))
                 .thenReturn(true);
 
         // When

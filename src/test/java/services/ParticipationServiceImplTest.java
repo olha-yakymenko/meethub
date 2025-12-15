@@ -448,7 +448,7 @@ class ParticipationServiceImplTest {
                 createParticipant(ParticipationStatus.CONFIRMED),      // Powinien być włączony
                 createParticipant(ParticipationStatus.DECLINED),       // Nie powinien być włączony
                 createParticipant(ParticipationStatus.ATTENDED),       // Powinien być włączony
-                createParticipant(ParticipationStatus.WAITING_LIST)    // Nie powinien być włączony
+                createParticipant(ParticipationStatus.PENDING)    // Nie powinien być włączony
         );
 
         when(participantRepository.findByMeetingId(1L)).thenReturn(allParticipants);
@@ -469,7 +469,7 @@ class ParticipationServiceImplTest {
         List<MeetingParticipant> allParticipants = Arrays.asList(
                 createParticipant(ParticipationStatus.INVITED),
                 createParticipant(ParticipationStatus.DECLINED),
-                createParticipant(ParticipationStatus.WAITING_LIST)
+                createParticipant(ParticipationStatus.PENDING)
         );
 
         when(participantRepository.findByMeetingId(1L)).thenReturn(allParticipants);
@@ -503,7 +503,7 @@ class ParticipationServiceImplTest {
 
         // Then
         assertNotNull(result);
-        assertEquals(ParticipationStatus.WAITING_LIST, result.getStatus());
+        assertEquals(ParticipationStatus.PENDING, result.getStatus());
         assertEquals(testMeeting, result.getMeeting());
         assertEquals(testUser, result.getUser());
         verify(participantRepository).save(any(MeetingParticipant.class));
@@ -550,7 +550,7 @@ class ParticipationServiceImplTest {
     @Test
     void promoteFromWaitingList_shouldPromote_whenValidRequest() {
         // Given
-        testParticipant.setStatus(ParticipationStatus.WAITING_LIST);
+        testParticipant.setStatus(ParticipationStatus.PENDING);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
@@ -582,7 +582,7 @@ class ParticipationServiceImplTest {
     @Test
     void promoteFromWaitingList_shouldThrow_whenNoAvailableSpots() {
         // Given
-        testParticipant.setStatus(ParticipationStatus.WAITING_LIST);
+        testParticipant.setStatus(ParticipationStatus.PENDING);
         testMeeting.setMaxParticipants(5);
 
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
@@ -599,7 +599,7 @@ class ParticipationServiceImplTest {
     @Test
     void promoteFromWaitingList_shouldWork_whenNoMaxParticipants() {
         // Given
-        testParticipant.setStatus(ParticipationStatus.WAITING_LIST);
+        testParticipant.setStatus(ParticipationStatus.PENDING);
         testMeeting.setMaxParticipants(null);
 
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
@@ -727,7 +727,7 @@ class ParticipationServiceImplTest {
     @Test
     void promoteFromWaitingList_shouldHandleNullMeeting() {
         // Given
-        testParticipant.setStatus(ParticipationStatus.WAITING_LIST);
+        testParticipant.setStatus(ParticipationStatus.PENDING);
         testMeeting.setMaxParticipants(null);
 
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))

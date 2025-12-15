@@ -81,29 +81,29 @@
             </div>
 
             <!-- Lista przypisań -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-people me-2"></i>Przypisani użytkownicy
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div th:if="${task.assignments != null and !task.assignments.empty}">
-                        <div th:each="assignment : ${task.assignments}" class="d-flex align-items-center mb-2 p-2 border rounded">
-                            <i class="bi bi-person-circle me-2 text-muted"></i>
-                            <div class="flex-grow-1">
-                                <div class="fw-bold" th:text="${assignment.user.firstName + ' ' + assignment.user.lastName}"></div>
-                                <small class="text-muted" th:text="${assignment.user.email}"></small>
-                            </div>
-                            <span class="badge ms-2" th:class="${assignment.status.name() == 'ASSIGNED' ? 'bg-secondary' : (assignment.status.name() == 'IN_PROGRESS' ? 'bg-warning' : (assignment.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger'))}" th:text="${assignment.status.displayName}"></span>
-                        </div>
-                    </div>
-                    <div th:if="${task.assignments == null or task.assignments.empty}" class="text-muted text-center py-3">
-                        <i class="bi bi-people"></i>
-                        <p class="mt-2 mb-0">Brak przypisanych użytkowników</p>
-                    </div>
-                </div>
-            </div>
+<!--            <div class="card mb-4">-->
+<!--                <div class="card-header">-->
+<!--                    <h5 class="card-title mb-0">-->
+<!--                        <i class="bi bi-people me-2"></i>Przypisani użytkownicy-->
+<!--                    </h5>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <div th:if="${task.assignments != null and !task.assignments.empty}">-->
+<!--                        <div th:each="assignment : ${task.assignments}" class="d-flex align-items-center mb-2 p-2 border rounded">-->
+<!--                            <i class="bi bi-person-circle me-2 text-muted"></i>-->
+<!--                            <div class="flex-grow-1">-->
+<!--                                <div class="fw-bold" th:text="${assignment.user.firstName + ' ' + assignment.user.lastName}"></div>-->
+<!--                                <small class="text-muted" th:text="${assignment.user.email}"></small>-->
+<!--                            </div>-->
+<!--                            <span class="badge ms-2" th:class="${assignment.status.name() == 'ASSIGNED' ? 'bg-secondary' : (assignment.status.name() == 'IN_PROGRESS' ? 'bg-warning' : (assignment.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger'))}" th:text="${assignment.status.displayName}"></span>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div th:if="${task.assignments == null or task.assignments.empty}" class="text-muted text-center py-3">-->
+<!--                        <i class="bi bi-people"></i>-->
+<!--                        <p class="mt-2 mb-0">Brak przypisanych użytkowników</p>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
         </div>
 
         <!-- Sidebar -->
@@ -235,6 +235,11 @@
                                             </button>
                                         </form>
                                     </div>
+
+                                    <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/files(meetingId=${meeting.id}, taskId=${task.id})}"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>Dołącz plik
+                                    </a>
                                 </div>
                             </div>
                         </div>

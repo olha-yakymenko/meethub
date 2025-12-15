@@ -10,8 +10,8 @@ public enum ParticipationStatus {
 
     CONFIRMED("Potwierdzony"),       // Potwierdził uczestnictwo
 
-    ATTENDED("Był obecny"),
-    WAITING_LIST("Lista oczekujących");
+    ATTENDED("Był obecny");
+//    WAITING_LIST("Lista oczekujących");
 
 
     //    PESENT("Obecny");

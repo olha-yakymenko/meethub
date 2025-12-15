@@ -1172,12 +1172,12 @@ public class MeetingServiceImpl implements MeetingService {
                         MeetingSpecification.buildParticipationStatusPredicate(root, query, cb, userId,
                                 ParticipationStatus.DECLINED)
                 );
-
-            case "WAITING_LIST":
-                return spec.and((root, query, cb) ->
-                        MeetingSpecification.buildParticipationStatusPredicate(root, query, cb, userId,
-                                ParticipationStatus.WAITING_LIST)
-                );
+//
+//            case "WAITING_LIST":
+//                return spec.and((root, query, cb) ->
+//                        MeetingSpecification.buildParticipationStatusPredicate(root, query, cb, userId,
+//                                ParticipationStatus.WAITING_LIST)
+//                );
 
             case "ATTENDED":
                 return spec.and((root, query, cb) ->

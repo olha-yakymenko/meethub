@@ -95,6 +95,9 @@ public interface TaskService {
     TaskFile getFileById(Long fileId);
 
     @Transactional
+    TaskFile uploadFileToAssignment(Long assignmentId, MultipartFile file, Long userId, String description);
+
+    @Transactional
     TaskFile uploadFileToTask(Long taskId, MultipartFile file, Long userId, String description);
 
     Resource downloadFile(
@@ -109,6 +112,12 @@ public interface TaskService {
 //
 //    @Transactional(readOnly = true)
 //    List<TaskFile> getAllTaskFilesForOrganizer(Long taskId, Long userId);
+
+    @Transactional(readOnly = true)
+    List<TaskFile> getTaskFiles(Long taskId, Long userId);
+
+    @Transactional(readOnly = true)
+    List<TaskFile> getAllTaskFilesForOrganizer(Long taskId, Long userId);
 
     void deleteFile(
             @NotNull @Positive Long fileId,
@@ -184,7 +193,13 @@ public interface TaskService {
 //    TaskFile uploadTaskFile(Long taskId, MultipartFile file, Long userId, String description);
 
     @Transactional(readOnly = true)
+    List<TaskFile> getUserFilesForTask(Long taskId, Long userId);
+
+    @Transactional(readOnly = true)
     boolean canUserUploadToTask(Long taskId, Long userId);
+
+    @Transactional(readOnly = true)
+    boolean canUserViewTaskFiles(Long taskId, Long userId);
 //
 //    @Transactional(readOnly = true)
 //    boolean canUserViewTaskFiles(Long taskId, Long userId);

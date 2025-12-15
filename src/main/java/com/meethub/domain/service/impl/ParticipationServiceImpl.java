@@ -210,7 +210,7 @@ public class ParticipationServiceImpl implements ParticipationService {
         MeetingParticipant participant = MeetingParticipant.builder()
                 .meeting(meeting)
                 .user(user)
-                .status(ParticipationStatus.WAITING_LIST)
+                .status(ParticipationStatus.PENDING)
 //                .invitedAt(LocalDateTime.now())
                 .build();
 
@@ -224,7 +224,7 @@ public class ParticipationServiceImpl implements ParticipationService {
 
         MeetingParticipant participant = getParticipant(meetingId, userId);
 
-        if (participant.getStatus() != ParticipationStatus.WAITING_LIST) {
+        if (participant.getStatus() != ParticipationStatus.PENDING) {
             throw new BusinessException("User is not on waiting list");
         }
 

@@ -30,7 +30,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Validated // DODANE - walidacja dla kontrolera webowego
 @Slf4j
@@ -557,110 +561,118 @@ public class MeetingTaskController {
     }
 // MeetingTaskController.java - poprawione metody
 //
-//    @GetMapping("/{taskId}/files")
-//    @Operation(summary = "Lista plików zadania", description = "Wyświetla wszystkie pliki przypisane do zadania.")
-//    public String getTaskFiles(
-//            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-//            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-//            Long meetingId,
-//
-//            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
-//            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
-//            Long taskId,
-//
-//            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
-//            CustomUserDetails userDetails,
-//            Model model) {
-//
-//        try {
-//            log.info("Wyświetlanie plików dla zadania ID={} przez użytkownika {}", taskId, userDetails.getId());
-//
-//            // Używamy serwisu do pobrania zadania i spotkania
-//            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
-//
-//            List<TaskFile> files = taskService.getTaskFiles(taskId, userDetails.getId());
-//            boolean canUpload = taskService.canUserUploadToTask(taskId, userDetails.getId());
-//
-//            model.addAttribute("meeting", response.getMeeting());
-//            model.addAttribute("task", response.getTask());
-//            model.addAttribute("files", files);
-//            model.addAttribute("isOrganizer", response.isOrganizer());
-//            model.addAttribute("canUpload", canUpload);
-//            model.addAttribute("userId", userDetails.getId());
-//
-//            return "meetings/tasks/files";
-//
-//        } catch (Exception e) {
-//            log.error("Błąd podczas wyświetlania plików zadania {}: {}", taskId, e.getMessage(), e);
-//            model.addAttribute("error", e.getMessage());
-//            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
-//        }
-//    }
+@GetMapping("/{taskId}/files")
+@Operation(summary = "Lista plików zadania", description = "Wyświetla pliki przypisane do zadania.")
+public String getTaskFiles(
+        @PathVariable @NotNull Long meetingId,
+        @PathVariable @NotNull Long taskId,
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        Model model) {
 
-//    @PostMapping("/{taskId}/files/upload")
-//    @Operation(summary = "Prześlij plik do zadania", description = "Przesyła nowy plik do zadania.")
-//    public String uploadTaskFile(
-//            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-//            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-//            Long meetingId,
-//
-//            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
-//            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
-//            Long taskId,
-//
-//            @RequestParam("file") @NotNull(message = "Plik nie może być pusty")
-//            MultipartFile file,
-//
-//            @RequestParam(value = "description", required = false, defaultValue = "")
-//            @Size(max = 500, message = "Opis nie może przekraczać 500 znaków")
-//            String description,
-//
-//            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
-//            CustomUserDetails userDetails,
-//            RedirectAttributes redirectAttributes) {
-//
-//        try {
-//            log.info("Przesyłanie pliku do zadania ID={} przez użytkownika {}", taskId, userDetails.getId());
-//
-//            // Sprawdź czy użytkownik ma dostęp do zadania
-//            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
-//
-//            TaskFile uploadedFile;
-//
-//            if (response.isOrganizer()) {
-//                // Organizator wrzuca plik bezpośrednio do zadania
-//                uploadedFile = taskService.uploadFileToTask(taskId, file, userDetails.getId(), description);
-//            } else {
-//                // Dla użytkownika - sprawdź czy jest przypisany do zadania
-//                // Najpierw sprawdź czy może uploadować
-//                if (!taskService.canUserUploadToTask(taskId, userDetails.getId())) {
-//                    throw new RuntimeException("Nie masz uprawnień do przesyłania plików do tego zadania");
-//                }
-//
-//                // Pobierz assignment dla tego użytkownika i zadania
-//                List<TaskAssignment> userAssignments = taskService.getUserAssignments(userDetails.getId());
-//                TaskAssignment userAssignment = userAssignments.stream()
-//                        .filter(assignment -> assignment.getTask().getId().equals(taskId))
-//                        .findFirst()
-//                        .orElseThrow(() -> new RuntimeException("Nie jesteś przypisany do tego zadania"));
-//
-//                uploadedFile = taskService.uploadFileToAssignment(userAssignment.getId(), file, userDetails.getId(), description);
-//            }
-//
-//            redirectAttributes.addFlashAttribute("success",
-//                    String.format("Plik '%s' został przesłany", uploadedFile.getOriginalFilename()));
-//
-//        } catch (jakarta.validation.ConstraintViolationException e) {
-//            log.warn("Błąd walidacji podczas przesyłania pliku: {}", e.getMessage());
-//            redirectAttributes.addFlashAttribute("error", "Nieprawidłowe dane wejściowe");
-//
-//        } catch (Exception e) {
-//            log.error("Błąd podczas przesyłania pliku do zadania {}: {}", taskId, e.getMessage(), e);
-//            redirectAttributes.addFlashAttribute("error", e.getMessage());
-//        }
-//
-//        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/files";
-//    }
+    try {
+        log.info("Wyświetlanie plików dla zadania ID={} przez użytkownika {}",
+                taskId, userDetails.getId());
+
+        // Pobierz dane zadania
+        MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(
+                meetingId, taskId, userDetails.getId());
+
+        List<TaskFile> files;
+
+        if (response.isOrganizer()) {
+            // ✅ ORGANIZATOR widzi WSZYSTKIE pliki
+            files = taskService.getAllTaskFilesForOrganizer(taskId, userDetails.getId());
+            log.info("Organizer view - showing ALL files: {}", files.size());
+        } else {
+            // ✅ ZWYKŁY UŻYTKOWNIK widzi tylko SWOJE pliki
+            files = taskService.getUserFilesForTask(taskId, userDetails.getId());
+            log.info("User view - showing USER'S files: {}", files.size());
+        }
+
+        boolean canUpload = taskService.canUserUploadToTask(taskId, userDetails.getId());
+
+        model.addAttribute("meeting", response.getMeeting());
+        model.addAttribute("task", response.getTask());
+        model.addAttribute("files", files);
+        model.addAttribute("isOrganizer", response.isOrganizer());
+        model.addAttribute("canUpload", canUpload);
+        model.addAttribute("userId", userDetails.getId());
+
+        return "meetings/tasks/files";
+
+    } catch (Exception e) {
+        log.error("Błąd podczas wyświetlania plików zadania {}: {}", taskId, e.getMessage(), e);
+        model.addAttribute("error", e.getMessage());
+        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+    }
+}
+
+
+
+    @PostMapping("/{taskId}/files/upload")
+    @Operation(summary = "Prześlij plik do zadania", description = "Przesyła nowy plik do zadania.")
+    public String uploadTaskFile(
+            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
+            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+            Long meetingId,
+
+            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
+            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
+            Long taskId,
+
+            @RequestParam("file") @NotNull(message = "Plik nie może być pusty")
+            MultipartFile file,
+
+            @RequestParam(value = "description", required = false, defaultValue = "")
+            @Size(max = 500, message = "Opis nie może przekraczać 500 znaków")
+            String description,
+
+            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
+            CustomUserDetails userDetails,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            log.info("Przesyłanie pliku do zadania ID={} przez użytkownika {}", taskId, userDetails.getId());
+
+            // Sprawdź czy użytkownik ma dostęp do zadania
+            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
+
+            TaskFile uploadedFile;
+
+            if (response.isOrganizer()) {
+                // Organizator wrzuca plik bezpośrednio do zadania
+                uploadedFile = taskService.uploadFileToTask(taskId, file, userDetails.getId(), description);
+            } else {
+                // Dla użytkownika - sprawdź czy jest przypisany do zadania
+                if (!taskService.canUserUploadToTask(taskId, userDetails.getId())) {
+                    throw new RuntimeException("Nie masz uprawnień do przesyłania plików do tego zadania");
+                }
+
+                // Używamy metody uploadFileToAssignment jeśli użytkownik ma assignment
+                // Szukamy assignment dla tego użytkownika i zadania
+                List<TaskAssignment> userAssignments = taskService.getUserAssignments(userDetails.getId());
+                TaskAssignment userAssignment = userAssignments.stream()
+                        .filter(assignment -> assignment.getTask().getId().equals(taskId))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("Nie jesteś przypisany do tego zadania"));
+
+                uploadedFile = taskService.uploadFileToAssignment(userAssignment.getId(), file, userDetails.getId(), description);
+            }
+
+            redirectAttributes.addFlashAttribute("success",
+                    String.format("Plik '%s' został przesłany", uploadedFile.getOriginalFilename()));
+
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            log.warn("Błąd walidacji podczas przesyłania pliku: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Nieprawidłowe dane wejściowe");
+
+        } catch (Exception e) {
+            log.error("Błąd podczas przesyłania pliku do zadania {}: {}", taskId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+
+        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/files";
+    }
 
     @GetMapping("/{taskId}/files/{fileId}/download")
     @Operation(summary = "Pobierz plik", description = "Pobiera plik przypisany do zadania.")
@@ -744,6 +756,75 @@ public class MeetingTaskController {
         }
 
         return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/files";
+    }
+
+
+
+    @GetMapping("/{taskId}/organizer-view")
+    @Operation(summary = "Widok organizatora", description = "Szczegółowy widok zadania dla organizatora z wszystkimi plikami i przypisaniami.")
+    public String getOrganizerTaskView(
+            @PathVariable @NotNull Long meetingId,
+            @PathVariable @NotNull Long taskId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model) {
+
+        try {
+            log.info("=== ORGANIZER VIEW START ===");
+
+            // Pobierz dane zadania
+            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(
+                    meetingId, taskId, userDetails.getId());
+
+            if (!response.isOrganizer()) {
+                return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+            }
+
+            // Pobierz WSZYSTKIE pliki
+            List<TaskFile> allFiles = taskService.getAllTaskFilesForOrganizer(taskId, userDetails.getId());
+            if (allFiles == null) {
+                allFiles = new ArrayList<>();
+            }
+            log.info("All files count: {}", allFiles.size());
+
+            // Pobierz wszystkie przypisania
+            List<TaskAssignment> assignments = taskService.getTaskAssignments(taskId);
+            if (assignments == null) {
+                assignments = new ArrayList<>();
+            }
+            log.info("Assignments count: {}", assignments.size());
+
+            // Grupuj pliki według użytkownika
+            Map<User, List<TaskFile>> filesByUser = new HashMap<>();
+            if (allFiles != null) {
+                filesByUser = allFiles.stream()
+                        .filter(file -> file.getUploadedBy() != null)
+                        .collect(Collectors.groupingBy(TaskFile::getUploadedBy));
+            }
+            log.info("Files by user map size: {}", filesByUser.size());
+
+            // Statystyki
+            long totalFiles = allFiles.size();
+            long totalSize = allFiles.stream()
+                    .mapToLong(file -> file.getFileSize() != null ? file.getFileSize() : 0)
+                    .sum();
+            String totalSizeMB = String.format("%.2f", totalSize / (1024.0 * 1024.0));
+
+            // Dodaj atrybuty do modelu
+            model.addAttribute("meeting", response.getMeeting());
+            model.addAttribute("task", response.getTask());
+            model.addAttribute("assignments", assignments);
+            model.addAttribute("allFiles", allFiles);
+            model.addAttribute("filesByUser", filesByUser);
+            model.addAttribute("totalFiles", totalFiles);
+            model.addAttribute("totalSizeMB", totalSizeMB);
+
+            log.info("=== ORGANIZER VIEW END ===");
+            return "meetings/tasks/organizer-view"; // Użyj prostszego szablonu
+
+        } catch (Exception e) {
+            log.error("Błąd w widoku organizatora: {}", e.getMessage(), e);
+            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+        }
     }
 }
 

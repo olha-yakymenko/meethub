@@ -111,16 +111,47 @@
                                 </span>
                             </td>
 
+<!--                            &lt;!&ndash; Akcje &ndash;&gt;-->
+<!--                            <td>-->
+<!--                                <div class="btn-group btn-group-sm">-->
+<!--                                    &lt;!&ndash; Edycja (jeśli endpoint istnieje) &ndash;&gt;-->
+<!--                                    <a th:href="@{/meetings/{meetingId}/participants/{participantId}/edit(meetingId=${meetingId}, participantId=${participant.id})}"-->
+<!--                                       class="btn btn-outline-primary" title="Edytuj" th:if="${false}">-->
+<!--                                        <i class="bi bi-pencil"></i>-->
+<!--                                    </a>-->
+<!--                                    &lt;!&ndash; Usuwanie &ndash;&gt;-->
+<!--                                    <button th:if="${isOrganizer}"-->
+<!--                                            th:data-user-name="${participant.getFullName()}"-->
+<!--                                            th:data-participant-id="${participant.id}"-->
+<!--                                            onclick="confirmDelete(this.getAttribute('data-user-name'), this.getAttribute('data-participant-id'))"-->
+<!--                                            class="btn btn-outline-danger" title="Usuń">-->
+<!--                                        <i class="bi bi-trash"></i>-->
+<!--                                    </button>-->
+<!--                                </div>-->
+<!--                            </td>-->
+
                             <!-- Akcje -->
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <!-- Edycja (jeśli endpoint istnieje) -->
-                                    <a th:href="@{/meetings/{meetingId}/participants/{participantId}/edit(meetingId=${meetingId}, participantId=${participant.id})}"
-                                       class="btn btn-outline-primary" title="Edytuj" th:if="${false}">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <!-- Usuwanie -->
-                                    <button th:if="${isOrganizer}"
+                                    <!-- Akceptacja - tylko dla PENDING i jeśli organizator -->
+                                    <form th:action="@{/meetings/{meetingId}/participants/{participantId}/approve(meetingId=${meetingId}, participantId=${participant.id})}"
+                                          method="post" th:if="${isOrganizer and participant.status == 'PENDING'}" style="display: inline;">
+                                        <button type="submit" class="btn btn-outline-success" title="Zaakceptuj">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Odrzucenie - tylko dla PENDING i jeśli organizator -->
+                                    <form th:action="@{/meetings/{meetingId}/participants/{participantId}/reject(meetingId=${meetingId}, participantId=${participant.id})}"
+                                          method="post" th:if="${isOrganizer and participant.status == 'PENDING'}" style="display: inline;">
+                                        <button type="submit" class="btn btn-outline-danger" title="Odrzuć">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+
+
+                                    <!-- Usuwanie - ukryte dla PENDING (mamy osobne przyciski) -->
+                                    <button th:if="${isOrganizer and participant.status != 'PENDING'}"
                                             th:data-user-name="${participant.getFullName()}"
                                             th:data-participant-id="${participant.id}"
                                             onclick="confirmDelete(this.getAttribute('data-user-name'), this.getAttribute('data-participant-id'))"
