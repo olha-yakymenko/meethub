@@ -30,7 +30,7 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@Disabled
+
 @SpringBootTest
 @AutoConfigureMockMvc
 //@ActiveProfiles("test")
@@ -123,14 +123,6 @@ class AnalyticsControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.organizerId", is(testUser.getId().intValue())));
     }
 
-//    @Test
-//    @WithMockUser(username = "test@example.com")
-//    void getMyOrganizerReport_shouldReturnReport() throws Exception {
-//        mockMvc.perform(get("/api/v1/analytics/my-report")
-//                        .param("dateRange.from", LocalDateTime.now().minusMonths(1).toString()))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success", is(true)));
-//    }
 }
 
 

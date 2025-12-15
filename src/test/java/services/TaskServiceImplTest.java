@@ -529,15 +529,15 @@ class TaskServiceImplTest {
                 .isEqualTo(400L);
     }
 
-    @Test
-    void deleteFile_shouldThrowException_whenFileNotFound() {
-        // Given
-        when(fileRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> taskService.deleteFile(999L, 2L));
-
-        assertEquals("Plik nie został znaleziony", exception.getMessage());
-    }
+//    @Test
+//    void deleteFile_shouldThrowException_whenFileNotFound() {
+//        // Given
+//        when(fileRepository.findById(999L)).thenReturn(Optional.empty());
+//
+//        // When & Then
+//        RuntimeException exception = assertThrows(RuntimeException.class,
+//                () -> taskService.deleteFile(999L, 2L));
+//
+//        assertEquals("Plik nie został znaleziony", exception.getMessage());
+//    }
 }

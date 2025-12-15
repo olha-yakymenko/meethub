@@ -332,31 +332,31 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Resource downloadFile(Long fileId, Long userId) {
-        log.debug("Downloading file: {}, user: {}", fileId, userId);
-
-        TaskFile taskFile = fileRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("Plik nie został znaleziony"));
-
-        validateFileAccess(taskFile, userId);
-
-        try {
-            Path filePath = Paths.get(taskFile.getFilePath());
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists() && resource.isReadable()) {
-                log.info("File downloaded successfully: {}", fileId);
-                return resource;
-            } else {
-                throw new RuntimeException("Plik nie istnieje lub nie można go odczytać");
-            }
-        } catch (MalformedURLException e) {
-            log.error("Error downloading file: {}", e.getMessage());
-            throw new RuntimeException("Błąd podczas pobierania pliku: " + e.getMessage());
-        }
-    }
+//    @Override
+//    @Transactional(readOnly = true)
+//    public Resource downloadFile(Long fileId, Long userId) {
+//        log.debug("Downloading file: {}, user: {}", fileId, userId);
+//
+//        TaskFile taskFile = fileRepository.findById(fileId)
+//                .orElseThrow(() -> new RuntimeException("Plik nie został znaleziony"));
+//
+//        validateFileAccess(taskFile, userId);
+//
+//        try {
+//            Path filePath = Paths.get(taskFile.getFilePath());
+//            Resource resource = new UrlResource(filePath.toUri());
+//
+//            if (resource.exists() && resource.isReadable()) {
+//                log.info("File downloaded successfully: {}", fileId);
+//                return resource;
+//            } else {
+//                throw new RuntimeException("Plik nie istnieje lub nie można go odczytać");
+//            }
+//        } catch (MalformedURLException e) {
+//            log.error("Error downloading file: {}", e.getMessage());
+//            throw new RuntimeException("Błąd podczas pobierania pliku: " + e.getMessage());
+//        }
+//    }
 
     @Override
     @Transactional(readOnly = true)
@@ -636,6 +636,300 @@ public class TaskServiceImpl implements TaskService {
                 .build();
     }
 
+
+// TaskServiceImpl.java - dodaj te metody
+
+    @Transactional(readOnly = true)
+    @Override
+    public TaskFile getFileById(Long fileId) {
+        log.debug("Getting file by ID: {}", fileId);
+        return fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("Plik nie został znaleziony"));
+    }
+//
+//    @Override
+//    @Transactional
+//    public TaskFile uploadFileToAssignment(Long assignmentId, MultipartFile file, Long userId, String description) {
+//        log.info("Uploading file to assignment: {}, user: {}, filename: {}",
+//                assignmentId, userId, file.getOriginalFilename());
+//
+//        TaskAssignment assignment = getAssignmentById(assignmentId);
+//        validateAssignmentAccess(assignment, userId);
+//
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("Użytkownik nie został znaleziony"));
+//
+//        Task task = assignment.getTask();
+//
+//        return saveFile(file, user, description, task, assignment);
+//    }
+
+    @Transactional
+    @Override
+    public TaskFile uploadFileToTask(Long taskId, MultipartFile file, Long userId, String description) {
+        log.info("Uploading file to task: {}, user: {}, filename: {}",
+                taskId, userId, file.getOriginalFilename());
+
+        Task task = getTaskById(taskId);
+        Meeting meeting = task.getMeeting();
+
+        // Tylko organizator może wrzucać pliki bezpośrednio do zadania
+        if (!meeting.getOrganizer().getId().equals(userId)) {
+            throw new RuntimeException("Tylko organizator może wrzucać pliki bezpośrednio do zadania");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Użytkownik nie został znaleziony"));
+
+        return saveFile(file, user, description, task, null);
+    }
+
+    private TaskFile saveFile(MultipartFile file, User user, String description, Task task, TaskAssignment assignment) {
+        if (file.isEmpty()) {
+            throw new RuntimeException("Plik jest pusty");
+        }
+
+        try {
+            // Bezpieczna nazwa katalogu użytkownika
+            String userEmail = user.getEmail();
+            String safeUserDir = userEmail.replace("@", "_at_").replace(".", "_");
+            String taskDir = "task_" + task.getId();
+
+            Path uploadPath = Paths.get(uploadDir, "tasks", taskDir, safeUserDir);
+            Files.createDirectories(uploadPath);
+
+            // Unikalna nazwa pliku: timestamp_userId_randomUUID_originalName
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = getFileExtension(originalFilename);
+            String baseName = originalFilename.substring(0, originalFilename.lastIndexOf('.'));
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String randomId = UUID.randomUUID().toString().substring(0, 8);
+
+            // Usuń niebezpieczne znaki z nazwy
+            String safeBaseName = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String uniqueFilename = timestamp + "_" + user.getId() + "_" + randomId + "_" + safeBaseName + fileExtension;
+
+            Path filePath = uploadPath.resolve(uniqueFilename);
+
+            // Walidacja na podstawie ustawień zadania
+//            validateFileAgainstTaskSettings(file, task);
+
+            // Zapisz plik
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Utwórz rekord w bazie
+            TaskFile taskFile = TaskFile.builder()
+                    .filename(uniqueFilename)
+                    .originalFilename(originalFilename)
+                    .filePath(filePath.toString())
+                    .fileSize(file.getSize())
+                    .contentType(file.getContentType())
+                    .assignment(assignment)
+                    .uploadedAt(LocalDateTime.now())
+                    .build();
+
+            TaskFile savedFile = fileRepository.save(taskFile);
+            log.info("File uploaded successfully: {}", savedFile.getId());
+            return savedFile;
+
+        } catch (IOException e) {
+            log.error("Error uploading file: {}", e.getMessage());
+            throw new RuntimeException("Błąd podczas zapisywania pliku: " + e.getMessage());
+        }
+    }
+
+//    private void validateFileAgainstTaskSettings(MultipartFile file, Task task) {
+//        // Walidacja rozmiaru pliku
+//        if (task.getMaxFileSize() != null && task.getMaxFileSize() > 0) {
+//            long maxSizeBytes = task.getMaxFileSize();
+//            if (file.getSize() > maxSizeBytes) {
+//                throw new RuntimeException(
+//                        String.format("Plik przekracza maksymalny rozmiar %d MB",
+//                                task.getMaxFileSize() / (1024 * 1024))
+//                );
+//            }
+//        }
+//
+//        // Walidacja typu pliku
+//        if (task.getAllowedFileTypes() != null && !task.getAllowedFileTypes().isEmpty()) {
+//            String contentType = file.getContentType();
+//            String originalFilename = file.getOriginalFilename();
+//
+//            if (contentType == null) {
+//                contentType = "application/octet-stream";
+//            }
+//
+//            // Sprawdź czy typ jest dozwolony
+//            String[] allowedTypes = task.getAllowedFileTypes().split(",");
+//            boolean allowed = false;
+//
+//            for (String allowedType : allowedTypes) {
+//                String trimmedType = allowedType.trim().toLowerCase();
+//
+//                // Sprawdź typ MIME
+//                if (contentType.toLowerCase().contains(trimmedType)) {
+//                    allowed = true;
+//                    break;
+//                }
+//
+//                // Sprawdź rozszerzenie
+//                if (originalFilename != null &&
+//                        originalFilename.toLowerCase().endsWith("." + trimmedType)) {
+//                    allowed = true;
+//                    break;
+//                }
+//            }
+//
+//            if (!allowed) {
+//                throw new RuntimeException(
+//                        String.format("Typ pliku '%s' nie jest dozwolony. Dozwolone typy: %s",
+//                                contentType, task.getAllowedFileTypes())
+//                );
+//            }
+//        }
+//    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Resource downloadFile(Long fileId, Long userId) {
+        log.debug("Downloading file: {}, user: {}", fileId, userId);
+
+        TaskFile taskFile = getFileById(fileId);
+        validateFileAccess(taskFile, userId);
+
+        try {
+            Path filePath = Paths.get(taskFile.getFilePath());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                log.info("File downloaded successfully: {}", fileId);
+                return resource;
+            } else {
+                throw new RuntimeException("Plik nie istnieje lub nie można go odczytać");
+            }
+        } catch (MalformedURLException e) {
+            log.error("Error downloading file: {}", e.getMessage());
+            throw new RuntimeException("Błąd podczas pobierania pliku: " + e.getMessage());
+        }
+    }
+
+//    @Override
+//    @Transactional(readOnly = true)
+//    public List<TaskFile> getTaskFiles(Long taskId, Long userId) {
+//        log.debug("Getting all files for task: {}, user: {}", taskId, userId);
+//
+//        Task task = getTaskById(taskId);
+//
+//        if (!canUserViewTaskFiles(taskId, userId)) {
+//            throw new RuntimeException("Brak uprawnień do przeglądania plików tego zadania");
+//        }
+//
+//        // Pobierz wszystkie pliki związane z tym zadaniem
+//        // (zarówno powiązane z assignment, jak i bezpośrednio z task)
+//        List<TaskFile> files = new ArrayList<>();
+//
+//        // Pliki przypisań
+//        List<TaskAssignment> assignments = assignmentRepository.findByTaskId(taskId);
+//        for (TaskAssignment assignment : assignments) {
+//            files.addAll(fileRepository.findByAssignmentId(assignment.getId()));
+//        }
+//
+//        // Pliki bezpośrednio powiązane z zadaniem (dla organizatora)
+//        files.addAll(fileRepository.findByTaskIdAndAssignmentIsNull(taskId));
+//
+//        return files;
+//    }
+
+//    @Transactional(readOnly = true)
+//    @Override
+//    public List<TaskFile> getAllTaskFilesForOrganizer(Long taskId, Long userId) {
+//        log.debug("Getting all files for task (organizer view): {}, user: {}", taskId, userId);
+//
+//        Task task = getTaskById(taskId);
+//        Meeting meeting = task.getMeeting();
+//
+//        if (!meeting.getOrganizer().getId().equals(userId)) {
+//            throw new RuntimeException("Tylko organizator może przeglądać wszystkie pliki zadania");
+//        }
+//
+//        return fileRepository.findByTaskId(taskId);
+//    }
+
+//    @Override
+//    @Transactional
+//    public void deleteFile(Long fileId, Long userId) {
+//        log.info("Deleting file: {}, user: {}", fileId, userId);
+//
+//        TaskFile taskFile = getFileById(fileId);
+//
+//        // Sprawdź uprawnienia: organizator lub osoba która wrzuciła plik
+//        Task task = taskFile.getAssignment() != null ?
+//                taskFile.getAssignment().getTask() :
+//                getTaskById(taskFile.getId()); // potrzebujesz relacji TaskFile -> Task
+//
+//        Meeting meeting = task.getMeeting();
+//        boolean isOrganizer = meeting.getOrganizer().getId().equals(userId);
+//        boolean isUploader = taskFile.getUploadedBy().getId().equals(userId);
+//
+//        if (!isOrganizer && !isUploader) {
+//            throw new RuntimeException("Brak uprawnień do usunięcia tego pliku");
+//        }
+//
+//        try {
+//            // Usuń plik fizycznie
+//            Path filePath = Paths.get(taskFile.getFilePath());
+//            Files.deleteIfExists(filePath);
+//
+//            // Usuń z bazy
+//            fileRepository.delete(taskFile);
+//            log.info("File deleted successfully: {}", fileId);
+//        } catch (IOException e) {
+//            log.error("Error deleting file: {}", e.getMessage());
+//            throw new RuntimeException("Błąd podczas usuwania pliku: " + e.getMessage());
+//        }
+//    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public boolean canUserUploadToTask(Long taskId, Long userId) {
+        try {
+            Task task = getTaskById(taskId);
+            Meeting meeting = task.getMeeting();
+
+            // Organizator może zawsze
+            if (meeting.getOrganizer().getId().equals(userId)) {
+                return true;
+            }
+
+            // Użytkownik przypisany do zadania może
+            boolean isAssigned = assignmentRepository.findByTaskIdAndUserId(taskId, userId).isPresent();
+            return isAssigned;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+//    @Transactional(readOnly = true)
+//    @Override
+//    public boolean canUserViewTaskFiles(Long taskId, Long userId) {
+//        try {
+//            Task task = getTaskById(taskId);
+//            Meeting meeting = task.getMeeting();
+//
+//            // Organizator może zawsze
+//            if (meeting.getOrganizer().getId().equals(userId)) {
+//                return true;
+//            }
+//
+//            // Użytkownik przypisany do zadania może
+//            boolean isAssigned = assignmentRepository.findByTaskIdAndUserId(taskId, userId).isPresent();
+//            return isAssigned;
+//
+//        } catch (Exception e) {
+//            return false;
+//        }
+//    }
 
 }
 

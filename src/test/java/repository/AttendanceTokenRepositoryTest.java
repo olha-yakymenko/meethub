@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -16,7 +17,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-//@ActiveProfiles("test")
+@ActiveProfiles("postgres")
+//@Sql(scripts = "/data.sql")
 class AttendanceTokenRepositoryTest {
 
     @Autowired

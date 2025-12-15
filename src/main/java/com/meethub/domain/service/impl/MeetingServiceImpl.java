@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,7 @@ public class MeetingServiceImpl implements MeetingService {
     private final MeetingAuthorizationService meetingAuthorizationService;
     private final CategoryRepository categoryRepository;
 
+    private final JdbcTemplate jdbcTemplate;
     private final MeetingSchedulerService meetingSchedulerService;
 
     @Override
@@ -175,7 +177,10 @@ public class MeetingServiceImpl implements MeetingService {
     @Override
     @Transactional
     public MeetingResponse updateMeeting(Long meetingId, UpdateMeetingRequest request, Long userId) {
-        log.info("Updating meeting {} by user {}", meetingId, userId);
+        log.info("=== START updateMeeting ===");
+        log.info("Meeting ID: {}, User ID: {}", meetingId, userId);
+        log.info("Request: title={}, status={}, statusChangeReason={}",
+                request.getTitle(), request.getStatus(), request.getStatusChangeReason());
 
         // 1. SPRAWDŹ UPRAWNIENIA
         if (!meetingAuthorizationService.canUserEditMeeting(meetingId, userId)) {
@@ -185,16 +190,20 @@ public class MeetingServiceImpl implements MeetingService {
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
 
+        log.info("Found meeting: id={}, title={}, status={}",
+                meeting.getId(), meeting.getTitle(), meeting.getStatus());
+
         // 2. ZAPISZ STARE DANE DO PORÓWNANIA
         MeetingStatus oldStatus = meeting.getStatus();
         LocalDateTime oldStartDate = meeting.getStartDate();
         LocalDateTime oldEndDate = meeting.getEndDate();
         String oldTitle = meeting.getTitle();
-        Location oldLocation = meeting.getLocation() != null ?
-                new Location(meeting.getLocation()) : null; // głęboka kopia jeśli potrzeba
+
+        log.info("Old data: status={}, title={}", oldStatus, oldTitle);
 
         // 3. ZAPISZ ZMIANĘ STATUSU W HISTORII
         if (request.getStatus() != null && !request.getStatus().equals(oldStatus)) {
+            log.info("Status change detected: {} -> {}", oldStatus, request.getStatus());
             saveStatusChange(meeting, oldStatus.name(),
                     request.getStatus().name(), userId, request.getStatusChangeReason());
 
@@ -219,23 +228,32 @@ public class MeetingServiceImpl implements MeetingService {
             log.info("Updated categories for meeting {}: {} categories", meetingId, categories.size());
         }
 
-        // 5. AKTUALIZUJ POZOSTAŁE POLA
+        // 5. AKTUALIZUJ POZOSTAŁE POLA - DODAJ LOG PRZED I PO
+        log.info("BEFORE meetingMapper.updateEntityFromRequest - Title: {}", meeting.getTitle());
+        log.info("Calling meetingMapper.updateEntityFromRequest...");
         meetingMapper.updateEntityFromRequest(request, meeting);
+        log.info("AFTER meetingMapper.updateEntityFromRequest - Title: {}", meeting.getTitle());
+        log.info("Meeting fields after update: title={}, status={}",
+                meeting.getTitle(), meeting.getStatus());
 
         // 6. ZAPISZ ZMIANY
+        log.info("Saving meeting to repository...");
         Meeting updatedMeeting = meetingRepository.save(meeting);
-        log.info("Meeting {} updated by user {}", meetingId, userId);
+        log.info("Meeting saved: id={}, title={}, status={}",
+                updatedMeeting.getId(), updatedMeeting.getTitle(), updatedMeeting.getStatus());
 
         // 7. SPRAWDŹ CZY ZMIENIŁA SIĘ DATA I PRZEPLANUJ POWIADOMIENIA
         handleDateChanges(meetingId, updatedMeeting, oldStartDate, oldEndDate, userId);
 
-        // 8. WYŚLIJ POWIADOMIENIA O ZMIANACH (opcjonalnie)
-        if (shouldNotifyParticipantsAboutUpdate(request, oldTitle, oldStartDate, oldLocation)) {
-//            sendMeetingUpdateNotifications(updatedMeeting, userId, getChangesSummary(request, oldTitle, oldStartDate, oldEndDate, oldLocation));
-        }
+        // 8. Mapowanie odpowiedzi
+        log.info("Mapping to response...");
+        MeetingResponse response = meetingMapper.toResponse(updatedMeeting);
+        log.info("=== END updateMeeting ===");
 
-        return meetingMapper.toResponse(updatedMeeting);
+        return response;
     }
+
+
 
     /**
      * Obsługa zmian daty spotkania
@@ -303,20 +321,54 @@ public class MeetingServiceImpl implements MeetingService {
     }
 
 
+//    @Override
+//    @Transactional
+//    public void deleteMeeting(Long meetingId, Long organizerId) {
+//        // ✅ SPRAWDŹ UPRAWNIENIA
+//        if (!meetingAuthorizationService.canUserDeleteMeeting(meetingId, organizerId)) {
+//            throw new BusinessException("No permission to delete this meeting");
+//        }
+//
+//        Meeting meeting = meetingRepository.findByIdAndOrganizerId(meetingId, organizerId)
+//                .orElseThrow(() -> new ResourceNotFoundException(
+//                        "Meeting not found with id: " + meetingId + " for organizer: " + organizerId));
+//
+//        meetingRepository.delete(meeting);
+//        log.info("Meeting {} deleted by organizer {}", meetingId, organizerId);
+//    }
+
+
+
     @Override
     @Transactional
     public void deleteMeeting(Long meetingId, Long organizerId) {
-        // ✅ SPRAWDŹ UPRAWNIENIA
+        // ✅ SPRAWDŹ UPRAWNIENIA PRZEZ JPA
         if (!meetingAuthorizationService.canUserDeleteMeeting(meetingId, organizerId)) {
             throw new BusinessException("No permission to delete this meeting");
         }
 
+        // ✅ SPRAWDŹ CZY SPOTKANIE ISTNIEJE I NALEŻY DO ORGANIZATORA
         Meeting meeting = meetingRepository.findByIdAndOrganizerId(meetingId, organizerId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Meeting not found with id: " + meetingId + " for organizer: " + organizerId));
 
-        meetingRepository.delete(meeting);
-        log.info("Meeting {} deleted by organizer {}", meetingId, organizerId);
+        // ✅ UŻYJ JDBC DO USUNIĘCIA
+        // Najpierw usuń zależne rekordy (jeśli są foreign key constraints)
+        String deleteParticipantsSql = "DELETE FROM meeting_participants WHERE meeting_id = ?";
+        jdbcTemplate.update(deleteParticipantsSql, meetingId);
+
+        String deleteCategoriesSql = "DELETE FROM meeting_categories WHERE meeting_id = ?";
+        jdbcTemplate.update(deleteCategoriesSql, meetingId);
+
+        // Teraz usuń spotkanie
+        String deleteMeetingSql = "DELETE FROM meetings WHERE id = ?";
+        int deleted = jdbcTemplate.update(deleteMeetingSql, meetingId);
+
+        if (deleted == 0) {
+            throw new BusinessException("Failed to delete meeting");
+        }
+
+        log.info("Meeting {} deleted by organizer {} (via JDBC)", meetingId, organizerId);
     }
 
     @Override
@@ -353,6 +405,29 @@ public class MeetingServiceImpl implements MeetingService {
                 .toList();
     }
 
+//    @Override
+//    @Transactional
+//    public void changeMeetingStatus(Long meetingId, MeetingStatus status, Long organizerId) {
+//        // ✅ SPRAWDŹ UPRAWNIENIA
+//        if (!meetingAuthorizationService.canUserEditMeeting(meetingId, organizerId)) {
+//            throw new BusinessException("No permission to change status of this meeting");
+//        }
+//
+//        Meeting meeting = meetingRepository.findById(meetingId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
+//
+//        String oldStatus = meeting.getStatus().name();
+//        meeting.setStatus(status);
+//        meetingRepository.save(meeting);
+//
+//        // ✅ ZAPISZ W HISTORII
+//        saveStatusChange(meeting, oldStatus, status.name(), organizerId, "Zmiana statusu");
+//
+//        log.info("Meeting {} status changed from {} to {} by {}",
+//                meetingId, oldStatus, status, organizerId);
+//    }
+
+
     @Override
     @Transactional
     public void changeMeetingStatus(Long meetingId, MeetingStatus status, Long organizerId) {
@@ -361,64 +436,98 @@ public class MeetingServiceImpl implements MeetingService {
             throw new BusinessException("No permission to change status of this meeting");
         }
 
+        // ✅ UŻYJ JDBC ZAMIAST JPA
+        List<Long> meetingIds = List.of(meetingId);
+        int updated = customMeetingRepository.bulkUpdateMeetingStatus(meetingIds, status.name());
+
+        if (updated == 0) {
+            throw new ResourceNotFoundException("Meeting not found with id: " + meetingId);
+        }
+
+        // ✅ ZAPISZ W HISTORII (to nadal przez JPA)
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
 
         String oldStatus = meeting.getStatus().name();
-        meeting.setStatus(status);
-        meetingRepository.save(meeting);
+        saveStatusChange(meeting, oldStatus, status.name(), organizerId, "Status change via JDBC");
 
-        // ✅ ZAPISZ W HISTORII
-        saveStatusChange(meeting, oldStatus, status.name(), organizerId, "Zmiana statusu");
-
-        log.info("Meeting {} status changed from {} to {} by {}",
+        log.info("Meeting {} status changed from {} to {} by {} (via JDBC)",
                 meetingId, oldStatus, status, organizerId);
     }
+
+
+//    @Override
+//    @Transactional
+//    public MeetingResponse duplicateMeeting(Long meetingId, Long organizerId) {
+//        log.info("Duplicating meeting {} by user {}", meetingId, organizerId);
+//
+//        if (!meetingAuthorizationService.canUserEditMeeting(meetingId, organizerId)) {
+//            throw new BusinessException("No permission to duplicate this meeting");
+//        }
+//
+//        Meeting original = meetingRepository.findById(meetingId)
+//                .orElseThrow(() -> new ResourceNotFoundException(
+//                        "Meeting not found with id: " + meetingId));
+//
+//        Meeting duplicate = meetingMapper.cloneMeeting(original);
+//
+//        User organizer = userRepository.findById(organizerId)
+//                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + organizerId));
+//        duplicate.setOrganizer(organizer);
+//
+//        duplicate.setStartDate(original.getStartDate().plusDays(7));
+//        duplicate.setEndDate(original.getEndDate().plusDays(7));
+//
+//        if (original.getCategories() != null) {
+//            duplicate.setCategories(new HashSet<>(original.getCategories()));
+//        }
+//
+//        duplicate.setOriginalMeetingId(original.getId());
+//
+//        Meeting savedDuplicate = meetingRepository.save(duplicate);
+//
+//        saveStatusChange(savedDuplicate, null, savedDuplicate.getStatus().name(),
+//                organizerId, "Utworzono jako kopia spotkania #" + original.getId());
+//
+//        log.info("Meeting duplicated from {} to new id: {}", meetingId, savedDuplicate.getId());
+//
+//        return meetingMapper.toResponse(savedDuplicate);
+//    }
+
 
     @Override
     @Transactional
     public MeetingResponse duplicateMeeting(Long meetingId, Long organizerId) {
-        log.info("Duplicating meeting {} by user {}", meetingId, organizerId);
+        log.info("Changing status of meeting {} to PLANNED by user {}", meetingId, organizerId);
 
-        // ✅ SPRAWDŹ UPRAWNIENIA
+        // Sprawdzenie uprawnień
         if (!meetingAuthorizationService.canUserEditMeeting(meetingId, organizerId)) {
-            throw new BusinessException("No permission to duplicate this meeting");
+            throw new BusinessException("No permission to change status of this meeting");
         }
 
-        Meeting original = meetingRepository.findById(meetingId)
+        // Pobranie istniejącego spotkania
+        Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Meeting not found with id: " + meetingId));
 
-        // ✅ UŻYJ MAPPERA DO KOPIOWANIA
-        Meeting duplicate = meetingMapper.cloneMeeting(original);
+        // Zachowanie starego statusu do historii
+        String oldStatus = meeting.getStatus().name();
 
-        // ✅ USTAW NOWEGO ORGANIZATORA
-        User organizer = userRepository.findById(organizerId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + organizerId));
-        duplicate.setOrganizer(organizer);
+        // Zmiana statusu na PLANNED
+        meeting.setStatus(MeetingStatus.PLANNED);
 
-        // ✅ USTAW DATĘ NA ZA TYDZIEŃ
-        duplicate.setStartDate(original.getStartDate().plusDays(7));
-        duplicate.setEndDate(original.getEndDate().plusDays(7));
+        // Zapisanie zmian w bazie
+        Meeting updatedMeeting = meetingRepository.save(meeting);
 
-        // ✅ ZACHOWAJ KATEGORIE Z ORYGINAŁU
-        if (original.getCategories() != null) {
-            duplicate.setCategories(new HashSet<>(original.getCategories()));
-        }
+        // Zapisanie historii zmiany statusu
+        saveStatusChange(updatedMeeting, oldStatus, updatedMeeting.getStatus().name(),
+                organizerId, "Status zmieniony na PLANNED");
 
-        // ✅ USTAW REFERENCJĘ DO ORYGINAŁU
-        duplicate.setOriginalMeetingId(original.getId());
+        log.info("Meeting {} status changed from {} to {}", meetingId, oldStatus, updatedMeeting.getStatus().name());
 
-        Meeting savedDuplicate = meetingRepository.save(duplicate);
-
-        // ✅ ZAPISZ W HISTORII
-        saveStatusChange(savedDuplicate, null, savedDuplicate.getStatus().name(),
-                organizerId, "Utworzono jako kopia spotkania #" + original.getId());
-
-        log.info("Meeting duplicated from {} to new id: {}", meetingId, savedDuplicate.getId());
-
-        return meetingMapper.toResponse(savedDuplicate);
+        return meetingMapper.toResponse(updatedMeeting);
     }
+
 
     @Override
     @Transactional(readOnly = true)

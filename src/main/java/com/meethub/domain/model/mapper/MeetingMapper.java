@@ -116,12 +116,85 @@ public class MeetingMapper {
         return response;
     }
 
+//    public void updateEntityFromRequest(UpdateMeetingRequest request, Meeting meeting) {
+//        if (request == null || meeting == null) {
+//            return;
+//        }
+//
+//        if (request.getTitle() != null) {
+//            meeting.setTitle(request.getTitle());
+//        }
+//        if (request.getDescription() != null) {
+//            meeting.setDescription(request.getDescription());
+//        }
+//        if (request.getAgenda() != null) {
+//            meeting.setAgenda(request.getAgenda());
+//        }
+//        if (request.getType() != null) {
+//            meeting.setType(request.getType());
+//        }
+//        if (request.getVisibility() != null) {
+//            meeting.setVisibility(request.getVisibility());
+//        }
+//        if (request.getStartDate() != null) {
+//            meeting.setStartDate(request.getStartDate());
+//        }
+//        if (request.getEndDate() != null) {
+//            meeting.setEndDate(request.getEndDate());
+//        }
+//        if (request.getMaxParticipants() != null) {
+//            meeting.setMaxParticipants(request.getMaxParticipants());
+//        }
+//        if (request.getTags() != null) {
+//            meeting.setTags(new HashSet<>(request.getTags()));
+//        }
+//
+//        // ✅ NOWE POLA: Powtarzanie
+//        meeting.setRecurring(request.isRecurring());
+//        if (request.getRecurrencePattern() != null) {
+//            meeting.setRecurrencePattern(request.getRecurrencePattern());
+//        }
+//        if (request.getRecurrenceEndDate() != null) {
+//            meeting.setRecurrenceEndDate(request.getRecurrenceEndDate());
+//        }
+//        if (request.getRecurrenceExceptionsJson() != null) {
+//            meeting.setRecurrenceExceptionsJson(request.getRecurrenceExceptionsJson());
+//        }
+//
+//        // ✅ NOWE POLA: Status (z historią zmian)
+//        if (request.getStatus() != null && !request.getStatus().equals(meeting.getStatus())) {
+//            // Zapisz zmianę statusu w historii
+//            MeetingStatusChange statusChange = MeetingStatusChange.builder()
+//                    .meeting(meeting)
+//                    .oldStatus(meeting.getStatus().name())
+//                    .newStatus(request.getStatus().name())
+//                    .reason(request.getStatusChangeReason())
+//                    .changedAt(LocalDateTime.now())
+//                    .build();
+//
+//            if (meeting.getStatusChanges() == null) {
+//                meeting.setStatusChanges(new ArrayList<>());
+//            }
+//            meeting.getStatusChanges().add(statusChange);
+//
+//            meeting.setStatus(request.getStatus());
+//        }
+//    }
+
+
+
     public void updateEntityFromRequest(UpdateMeetingRequest request, Meeting meeting) {
         if (request == null || meeting == null) {
+            log.warn("Cannot update - request or meeting is null");
             return;
         }
 
+        log.info("updateEntityFromRequest START - Meeting title before: {}", meeting.getTitle());
+        log.info("Request fields - title: {}, status: {}",
+                request.getTitle(), request.getStatus());
+
         if (request.getTitle() != null) {
+            log.info("Updating title from '{}' to '{}'", meeting.getTitle(), request.getTitle());
             meeting.setTitle(request.getTitle());
         }
         if (request.getDescription() != null) {
@@ -163,6 +236,7 @@ public class MeetingMapper {
 
         // ✅ NOWE POLA: Status (z historią zmian)
         if (request.getStatus() != null && !request.getStatus().equals(meeting.getStatus())) {
+            log.info("Status change in mapper: {} -> {}", meeting.getStatus(), request.getStatus());
             // Zapisz zmianę statusu w historii
             MeetingStatusChange statusChange = MeetingStatusChange.builder()
                     .meeting(meeting)
@@ -179,6 +253,9 @@ public class MeetingMapper {
 
             meeting.setStatus(request.getStatus());
         }
+
+        log.info("updateEntityFromRequest END - Meeting title after: {}", meeting.getTitle());
+        log.info("Meeting status after: {}", meeting.getStatus());
     }
 
     public UserResponse toUserResponse(User user) {

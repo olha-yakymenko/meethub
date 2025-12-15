@@ -706,7 +706,7 @@
                                 </div>
 
                                 <!-- Użytkownik nie jest uczestnikiem -->
-                                <div th:if="${!isParticipant and !isPending}">
+                                <div th:if="${!isParticipant}">
                                     <form th:action="@{/meetings/{id}/participants/join(id=${meeting.id})}" method="post">
                                         <button type="submit" class="btn btn-success w-100">
                                             <i class="bi bi-plus-circle me-2"></i>Dołącz do spotkania

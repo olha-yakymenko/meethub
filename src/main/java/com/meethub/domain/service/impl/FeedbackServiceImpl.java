@@ -71,7 +71,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Transactional(readOnly = true)
     public Feedback getUserFeedback(Long meetingId, Long userId) {
         return feedbackRepository.findByMeetingIdAndUserId(meetingId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found"));
+                .orElse(null);
     }
 
     @Override

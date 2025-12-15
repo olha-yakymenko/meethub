@@ -16,13 +16,21 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Validated // DODANE - walidacja dla kontrolera webowego
 @Slf4j
@@ -546,6 +554,196 @@ public class MeetingTaskController {
         }
 
         return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+    }
+// MeetingTaskController.java - poprawione metody
+//
+//    @GetMapping("/{taskId}/files")
+//    @Operation(summary = "Lista plików zadania", description = "Wyświetla wszystkie pliki przypisane do zadania.")
+//    public String getTaskFiles(
+//            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
+//            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+//            Long meetingId,
+//
+//            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
+//            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
+//            Long taskId,
+//
+//            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
+//            CustomUserDetails userDetails,
+//            Model model) {
+//
+//        try {
+//            log.info("Wyświetlanie plików dla zadania ID={} przez użytkownika {}", taskId, userDetails.getId());
+//
+//            // Używamy serwisu do pobrania zadania i spotkania
+//            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
+//
+//            List<TaskFile> files = taskService.getTaskFiles(taskId, userDetails.getId());
+//            boolean canUpload = taskService.canUserUploadToTask(taskId, userDetails.getId());
+//
+//            model.addAttribute("meeting", response.getMeeting());
+//            model.addAttribute("task", response.getTask());
+//            model.addAttribute("files", files);
+//            model.addAttribute("isOrganizer", response.isOrganizer());
+//            model.addAttribute("canUpload", canUpload);
+//            model.addAttribute("userId", userDetails.getId());
+//
+//            return "meetings/tasks/files";
+//
+//        } catch (Exception e) {
+//            log.error("Błąd podczas wyświetlania plików zadania {}: {}", taskId, e.getMessage(), e);
+//            model.addAttribute("error", e.getMessage());
+//            return "redirect:/meetings/" + meetingId + "/tasks/" + taskId;
+//        }
+//    }
+
+//    @PostMapping("/{taskId}/files/upload")
+//    @Operation(summary = "Prześlij plik do zadania", description = "Przesyła nowy plik do zadania.")
+//    public String uploadTaskFile(
+//            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
+//            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+//            Long meetingId,
+//
+//            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
+//            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
+//            Long taskId,
+//
+//            @RequestParam("file") @NotNull(message = "Plik nie może być pusty")
+//            MultipartFile file,
+//
+//            @RequestParam(value = "description", required = false, defaultValue = "")
+//            @Size(max = 500, message = "Opis nie może przekraczać 500 znaków")
+//            String description,
+//
+//            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
+//            CustomUserDetails userDetails,
+//            RedirectAttributes redirectAttributes) {
+//
+//        try {
+//            log.info("Przesyłanie pliku do zadania ID={} przez użytkownika {}", taskId, userDetails.getId());
+//
+//            // Sprawdź czy użytkownik ma dostęp do zadania
+//            MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
+//
+//            TaskFile uploadedFile;
+//
+//            if (response.isOrganizer()) {
+//                // Organizator wrzuca plik bezpośrednio do zadania
+//                uploadedFile = taskService.uploadFileToTask(taskId, file, userDetails.getId(), description);
+//            } else {
+//                // Dla użytkownika - sprawdź czy jest przypisany do zadania
+//                // Najpierw sprawdź czy może uploadować
+//                if (!taskService.canUserUploadToTask(taskId, userDetails.getId())) {
+//                    throw new RuntimeException("Nie masz uprawnień do przesyłania plików do tego zadania");
+//                }
+//
+//                // Pobierz assignment dla tego użytkownika i zadania
+//                List<TaskAssignment> userAssignments = taskService.getUserAssignments(userDetails.getId());
+//                TaskAssignment userAssignment = userAssignments.stream()
+//                        .filter(assignment -> assignment.getTask().getId().equals(taskId))
+//                        .findFirst()
+//                        .orElseThrow(() -> new RuntimeException("Nie jesteś przypisany do tego zadania"));
+//
+//                uploadedFile = taskService.uploadFileToAssignment(userAssignment.getId(), file, userDetails.getId(), description);
+//            }
+//
+//            redirectAttributes.addFlashAttribute("success",
+//                    String.format("Plik '%s' został przesłany", uploadedFile.getOriginalFilename()));
+//
+//        } catch (jakarta.validation.ConstraintViolationException e) {
+//            log.warn("Błąd walidacji podczas przesyłania pliku: {}", e.getMessage());
+//            redirectAttributes.addFlashAttribute("error", "Nieprawidłowe dane wejściowe");
+//
+//        } catch (Exception e) {
+//            log.error("Błąd podczas przesyłania pliku do zadania {}: {}", taskId, e.getMessage(), e);
+//            redirectAttributes.addFlashAttribute("error", e.getMessage());
+//        }
+//
+//        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/files";
+//    }
+
+    @GetMapping("/{taskId}/files/{fileId}/download")
+    @Operation(summary = "Pobierz plik", description = "Pobiera plik przypisany do zadania.")
+    public ResponseEntity<Resource> downloadTaskFile(
+            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
+            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+            Long meetingId,
+
+            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
+            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
+            Long taskId,
+
+            @PathVariable @NotNull(message = "Identyfikator pliku nie może być pusty")
+            @Min(value = 1, message = "Identyfikator pliku musi być liczbą dodatnią")
+            Long fileId,
+
+            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
+            CustomUserDetails userDetails) {
+
+        try {
+            log.info("Pobieranie pliku ID={} z zadania ID={}", fileId, taskId);
+
+            // Sprawdź czy użytkownik ma dostęp do zadania
+            taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
+
+            Resource resource = taskService.downloadFile(fileId, userDetails.getId());
+            TaskFile taskFile = taskService.getFileById(fileId);
+
+            String contentType = taskFile.getContentType();
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + taskFile.getOriginalFilename() + "\"")
+                    .body(resource);
+
+        } catch (Exception e) {
+            log.error("Błąd podczas pobierania pliku {}: {}", fileId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @PostMapping("/{taskId}/files/{fileId}/delete")
+    @Operation(summary = "Usuń plik", description = "Usuwa plik z zadania.")
+    public String deleteTaskFile(
+            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
+            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+            Long meetingId,
+
+            @PathVariable @NotNull(message = "Identyfikator zadania nie może być pusty")
+            @Min(value = 1, message = "Identyfikator zadania musi być liczbą dodatnią")
+            Long taskId,
+
+            @PathVariable @NotNull(message = "Identyfikator pliku nie może być pusty")
+            @Min(value = 1, message = "Identyfikator pliku musi być liczbą dodatnią")
+            Long fileId,
+
+            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
+            CustomUserDetails userDetails,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            log.info("Usuwanie pliku ID={} z zadania ID={}", fileId, taskId);
+
+            // Sprawdź czy użytkownik ma dostęp do zadania
+            taskService.getTaskDetailsForUser(meetingId, taskId, userDetails.getId());
+
+            taskService.deleteFile(fileId, userDetails.getId());
+            redirectAttributes.addFlashAttribute("success", "Plik został usunięty");
+
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            log.warn("Błąd walidacji podczas usuwania pliku: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Nieprawidłowy identyfikator pliku");
+
+        } catch (Exception e) {
+            log.error("Błąd usuwania pliku {}: {}", fileId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+
+        return "redirect:/meetings/" + meetingId + "/tasks/" + taskId + "/files";
     }
 }
 

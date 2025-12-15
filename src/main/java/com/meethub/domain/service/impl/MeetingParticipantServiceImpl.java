@@ -488,18 +488,15 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         Optional<MeetingParticipant> participantOpt = participantRepository.findByMeetingIdAndUserId(meetingId, userId);
 
         if (participantOpt.isEmpty()) {
+            log.info("TUTAJ: {}", participantOpt);
             return false;
         }
 
         MeetingParticipant participant = participantOpt.get();
 
-        // ✅ Użytkownik NIE jest uczestnikiem jeśli:
-        // - Odrzucił zaproszenie (DECLINED)
-        // - Był zaproszony, ale jeszcze nie odpowiedział (INVITED) - to zależy od logiki biznesowej
-        // - Jest na liście oczekujących (WAITING_LIST) - to też zależy
-
         ParticipationStatus status = participant.getStatus();
 
+        log.info("Status usera: {}", status);
         // Dla uproszczenia: tylko CONFIRMED i PENDING są "uczestnikami"
         return status == ParticipationStatus.CONFIRMED ||
                 status == ParticipationStatus.PENDING;
@@ -1076,12 +1073,41 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return isUserParticipant(meetingId, userId);
     }
 
+//    @Override
+//    public boolean isOrganizer(Long meetingId, Long userId) {
+//        try {
+//            Meeting meeting = meetingRepository.findById(meetingId)
+//                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+//            return meeting.getOrganizer().getId().equals(userId);
+//        } catch (Exception e) {
+//            log.error("Error checking if user {} is organizer of meeting {}", userId, meetingId, e);
+//            return false;
+//        }
+//    }
+
+
+
     @Override
     public boolean isOrganizer(Long meetingId, Long userId) {
         try {
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
+            // UŻYJ ifPresent LUB isPresent ZAMIAST orElseThrow
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+
+            if (meetingOpt.isEmpty()) {
+                log.debug("Meeting {} not found, user {} is not organizer", meetingId, userId);
+                return false;  // ← ZWRÓĆ false ZAMIAST RZUCANIA WYJĄTKU
+            }
+
+            Meeting meeting = meetingOpt.get();
+
+            // Dodatkowe zabezpieczenie przed null organizatorem
+            if (meeting.getOrganizer() == null) {
+                log.warn("Meeting {} has no organizer set", meetingId);
+                return false;
+            }
+
             return meeting.getOrganizer().getId().equals(userId);
+
         } catch (Exception e) {
             log.error("Error checking if user {} is organizer of meeting {}", userId, meetingId, e);
             return false;

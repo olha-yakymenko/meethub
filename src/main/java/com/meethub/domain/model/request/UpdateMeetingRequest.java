@@ -45,13 +45,18 @@ import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class UpdateMeetingRequest {
 
     @Size(min = 3, max = 200, message = "Title must be 3-200 characters")

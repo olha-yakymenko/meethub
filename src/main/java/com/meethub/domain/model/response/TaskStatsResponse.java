@@ -122,12 +122,12 @@ public class TaskStatsResponse {
 
     // Builder z metodami pomocniczymi
     public static class TaskStatsResponseBuilder {
-        private Double completionRate;
-        private Double participationRate;
-        private Double averageFilesPerUser;
+        Double completionRate;
+        Double participationRate;
+        Double averageFilesPerUser;
         private Boolean isOverdue;
-        private Long daysUntilDeadline;
-        private String timeRemaining;
+        Long daysUntilDeadline;
+        String timeRemaining;
 
         public TaskStatsResponseBuilder calculateRates() {
             // Oblicz wskaźnik ukończenia

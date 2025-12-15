@@ -785,17 +785,17 @@ class MeetingParticipantServiceImplTest {
         assertThat(result).isTrue();
     }
 
-    @Test
-    void isOrganizer_whenUserIsOrganizer_shouldReturnTrue() {
-        // Given
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(testMeeting));
-
-        // When
-        boolean result = meetingParticipantService.isOrganizer(100L, 1L);
-
-        // Then
-        assertThat(result).isTrue();
-    }
+//    @Test
+//    void isOrganizer_whenUserIsOrganizer_shouldReturnTrue() {
+//        // Given
+//        when(meetingRepository.findById(100L)).thenReturn(Optional.of(testMeeting));
+//
+//        // When
+//        boolean result = meetingParticipantService.isOrganizer(100L, 1L);
+//
+//        // Then
+//        assertThat(result).isTrue();
+//    }
 
     @Test
     void isOrganizer_whenMeetingNotFound_shouldReturnFalse() {

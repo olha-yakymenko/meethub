@@ -1,3 +1,6 @@
+
+
+
 -- ===============================
 -- 1. Utwórz schemat i ustaw go
 -- ===============================
@@ -10,10 +13,13 @@ SET SCHEMA meethub_schema;
 
 -- 2.1. Users
 INSERT INTO users (email, password, first_name, last_name, role, enabled)
-VALUES
-('test.admin@example.com', 'pass', 'Admin', 'Test', 'ADMIN', TRUE),
-('test.organizer@example.com', 'pass', 'Organizer', 'Test', 'ORGANIZER', TRUE),
-('test.user@example.com', 'pass', 'User', 'Test', 'PARTICIPANT', TRUE);
+VALUES ('test.admin@example.com', 'pass', 'Admin', 'Test', 'ADMIN', 1);
+
+INSERT INTO users (email, password, first_name, last_name, role, enabled)
+VALUES ('test.organizer@example.com', 'pass', 'Organizer', 'Test', 'ORGANIZER', 1);
+
+INSERT INTO users (email, password, first_name, last_name, role, enabled)
+VALUES ('test.user@example.com', 'pass', 'User', 'Test', 'PARTICIPANT', 1);
 
 -- 2.2. Locations
 INSERT INTO locations (name, type, timezone)

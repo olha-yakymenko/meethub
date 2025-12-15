@@ -817,12 +817,71 @@ public class WebController {
             model.addAttribute("updateMeetingRequest", updateRequest);
             model.addAttribute("meetingId", id);
             model.addAttribute("user", userDetails);
+            model.addAttribute("meetingStatuses", MeetingStatus.values());
+
             return "meetings/edit";
 
         } catch (Exception e) {
             return "redirect:/meetings?error=Spotkanie nie zostało znalezione";
         }
     }
+
+//    @PostMapping("/meetings/{id}/edit")
+//    @Operation(summary = "Aktualizuj spotkanie",
+//            description = "Aktualizuje istniejące spotkanie. Tylko organizator może aktualizować.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do szczegółów spotkania po aktualizacji"),
+//            @ApiResponse(responseCode = "400", description = "Błędy walidacji formularza"),
+//            @ApiResponse(responseCode = "403", description = "Brak uprawnień do edycji")
+//    })
+//    public String updateMeeting(
+//            @PathVariable Long id,
+//            @Valid @ModelAttribute("updateMeetingRequest") UpdateMeetingRequest request,
+//            BindingResult result,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model,
+//            RedirectAttributes redirectAttributes) {
+//
+//        if (userDetails == null) {
+//            return "redirect:/login";
+//        }
+//
+//        // ✅ WALIDACJA LOKALIZACJI W ZALEŻNOŚCI OD TYPU SPOTKANIA
+//        if (request.getType() != null && request.getType() != MeetingType.ONLINE &&
+//                request.getLocationId() == null) {
+//            result.rejectValue("locationId", "NotNull",
+//                    "Lokalizacja jest wymagana dla spotkań osobiście lub hybrydowych");
+//        }
+//
+//        // ✅ WALIDACJA: Sprawdź czy lokalizacja istnieje (jeśli wybrana)
+//        if (request.getLocationId() != null) {
+//            try {
+//                locationService.validateLocationExists(request.getLocationId());
+//            } catch (IllegalArgumentException e) {
+//                result.rejectValue("locationId", "Invalid", e.getMessage());
+//            }
+//        }
+//
+//        if (result.hasErrors()) {
+//            model.addAttribute("meetingId", id);
+//            model.addAttribute("user", userDetails);
+//            return "meetings/edit";
+//        }
+//
+//        try {
+//            MeetingResponse meeting = meetingService.updateMeeting(id, request, userDetails.getId());
+//            redirectAttributes.addFlashAttribute("message",
+//                    "Spotkanie '" + meeting.getTitle() + "' zostało zaktualizowane pomyślnie!");
+//            return "redirect:/meetings/" + meeting.getId();
+//
+//        } catch (Exception e) {
+//            model.addAttribute("error", "Błąd podczas aktualizacji spotkania: " + e.getMessage());
+//            model.addAttribute("meetingId", id);
+//            model.addAttribute("user", userDetails);
+//            return "meetings/edit";
+//        }
+//    }
+
 
     @PostMapping("/meetings/{id}/edit")
     @Operation(summary = "Aktualizuj spotkanie",
@@ -844,14 +903,19 @@ public class WebController {
             return "redirect:/login";
         }
 
-        // ✅ WALIDACJA LOKALIZACJI W ZALEŻNOŚCI OD TYPU SPOTKANIA
+        // Log wartości przekazanych do aktualizacji
+        log.info("Updating meeting id={} by user id={}", id, userDetails.getId());
+        log.info("UpdateMeetingRequest: title='{}', description='{}', type={}, visibility={}, startDate={}, endDate={}, status={}",
+                request.getTitle(), request.getDescription(), request.getType(), request.getVisibility(),
+                request.getStartDate(), request.getEndDate(), request.getStatus());
+
+        // WALIDACJA LOKALIZACJI
         if (request.getType() != null && request.getType() != MeetingType.ONLINE &&
                 request.getLocationId() == null) {
             result.rejectValue("locationId", "NotNull",
                     "Lokalizacja jest wymagana dla spotkań osobiście lub hybrydowych");
         }
 
-        // ✅ WALIDACJA: Sprawdź czy lokalizacja istnieje (jeśli wybrana)
         if (request.getLocationId() != null) {
             try {
                 locationService.validateLocationExists(request.getLocationId());
@@ -879,6 +943,7 @@ public class WebController {
             return "meetings/edit";
         }
     }
+
 
     @PostMapping("/meetings/{id}/delete")
     @Operation(summary = "Usuń spotkanie",

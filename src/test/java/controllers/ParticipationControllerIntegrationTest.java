@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Disabled
+
 @SpringBootTest
 @AutoConfigureMockMvc
 //@ActiveProfiles("test")

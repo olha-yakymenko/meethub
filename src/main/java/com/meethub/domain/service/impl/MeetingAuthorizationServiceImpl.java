@@ -55,7 +55,7 @@ public class MeetingAuthorizationServiceImpl implements MeetingAuthorizationServ
 
             // ✅ SPRAWDŹ BEZPOŚREDNIEGO UCZESTNICTWA
             try {
-                isDirectParticipant = meetingParticipantService.isUserParticipant(userId, meeting.getId());
+                isDirectParticipant = meetingParticipantService.isUserParticipant(meeting.getId(), userId);
             } catch (Exception e) {
                 log.warn("Could not check participant status for user {} in meeting {}: {}",
                         userId, meeting.getId(), e.getMessage());

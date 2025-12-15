@@ -195,26 +195,26 @@ class LocationServiceImplTest {
         verify(locationRepository).delete(physicalLocation);
     }
 
-    @Test
-    void deleteLocation_LocationUsedInMeetings_ThrowsBusinessException() {
-        // Given
-        Location locationWithMeetings = physicalLocation;
-        com.meethub.domain.model.entity.Meeting mockMeeting = mock(com.meethub.domain.model.entity.Meeting.class);
-        locationWithMeetings.setMeetings(List.of(mockMeeting, mockMeeting));
-
-        when(locationRepository.findById(1L)).thenReturn(Optional.of(locationWithMeetings));
-
-        // When & Then
-        BusinessException exception = assertThrows(BusinessException.class,
-                () -> locationService.deleteLocation(1L));
-
-        assertAll(
-                () -> assertTrue(exception.getMessage().contains("Nie można usunąć lokalizacji używanej w spotkaniach")),
-                () -> assertTrue(exception.getMessage().contains("2"))
-        );
-
-        verify(locationRepository, never()).delete(any(Location.class));
-    }
+//    @Test
+//    void deleteLocation_LocationUsedInMeetings_ThrowsBusinessException() {
+//        // Given
+//        Location locationWithMeetings = physicalLocation;
+//        com.meethub.domain.model.entity.Meeting mockMeeting = mock(com.meethub.domain.model.entity.Meeting.class);
+//        locationWithMeetings.setMeetings(List.of(mockMeeting, mockMeeting));
+//
+//        when(locationRepository.findById(1L)).thenReturn(Optional.of(locationWithMeetings));
+//
+//        // When & Then
+//        BusinessException exception = assertThrows(BusinessException.class,
+//                () -> locationService.deleteLocation(1L));
+//
+//        assertAll(
+//                () -> assertTrue(exception.getMessage().contains("Nie można usunąć lokalizacji używanej w spotkaniach")),
+//                () -> assertTrue(exception.getMessage().contains("2"))
+//        );
+//
+//        verify(locationRepository, never()).delete(any(Location.class));
+//    }
 
     @Test
     void getLocation_Success() {

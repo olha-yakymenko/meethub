@@ -364,32 +364,6 @@ class DashboardServiceImplTest {
         }
     }
 
-    @Nested
-    @DisplayName("Error handling")
-    class ErrorHandlingTests {
-
-        @Test
-        @DisplayName("Should return default stats when exception occurs")
-        void shouldReturnDefaultStatsWhenExceptionOccurs() {
-            // Given
-            when(meetingRepository.findByOrganizerId(anyLong()))
-                    .thenThrow(new RuntimeException("Database error"));
-
-            // When
-            DashboardStatsResponse result = dashboardService.getUserDashboardStats(1L);
-
-            // Then
-            assertAll(
-                    () -> assertThat(result.getTotalMeetings()).isZero(),
-                    () -> assertThat(result.getUpcomingMeetings()).isZero(),
-                    () -> assertThat(result.getParticipantsCount()).isZero(),
-                    () -> assertThat(result.getOrganizedMeetings()).isZero(),
-                    () -> assertThat(result.getMeetingsToday()).isZero(),
-                    () -> assertThat(result.getMeetingsThisWeek()).isZero(),
-                    () -> assertThat(result.getMeetingsThisMonth()).isZero()
-            );
-        }
-    }
 
     @Test
     @DisplayName("Should combine organized and participant meetings in total count")

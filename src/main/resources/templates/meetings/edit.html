@@ -18,18 +18,6 @@
                 </div>
                 <div class="card-body">
 
-                    <!-- Komunikaty -->
-                    <div th:if="${message}" class="alert alert-success alert-dismissible fade show">
-                        <i class="bi bi-check-circle me-2"></i>
-                        <span th:text="${message}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
-                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <span th:text="${error}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
 
                     <!-- Formularz edycji -->
                     <form th:action="@{/meetings/{id}/edit(id=${meetingId})}"
@@ -120,6 +108,19 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="mb-3">
+                            <label for="status" class="form-label"><strong>Status spotkania *</strong></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option th:each="s : ${meetingStatuses}"
+                                        th:value="${s}"
+                                        th:text="${s}"
+                                        th:selected="${s} == ${updateMeetingRequest.status}">
+                                </option>
+                            </select>
+                            <div class="form-text">Wybierz aktualny status spotkania</div>
+                        </div>
+
 
                         <div class="row">
                             <!-- Data rozpoczęcia -->

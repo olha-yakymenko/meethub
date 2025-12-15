@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Pliki zadania - MeetHub</title>
+</head>
+<body>
+<div class="container mt-4">
+
+    <!-- Nagłówek -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>
+                <i class="bi bi-folder me-2"></i>
+                Pliki zadania: <span th:text="${task.title}"></span>
+            </h1>
+            <p class="text-muted" th:text="'Spotkanie: ' + ${meeting.title}"></p>
+        </div>
+        <div>
+            <a th:href="@{/meetings/{meetingId}/tasks/{taskId}(meetingId=${meeting.id}, taskId=${task.id})}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Powrót do zadania
+            </a>
+        </div>
+    </div>
+
+    <!-- Formularz przesyłania pliku -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-upload me-2"></i>Prześlij nowy plik
+            </h5>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/meetings/{meetingId}/tasks/{taskId}/files/upload(meetingId=${meeting.id}, taskId=${task.id})}"
+                  method="post"
+                  enctype="multipart/form-data">
+
+                <!-- Token CSRF -->
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Wybierz plik:</label>
+                            <input type="file"
+                                   class="form-control"
+                                   id="file"
+                                   name="file"
+                                   required
+                                   th:accept="${task.allowedFileTypes != null ? task.allowedFileTypes : '*/*'}">
+                            <div class="form-text">
+                                <span th:if="${task.maxFileSize != null}">
+                                    Maksymalny rozmiar: <span th:text="${task.maxFileSize}"></span> MB
+                                </span>
+                                <span th:if="${task.allowedFileTypes != null}">
+                                    | Dozwolone typy: <span th:text="${task.allowedFileTypes}"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Opis (opcjonalnie):</label>
+                            <textarea class="form-control"
+                                      id="description"
+                                      name="description"
+                                      rows="2"
+                                      maxlength="500"
+                                      placeholder="Krótki opis pliku..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-upload me-2"></i>Prześlij plik
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista plików -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-files me-2"></i>Lista plików
+                <span class="badge bg-secondary ms-2" th:text="${files != null ? files.size() : 0}"></span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${files != null and !files.empty}">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>Nazwa pliku</th>
+                            <th>Rozmiar</th>
+                            <th>Typ</th>
+                            <th>Przesłany przez</th>
+                            <th>Data</th>
+                            <th>Akcje</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="file : ${files}">
+                            <td>
+                                <i class="bi me-2"
+                                   th:class="${#strings.startsWith(file.contentType, 'image/') ? 'bi-file-earmark-image text-primary' :
+                                                (#strings.startsWith(file.contentType, 'application/pdf') ? 'bi-file-earmark-pdf text-danger' :
+                                                (#strings.startsWith(file.contentType, 'text/') ? 'bi-file-earmark-text text-info' :
+                                                'bi-file-earmark text-secondary'))}"></i>
+                                <strong th:text="${file.originalFilename}"></strong>
+                                <div th:if="${file.description}" class="text-muted small mt-1">
+                                    <i class="bi bi-chat-left-text"></i>
+                                    <span th:text="${file.description}"></span>
+                                </div>
+                            </td>
+                            <td>
+                                <span th:text="${#numbers.formatDecimal(file.fileSize / 1024.0, 1, 2) + ' KB'}"></span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info" th:text="${file.contentType}"></span>
+                            </td>
+                            <td>
+                                <div th:text="${file.uploadedBy.firstName + ' ' + file.uploadedBy.lastName}"></div>
+                                <small class="text-muted" th:text="${file.uploadedBy.email}"></small>
+                            </td>
+                            <td>
+                                <span th:text="${#temporals.format(file.uploadedAt, 'dd.MM.yyyy HH:mm')}"></span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a th:href="@{/meetings/{meetingId}/tasks/{taskId}/files/{fileId}/download(meetingId=${meeting.id}, taskId=${task.id}, fileId=${file.id})}"
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Pobierz">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+
+                                    <button th:if="${isOrganizer or file.uploadedBy.id == userId}"
+                                            type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Usuń"
+                                            onclick="deleteFile([[${file.id}]], '[[${file.originalFilename}]]')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div th:if="${files == null or files.empty}" class="text-center py-5">
+                <i class="bi bi-folder-x display-1 text-muted"></i>
+                <p class="mt-3 text-muted">Brak plików w tym zadaniu</p>
+                <p class="text-muted">Użyj formularza powyżej aby dodać pierwszy plik</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skrypt JavaScript -->
+<script>
+    function deleteFile(fileId, filename) {
+        if (confirm('Czy na pewno chcesz usunąć plik "' + filename + '"?')) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '/meetings/' + [[${meeting.id}]] + '/tasks/' + [[${task.id}]] + '/files/' + fileId + '/delete';
+
+            const csrfToken = document.querySelector('input[name="_csrf"]').value;
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_csrf';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+</body>
+</html>
