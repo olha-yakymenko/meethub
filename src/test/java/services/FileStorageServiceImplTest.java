@@ -17,11 +17,8 @@ import java.time.ZoneId;
 import java.nio.file.attribute.FileTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class FileStorageServiceImplTest {
 
     private FileStorageServiceImpl fileStorageService;
@@ -71,7 +68,6 @@ class FileStorageServiceImplTest {
     }
 
     @Test
-    @Order(1)
     void testGetFileStorageLocation_ShouldCreateDirectoryWhenNotExists() {
         // Given
         // Usuń katalog, jeśli istnieje
@@ -88,12 +84,14 @@ class FileStorageServiceImplTest {
         Path result = ReflectionTestUtils.invokeMethod(fileStorageService, "getFileStorageLocation");
 
         // Then
-        assertNotNull(result);
-        assertTrue(Files.exists(result) || Files.notExists(result));
+        assertAll("Directory creation check",
+                () -> assertNotNull(result, "Path should not be null"),
+                () -> assertTrue(Files.exists(result) || Files.notExists(result),
+                        "Directory should exist or not exist without exception")
+        );
     }
 
     @Test
-    @Order(2)
     void testStoreFile_ShouldSuccessfullyStoreFile() throws IOException {
         // Given
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -107,13 +105,16 @@ class FileStorageServiceImplTest {
         String resultPath = fileStorageService.storeFile(multipartFile, TEST_FILENAME);
 
         // Then
-        assertNotNull(resultPath);
-        assertTrue(resultPath.contains(TEST_FILENAME));
-        assertTrue(Files.exists(Paths.get(resultPath)));
+        assertAll("File storage validation",
+                () -> assertNotNull(resultPath, "Stored file path should not be null"),
+                () -> assertTrue(resultPath.contains(TEST_FILENAME),
+                        "Path should contain the filename"),
+                () -> assertTrue(Files.exists(Paths.get(resultPath)),
+                        "File should exist on filesystem")
+        );
     }
 
     @Test
-    @Order(3)
     void testStoreFile_ShouldThrowExceptionWhenFilenameContainsInvalidPathSequence() {
         // Given
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -127,11 +128,11 @@ class FileStorageServiceImplTest {
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> fileStorageService.storeFile(multipartFile, "../" + TEST_FILENAME));
 
-        assertTrue(exception.getMessage().contains("invalid path sequence"));
+        assertTrue(exception.getMessage().contains("invalid path sequence"),
+                "Exception message should indicate invalid path sequence");
     }
 
     @Test
-    @Order(4)
     void testStoreFile_ShouldOverwriteExistingFile() throws IOException {
         // Given
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -158,12 +159,13 @@ class FileStorageServiceImplTest {
         long secondSize = Files.size(Paths.get(secondPath));
 
         // Then
-        assertEquals(firstPath, secondPath); // Same path
-        assertTrue(secondSize > firstSize); // New content is larger
+        assertAll("File overwrite validation",
+                () -> assertEquals(firstPath, secondPath, "Should store to same path"),
+                () -> assertTrue(secondSize > firstSize, "New file should be larger")
+        );
     }
 
     @Test
-    @Order(5)
     void testLoadFileAsResource_ShouldReturnResourceWhenFileExists() throws IOException {
         // Given - najpierw zapisz plik
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -178,23 +180,24 @@ class FileStorageServiceImplTest {
         Resource resource = fileStorageService.loadFileAsResource(TEST_FILENAME);
 
         // Then
-        assertNotNull(resource);
-        assertTrue(resource.exists());
-        assertTrue(resource.isReadable());
+        assertAll("Resource validation",
+                () -> assertNotNull(resource, "Resource should not be null"),
+                () -> assertTrue(resource.exists(), "Resource should exist"),
+                () -> assertTrue(resource.isReadable(), "Resource should be readable")
+        );
     }
 
     @Test
-    @Order(6)
     void testLoadFileAsResource_ShouldThrowExceptionWhenFileNotFound() {
         // When & Then
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> fileStorageService.loadFileAsResource("non-existent-file.txt"));
 
-        assertTrue(exception.getMessage().contains("File not found"));
+        assertTrue(exception.getMessage().contains("File not found"),
+                "Exception message should indicate file not found");
     }
 
     @Test
-    @Order(7)
     void testDeleteFile_ShouldDeleteExistingFile() throws IOException {
         // Given
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -207,27 +210,26 @@ class FileStorageServiceImplTest {
         Path path = Paths.get(filePath);
 
         // Verify file exists
-        assertTrue(Files.exists(path));
+        assertTrue(Files.exists(path), "File should exist before deletion");
 
         // When
         fileStorageService.deleteFile(filePath);
 
         // Then
-        assertFalse(Files.exists(path));
+        assertFalse(Files.exists(path), "File should not exist after deletion");
     }
 
     @Test
-    @Order(8)
     void testDeleteFile_ShouldNotThrowExceptionWhenFileDoesNotExist() {
         // Given
         String nonExistentPath = "non-existent-path.txt";
 
         // When & Then (should not throw exception, just log warning)
-        assertDoesNotThrow(() -> fileStorageService.deleteFile(nonExistentPath));
+        assertDoesNotThrow(() -> fileStorageService.deleteFile(nonExistentPath),
+                "Should not throw exception for non-existent file");
     }
 
     @Test
-    @Order(9)
     void testFileExists_ShouldReturnTrueForExistingFile() throws IOException {
         // Given
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -242,45 +244,42 @@ class FileStorageServiceImplTest {
         boolean exists = fileStorageService.fileExists(TEST_FILENAME);
 
         // Then
-        assertTrue(exists);
+        assertTrue(exists, "Should return true for existing file");
     }
 
     @Test
-    @Order(10)
     void testFileExists_ShouldReturnFalseForNonExistingFile() {
         // When
         boolean exists = fileStorageService.fileExists("non-existent-file.txt");
 
         // Then
-        assertFalse(exists);
+        assertFalse(exists, "Should return false for non-existing file");
     }
 
     @Test
-    @Order(11)
     void testGetFilePath_ShouldReturnCorrectPath() {
         // When
         Path filePath = fileStorageService.getFilePath(TEST_FILENAME);
 
         // Then
-        assertNotNull(filePath);
-        assertTrue(filePath.toString().endsWith(TEST_FILENAME));
+        assertAll("FilePath validation",
+                () -> assertNotNull(filePath, "Path should not be null"),
+                () -> assertTrue(filePath.toString().endsWith(TEST_FILENAME),
+                        "Path should end with filename")
+        );
     }
 
     @Test
-    @Order(12)
     void testCleanupOrphanedFiles_ShouldNotRunWhenDisabled() {
         // Given
         ReflectionTestUtils.setField(fileStorageService, "cleanupEnabled", false);
 
-        // When
-        fileStorageService.cleanupOrphanedFiles();
-
-        // Then - No exception should be thrown
-        assertTrue(true);
+        // When & Then
+        assertDoesNotThrow(() -> fileStorageService.cleanupOrphanedFiles(),
+                "Should not throw exception when cleanup is disabled");
     }
 
     @Test
-    @Order(13)
     void testIsFileOrphaned_ShouldReturnTrueForOldFile() throws IOException {
         // Given
         Path tempFile = Files.createTempFile(Paths.get(UPLOAD_DIR), "test-old-file-", ".txt");
@@ -296,11 +295,10 @@ class FileStorageServiceImplTest {
                 fileStorageService, "isFileOrphaned", tempFile);
 
         // Then
-        assertTrue((Boolean) isOrphaned);
+        assertTrue((Boolean) isOrphaned, "Old file should be considered orphaned");
     }
 
     @Test
-    @Order(14)
     void testIsFileOrphaned_ShouldReturnFalseForRecentFile() throws IOException {
         // Given
         Path tempFile = Files.createTempFile(Paths.get(UPLOAD_DIR), "test-recent-file-", ".txt");
@@ -315,13 +313,11 @@ class FileStorageServiceImplTest {
                 fileStorageService, "isFileOrphaned", tempFile);
 
         // Then
-        assertFalse((Boolean) isOrphaned);
+        assertFalse((Boolean) isOrphaned, "Recent file should not be considered orphaned");
     }
 
-
     @Test
-    @Order(19)
-    void testCleanupOrphanedFiles_ShouldDeleteOldFiles() throws IOException, InterruptedException {
+    void testCleanupOrphanedFiles_ShouldDeleteOldFiles() throws IOException {
         // Given - utwórz stary plik
         Path oldFile = Files.createTempFile(
                 Paths.get(UPLOAD_DIR),
@@ -350,9 +346,10 @@ class FileStorageServiceImplTest {
         // When
         fileStorageService.cleanupOrphanedFiles();
 
-        // Then - stary plik powinien zostać usunięty, nowy nie
-        assertFalse(Files.exists(oldFile), "Old file should be deleted");
-        assertTrue(Files.exists(newFile), "New file should not be deleted");
+        // Then
+        assertAll("Cleanup validation",
+                () -> assertFalse(Files.exists(oldFile), "Old file should be deleted"),
+                () -> assertTrue(Files.exists(newFile), "New file should not be deleted")
+        );
     }
-
 }

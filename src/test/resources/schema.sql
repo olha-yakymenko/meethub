@@ -278,6 +278,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     allow_self_assignment BOOLEAN,
+    max_file_size INTEGER,
+    max_files_per_user BIGINT,
     allowed_file_types TEXT DEFAULT 'pdf,doc,docx,jpg,png',
     FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE

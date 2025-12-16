@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Mój Pulpit - MeetHub</title>
+</head>
+
+<div th:fragment="content">
+<h1>Wystąpił błąd</h1>
+
+<p th:if="${message}" th:text="${message}"></p>
+
+<div th:if="${status}">
+    <h2>Błąd [[${status}]]</h2>
+
+    <p th:switch="${status}">
+        <span th:case="401">Nie jesteś zalogowany</span>
+        <span th:case="403">Nie masz uprawnień</span>
+        <span th:case="404">Strona nie została znaleziona</span>
+        <span th:case="500">Błąd serwera</span>
+        <span th:case="*">Nieznany błąd</span>
+    </p>
+
+    <a th:if="${status == 401}" th:href="@{/login}">Zaloguj się</a>
+</div>
+
+<hr/>
+
+<p th:if="${path}">
+    <small>Ścieżka: <span th:text="${path}"></span></small>
+</p>
+
+<a th:href="@{/}">Powrót do strony głównej</a>
+
+</div>
+</html>

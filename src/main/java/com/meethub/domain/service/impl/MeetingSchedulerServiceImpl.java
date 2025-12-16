@@ -578,13 +578,13 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
 
     // ========== METODY POMOCNICZE ==========
 
-    private boolean isNotificationEnabled(User user, String preferenceKey) {
+    boolean isNotificationEnabled(User user, String preferenceKey) {
         return userPreferenceRepository.findByUserIdAndPreferenceKey(user.getId(), preferenceKey)
                 .map(pref -> "true".equalsIgnoreCase(pref.getPreferenceValue()))
                 .orElse(true); // Domyślnie true jeśli nie ma preferencji
     }
 
-    private boolean shouldScheduleMeeting(Meeting meeting) {
+    boolean shouldScheduleMeeting(Meeting meeting) {
         // Sprawdź czy spotkanie ma wystarczającą ilość czasu przed rozpoczęciem
         LocalDateTime now = LocalDateTime.now();
         long minutesUntilStart = ChronoUnit.MINUTES.between(now, meeting.getStartDate());
@@ -620,7 +620,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
                 .count();
     }
 
-    private void addTask(Long meetingId, String taskKey, ScheduledFuture<?> future) {
+    void addTask(Long meetingId, String taskKey, ScheduledFuture<?> future) {
         scheduledTasks.computeIfAbsent(meetingId, k -> ConcurrentHashMap.newKeySet())
                 .add(taskKey);
     }
@@ -641,7 +641,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         return !tasks.isEmpty();
     }
 
-    private void cleanupOrphanedTasks() {
+    void cleanupOrphanedTasks() {
         // Usuń zadania dla spotkań które już nie istnieją
         List<Long> existingMeetingIds = meetingRepository.findAllMeetingIds();
 
@@ -649,7 +649,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
                 !existingMeetingIds.contains(meetingId));
     }
 
-    private Map<String, String> createReminderVariables(Meeting meeting, int minutesBefore) {
+    Map<String, String> createReminderVariables(Meeting meeting, int minutesBefore) {
         Map<String, String> vars = new HashMap<>();
         vars.put("meetingTitle", meeting.getTitle());
         vars.put("meetingTime", meeting.getStartDate().toString());
@@ -693,7 +693,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
 //    }
 
 
-    private Map<String, String> createMeetingStartedVariables(Meeting meeting) {
+    Map<String, String> createMeetingStartedVariables(Meeting meeting) {
         Map<String, String> vars = new HashMap<>();
         vars.put("meetingTitle", meeting.getTitle());
         vars.put("meetingTime", meeting.getStartDate().toString());

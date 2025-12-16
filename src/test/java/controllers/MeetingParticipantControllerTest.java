@@ -1,204 +1,225 @@
-//package com.meethub.controller.api;
-//
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.meethub.domain.model.enums.ParticipationStatus;
-//import com.meethub.domain.model.enums.PermissionLevel;
-//import com.meethub.domain.model.projection.ParticipantProjection;
-//import com.meethub.domain.model.request.InviteParticipantsRequest;
-//import com.meethub.domain.model.response.ParticipantResponse;
-//import com.meethub.domain.model.response.UserResponse;
-//import com.meethub.domain.service.MeetingParticipantService;
-//import org.junit.jupiter.api.Test;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-//import org.springframework.boot.test.mock.mockito.MockBean;
-//import org.springframework.http.MediaType;
-//import org.springframework.security.test.context.support.WithMockUser;
-//import org.springframework.test.web.servlet.MockMvc;
-//
-//import java.util.Arrays;
-//import java.util.List;
-//
-//import static org.mockito.ArgumentMatchers.*;
-//import static org.mockito.Mockito.*;
-//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-//import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-//
-//@WebMvcTest(MeetingParticipantController.class)
-//class MeetingParticipantControllerTest {
-//
-//    @Autowired
-//    private MockMvc mockMvc;
-//
-//    @Autowired
-//    private ObjectMapper objectMapper;
-//
-//    @MockBean
-//    private MeetingParticipantService participantService;
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = {"USER"})
-//    void getParticipants_ShouldReturnParticipantsList() throws Exception {
-//        // Given
-//        ParticipantProjection participant1 = new ParticipantProjection() {
-//            @Override public Long getId() { return 1L; }
-//            @Override
-//            public String getUsername() { return "user1"; }
-//            @Override public String getEmail() { return "user1@example.com"; }
-//            @Override public ParticipationStatus getStatus() { return ParticipationStatus.CONFIRMED; }
-//        };
-//
-//        List<ParticipantProjection> participants = Arrays.asList(participant1);
-//        when(participantService.getMeetingParticipants(1L)).thenReturn(participants);
-//
-//        // When & Then
-//        mockMvc.perform(get("/api/v1/meetings/1/participants"))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data").isArray())
-//                .andExpect(jsonPath("$.data[0].email").value("user1@example.com"));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = {"USER"})
-//    void inviteParticipants_ShouldInviteMultipleUsers() throws Exception {
-//        // Given
-//        InviteParticipantsRequest request = new InviteParticipantsRequest();
-//        request.setUserIds(Arrays.asList(2L, 3L, 4L));
-//        request.setMessage("Please join our meeting");
-//
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/meetings/1/participants/invite")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request))
-//                        .with(request -> {
-//                            request.setAttribute("userId", 1L);
-//                            return request;
-//                        }))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.message").value("Uczestnicy zaproszeni pomyślnie"));
-//
-//        verify(participantService).inviteMultipleParticipants(eq(1L), any(InviteParticipantsRequest.class), eq(1L));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "user@example.com", roles = {"USER"})
-//    void joinMeeting_ShouldAllowJoiningPublicMeeting() throws Exception {
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/meetings/1/participants/join")
-//                        .with(request -> {
-//                            request.setAttribute("userId", 2L);
-//                            return request;
-//                        }))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true));
-//
-//        verify(participantService).joinPublicMeeting(1L, 2L);
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = {"USER"})
-//    void updateParticipantStatus_ShouldUpdateStatusWithComment() throws Exception {
-//        // When & Then
-//        mockMvc.perform(patch("/api/v1/meetings/1/participants/2/status")
-//                        .param("status", "CONFIRMED")
-//                        .param("comment", "Welcome to the meeting!")
-//                        .with(request -> {
-//                            request.setAttribute("userId", 1L);
-//                            return request;
-//                        }))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true));
-//
-//        verify(participantService).updateParticipantStatus(eq(1L), eq(2L),
-//                eq(ParticipationStatus.CONFIRMED), eq("Welcome to the meeting!"), eq(1L));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = {"USER"})
-//    void updateParticipantPermission_ShouldUpdatePermissionLevel() throws Exception {
-//        // When & Then
-//        mockMvc.perform(patch("/api/v1/meetings/1/participants/2/permission")
-//                        .param("permissionLevel", "CO_ORGANIZER")
-//                        .with(request -> {
-//                            request.setAttribute("userId", 1L);
-//                            return request;
-//                        }))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true));
-//
-//        verify(participantService).updateParticipantPermission(eq(1L), eq(2L),
-//                eq(PermissionLevel.CO_ORGANIZER), eq(1L));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = {"USER"})
-//    void removeParticipant_ShouldRemoveParticipant() throws Exception {
-//        // When & Then
-//        mockMvc.perform(delete("/api/v1/meetings/1/participants/2")
-//                        .with(request -> {
-//                            request.setAttribute("userId", 1L);
-//                            return request;
-//                        }))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true));
-//
-//        verify(participantService).removeParticipant(1L, 2L, 1L);
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "user@example.com", roles = {"USER"})
-//    void getUserInvitations_ShouldReturnUserInvitations() throws Exception {
-//        // Given
-//        ParticipantResponse invitation = new ParticipantResponse();
-//        invitation.setId(1L);
-//        invitation.setMeetingId(1L);
-//        invitation.setMeetingTitle("Team Meeting");
-//
-//        List<ParticipantResponse> invitations = Arrays.asList(invitation);
-//        when(participantService.getUserInvitations(1L)).thenReturn(invitations);
-//
-//        // When & Then
-//        mockMvc.perform(get("/api/v1/meetings/1/participants/invitations")
-//                        .with(request -> {
-//                            request.setAttribute("userId", 1L);
-//                            return request;
-//                        }))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data").isArray());
-//    }
-//
-//    @Test
-//    void acceptInvitationByToken_ShouldWorkWithoutAuth() throws Exception {
-//        // Given
-//        String validToken = "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567";
-//
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/meetings/1/participants/invitations/{token}/accept", validToken))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true));
-//
-//        verify(participantService).acceptInvitationByToken(validToken);
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "user@example.com", roles = {"USER"})
-//    void searchUsers_ShouldReturnFilteredUsers() throws Exception {
-//        // Given
-//        UserResponse user1 = new UserResponse();
-//        user1.setId(2L);
-//        user1.setUsername("john_doe");
-//
-//        List<UserResponse> users = Arrays.asList(user1);
-//        when(participantService.searchUsersForInvitation("john", 1L)).thenReturn(users);
-//
-//        // When & Then
-//        mockMvc.perform(get("/api/v1/meetings/1/participants/search-users")
-//                        .param("query", "john"))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data[0].username").value("john_doe"));
-//    }
-//}
+package com.meethub.controller.api;
+
+import com.meethub.domain.model.enums.ParticipationStatus;
+import com.meethub.domain.model.enums.PermissionLevel;
+import com.meethub.domain.model.projection.ParticipantProjection;
+import com.meethub.domain.model.request.InviteParticipantsRequest;
+import com.meethub.domain.model.response.ApiResponse;
+import com.meethub.domain.model.response.ParticipantResponse;
+import com.meethub.domain.model.response.UserResponse;
+import com.meethub.domain.service.MeetingParticipantService;
+import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class MeetingParticipantControllerTest {
+
+    @Mock
+    private MeetingParticipantService participantService;
+
+    @InjectMocks
+    private MeetingParticipantController controller;
+
+    private Long meetingId = 1L;
+    private Long participantId = 1L;
+    private Long userId = 1L;
+
+    @Test
+    void testGetParticipants_Success() {
+        List<ParticipantProjection> participants = Collections.emptyList();
+        when(participantService.getMeetingParticipants(meetingId)).thenReturn(participants);
+
+        ResponseEntity<ApiResponse<List<ParticipantProjection>>> response =
+                controller.getParticipants(meetingId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+    @Test
+    void testInviteParticipants_Success() {
+        InviteParticipantsRequest request = new InviteParticipantsRequest();
+
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.inviteParticipants(meetingId, request, userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+
+    @Test
+    void testJoinMeeting_Success() {
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.joinMeeting(meetingId, userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+
+    @Test
+    void testUpdateParticipantStatus_Success() {
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.updateParticipantStatus(meetingId, participantId,
+                        ParticipationStatus.CONFIRMED, "comment", userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+
+    @Test
+    void testUpdateParticipantPermission_Success() {
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.updateParticipantPermission(meetingId, participantId,
+                        PermissionLevel.CONTRIBUTOR, userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+    @Test
+    void testRemoveParticipant_Success() {
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.removeParticipant(meetingId, participantId, userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+    @Test
+    void testAcceptInvitationByToken_Success() {
+        String token = "valid_token_12345678901234567890123456789012";
+
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.acceptInvitationByToken(token);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+
+    @Test
+    void testSearchUsers_Success() {
+        List<UserResponse> users = Collections.emptyList();
+        when(participantService.searchUsersForInvitation("test", meetingId))
+                .thenReturn(users);
+
+        ResponseEntity<ApiResponse<List<UserResponse>>> response =
+                controller.searchUsers("test", meetingId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+
+    @Test
+    void testGetUserInvitations_Success() {
+        List<ParticipantResponse> invitations = Collections.emptyList();
+        when(participantService.getUserInvitations(userId)).thenReturn(invitations);
+
+        ResponseEntity<ApiResponse<List<ParticipantResponse>>> response =
+                controller.getUserInvitations(userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+
+    @Test
+    void testRespondToInvitation_Success() {
+        ResponseEntity<ApiResponse<Void>> response =
+                controller.respondToInvitation(participantId,
+                        ParticipationStatus.CONFIRMED, "comment", userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertTrue(response.getBody().isSuccess())
+        );
+    }
+
+    @Test
+    void testSearchUsers_WithResults() {
+        List<UserResponse> users = List.of(
+                new UserResponse(1L, "test1@example.com", "John", "Doe", null),
+                new UserResponse(2L, "test2@example.com", "Jane", "Smith", null)
+        );
+        when(participantService.searchUsersForInvitation("john", meetingId))
+                .thenReturn(users);
+
+        ResponseEntity<ApiResponse<List<UserResponse>>> response =
+                controller.searchUsers("john", meetingId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertEquals(2, response.getBody().getData().size())
+        );
+    }
+
+    @Test
+    void testGetUserInvitations_WithData() {
+        ParticipantResponse invitation1 = new ParticipantResponse();
+        ParticipantResponse invitation2 = new ParticipantResponse();
+        List<ParticipantResponse> invitations = List.of(invitation1, invitation2);
+
+        when(participantService.getUserInvitations(userId)).thenReturn(invitations);
+
+        ResponseEntity<ApiResponse<List<ParticipantResponse>>> response =
+                controller.getUserInvitations(userId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertEquals(2, response.getBody().getData().size())
+        );
+    }
+
+    @Test
+    void testGetParticipants_WithData() {
+        ParticipantProjection participant1 = mock(ParticipantProjection.class);
+        ParticipantProjection participant2 = mock(ParticipantProjection.class);
+        List<ParticipantProjection> participants = List.of(participant1, participant2);
+
+        when(participantService.getMeetingParticipants(meetingId)).thenReturn(participants);
+
+        ResponseEntity<ApiResponse<List<ParticipantProjection>>> response =
+                controller.getParticipants(meetingId);
+
+        assertAll(
+                () -> assertEquals(200, response.getStatusCodeValue()),
+                () -> assertEquals(2, response.getBody().getData().size())
+        );
+    }
+
+}

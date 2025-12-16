@@ -1,8 +1,6 @@
 package com.meethub.controller.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.meethub.domain.model.request.CreateMeetingRequest;
-import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.response.MeetingResponse;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.security.CustomUserDetailsService;
@@ -17,11 +15,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
