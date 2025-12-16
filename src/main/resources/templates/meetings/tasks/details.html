@@ -54,10 +54,10 @@
                             <small class="text-muted">Utworzono:</small>
                             <div class="text-muted" th:text="${#temporals.format(task.createdAt, 'dd.MM.yyyy HH:mm')}"></div>
                         </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Przez:</small>
-                            <div class="text-muted" th:text="${task.createdBy.firstName + ' ' + task.createdBy.lastName}"></div>
-                        </div>
+<!--                        <div class="col-md-3">-->
+<!--                            <small class="text-muted">Przez:</small>-->
+<!--                            <div class="text-muted" th:text="${task.createdBy.email}"></div>-->
+<!--                        </div>-->
                     </div>
 
                     <!-- Ustawienia -->

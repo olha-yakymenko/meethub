@@ -382,25 +382,39 @@ public class MeetingMapper {
         return clone;
     }
 
-    // ✅ METODA DLA TWORZENIA SZABLONU
-
     public Meeting createTemplateFromMeeting(Meeting original, String templateName) {
         if (original == null) {
             return null;
         }
 
-        Meeting template = cloneMeeting(original);
-        template.setTitle(templateName != null ? templateName : original.getTitle() + " (Szablon)");
-        template.setTemplate(true);
+        original.setTemplate(true);
 
-        // Wyczyść daty - szablon nie ma konkretnych dat
-//        template.setStartDate(null);
-//        template.setEndDate(null);
-//        template.setRecurrenceEndDate(null);
+        if (templateName != null && !templateName.isBlank()) {
+            original.setTitle(templateName);
+        }
 
-        // Wyczyść powiązania z uczestnikami
-        template.setParticipants(new HashSet<>());
-
-        return template;
+        return original;
     }
+
+
+
+//    public Meeting createTemplateFromMeeting(Meeting original, String templateName) {
+//        if (original == null) {
+//            return null;
+//        }
+//
+//        Meeting template = cloneMeeting(original);
+//        template.setTitle(templateName != null ? templateName : original.getTitle() + " (Szablon)");
+//        template.setTemplate(true);
+//
+//        // Wyczyść daty - szablon nie ma konkretnych dat
+////        template.setStartDate(null);
+////        template.setEndDate(null);
+////        template.setRecurrenceEndDate(null);
+//
+//        // Wyczyść powiązania z uczestnikami
+//        template.setParticipants(new HashSet<>());
+//
+//        return template;
+//    }
 }

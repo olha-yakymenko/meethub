@@ -33,8 +33,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -1220,6 +1222,9 @@ public class MeetingServiceImpl implements MeetingService {
 
         return MeetingResponse.fromEntity(meeting, userId);
     }
+
+
+
 }
 
 

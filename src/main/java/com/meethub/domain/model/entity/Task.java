@@ -62,4 +62,29 @@ public class Task {
 
     @Builder.Default
     private Long maxFileSize = 10 * 1024 * 1024L;
+
+
+
+
+    public Long getMeetingId() {
+        return meeting != null ? meeting.getId() : null;
+    }
+
+    public void setMeetingId(Long meetingId) {
+        if (this.meeting == null) {
+            this.meeting = new Meeting();
+        }
+        this.meeting.setId(meetingId);
+    }
+
+    public Long getCreatedById() {
+        return createdBy != null ? createdBy.getId() : null;
+    }
+
+    public void setCreatedById(Long createdById) {
+        if (this.createdBy == null) {
+            this.createdBy = new User();
+        }
+        this.createdBy.setId(createdById);
+    }
 }

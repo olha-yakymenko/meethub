@@ -113,12 +113,12 @@
                             </a>
 
                             <!-- Edycja (tylko dla właściciela/organizatora) -->
-                            <a th:if="${resource.canEdit}"
-                               th:href="@{/meetings/{meetingId}/resources/{resourceId}/edit(meetingId=${meeting.id}, resourceId=${resource.id})}"
-                               class="btn btn-sm btn-outline-secondary me-1"
-                               title="Edytuj">
-                                <i class="bi bi-pencil"></i>
-                            </a>
+<!--                            <a th:if="${resource.canEdit}"-->
+<!--                               th:href="@{/meetings/{meetingId}/resources/{resourceId}/edit(meetingId=${meeting.id}, resourceId=${resource.id})}"-->
+<!--                               class="btn btn-sm btn-outline-secondary me-1"-->
+<!--                               title="Edytuj">-->
+<!--                                <i class="bi bi-pencil"></i>-->
+<!--                            </a>-->
 
                             <!-- Usuwanie (tylko dla właściciela/organizatora) -->
                             <form th:if="${resource.canDelete}"

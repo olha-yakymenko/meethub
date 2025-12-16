@@ -72,6 +72,7 @@ public class WebController {
 //    private final LocationRepository locationRepository;
     private final LocationService locationService;
 
+    private final MeetingMarkService meetingMarkService;
     private final AttendanceTokenService attendanceTokenService;
 
     @GetMapping("/")
@@ -478,6 +479,8 @@ public class WebController {
 
 
 
+
+
     @GetMapping("/meetings/{id}")
     @Operation(summary = "Szczegóły spotkania",
             description = "Zwraca szczegółowe informacje o spotkaniu wraz z informacjami o uczestnictwie, zasobach, głosowaniach i statystykach.")
@@ -504,6 +507,19 @@ public class WebController {
             model.addAttribute("meeting", meeting);
 
             Long userId = userDetails != null ? userDetails.getId() : null;
+
+            // ============= WAŻNE SPOTKANIA - DODANE =============
+            boolean isImportant = false;
+            if (userId != null) {
+                try {
+                    isImportant = meetingMarkService.isMeetingImportantForUser(userId, id);
+                    log.info("Meeting importance for user {}: {}", userId, isImportant);
+                } catch (Exception e) {
+                    log.warn("Error checking meeting importance: {}", e.getMessage());
+                }
+            }
+            model.addAttribute("isImportant", isImportant);
+            // ============= KONIEC DODAWANIA =============
 
             // Sprawdzenie czy użytkownik jest adminem
             boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
@@ -561,8 +577,6 @@ public class WebController {
                     log.error("Error checking user status: {}", e.getMessage(), e);
                 }
             }
-
-
 
             // Uprawnienia użytkownika
             if (participationInfo != null) {
@@ -644,6 +658,24 @@ public class WebController {
                 }
             }
 
+            // ============= DODATKOWO: LISTA WAŻNYCH SPOTKAŃ =============
+            if (userId != null) {
+                try {
+                    List<Long> importantMeetingIds = meetingMarkService.getImportantMeetingIdsForUser(userId);
+                    model.addAttribute("importantMeetingIds", importantMeetingIds);
+                    model.addAttribute("hasImportantMeetings", !importantMeetingIds.isEmpty());
+                    log.info("User {} has {} important meetings", userId, importantMeetingIds.size());
+                } catch (Exception e) {
+                    model.addAttribute("importantMeetingIds", Collections.emptyList());
+                    model.addAttribute("hasImportantMeetings", false);
+                    log.warn("Error fetching important meetings list: {}", e.getMessage());
+                }
+            } else {
+                model.addAttribute("importantMeetingIds", Collections.emptyList());
+                model.addAttribute("hasImportantMeetings", false);
+            }
+            // ============= KONIEC DODAWANIA =============
+
             // Dane użytkownika w modelu
             if (userDetails != null) {
                 model.addAttribute("user", userDetails);
@@ -664,6 +696,194 @@ public class WebController {
             log.info("=== END meetingDetails ===");
         }
     }
+
+
+//    @GetMapping("/meetings/{id}")
+//    @Operation(summary = "Szczegóły spotkania",
+//            description = "Zwraca szczegółowe informacje o spotkaniu wraz z informacjami o uczestnictwie, zasobach, głosowaniach i statystykach.")
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "Strona ze szczegółami spotkania"),
+//            @ApiResponse(responseCode = "404", description = "Spotkanie nie znalezione"),
+//            @ApiResponse(responseCode = "302", description = "Przekierowanie do listy spotkań w przypadku błędu")
+//    })
+//    public String meetingDetails(
+//            @PathVariable Long id,
+//            @AuthenticationPrincipal CustomUserDetails userDetails,
+//            Model model) {
+//
+//        log.info("=== START meetingDetails ===");
+//        log.info("Meeting ID: {}", id);
+//        if (userDetails != null) {
+//            log.info("User ID: {}, username: {}", userDetails.getId(), userDetails.getUsername());
+//        }
+//
+//        try {
+//            // Pobranie szczegółów spotkania
+//            MeetingResponse meeting = meetingService.getMeetingById(id);
+//            log.info("Meeting fetched: {}", meeting);
+//            model.addAttribute("meeting", meeting);
+//
+//            Long userId = userDetails != null ? userDetails.getId() : null;
+//
+//            // Sprawdzenie czy użytkownik jest adminem
+//            boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
+//                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+//            model.addAttribute("isAdmin", isAdmin);
+//            log.info("User isAdmin: {}", isAdmin);
+//
+//            // Uczestnictwo użytkownika
+//            MeetingParticipationInfo participationInfo = null;
+//            if (userId != null) {
+//                try {
+//                    participationInfo = meetingAuthorizationService.getUserMeetingPermissions(id, userId);
+//                    log.info("Participation info: {}", participationInfo);
+//                } catch (Exception e) {
+//                    log.error("Error loading participation info: {}", e.getMessage(), e);
+//                }
+//            }
+//
+//            // Potwierdzeni uczestnicy
+//            try {
+//                List<ParticipantResponse> participants = meetingParticipantService.getConfirmedParticipants(id);
+//                model.addAttribute("participants", participants);
+//                log.info("Confirmed participants: {}", participants);
+//            } catch (Exception e) {
+//                model.addAttribute("participants", Collections.emptyList());
+//                log.error("Error fetching confirmed participants: {}", e.getMessage(), e);
+//            }
+//
+//            // Statystyki uczestników
+//            try {
+//                Map<String, Long> participantStats = meetingParticipantService.getParticipantStatistics(id);
+//                model.addAttribute("participantStats", participantStats);
+//                log.info("Participant stats: {}", participantStats);
+//            } catch (Exception e) {
+//                model.addAttribute("participantStats", new HashMap<>());
+//                log.error("Error fetching participant stats: {}", e.getMessage(), e);
+//            }
+//
+//            // Status użytkownika
+//            if (userId != null) {
+//                try {
+//                    boolean isPending = meetingParticipantService.isPendingParticipant(id, userId);
+//                    boolean isDeclined = meetingParticipantService.isDeclinedParticipant(id, userId);
+//                    boolean isInvited = meetingParticipantService.isInvitedParticipant(id, userId);
+//                    boolean isConfirmed = meetingParticipantService.isConfirmedParticipant(id, userId);
+//
+//                    model.addAttribute("isPending", isPending);
+//                    model.addAttribute("isDeclined", isDeclined);
+//                    model.addAttribute("isInvited", isInvited);
+//                    model.addAttribute("isConfirmed", isConfirmed);
+//
+//                    log.info("User status - Pending: {}, Declined: {}, Invited: {}, Confirmed: {}",
+//                            isPending, isDeclined, isInvited, isConfirmed);
+//                } catch (Exception e) {
+//                    log.error("Error checking user status: {}", e.getMessage(), e);
+//                }
+//            }
+//
+//
+//
+//            // Uprawnienia użytkownika
+//            if (participationInfo != null) {
+//                model.addAttribute("isOrganizer", participationInfo.isOrganizer());
+//                model.addAttribute("isParticipant", participationInfo.isParticipant());
+//                model.addAttribute("isRelated", participationInfo.isRelated());
+//                model.addAttribute("participantRole", participationInfo.getParticipantRole());
+//                model.addAttribute("canEdit", participationInfo.isCanEdit());
+//                model.addAttribute("canDelete", participationInfo.isCanDelete());
+//                model.addAttribute("canManageParticipants", participationInfo.isCanManageParticipants());
+//                model.addAttribute("canJoin", participationInfo.isCanJoin());
+//
+//                log.info("Participation flags added to model: {}", participationInfo);
+//            } else {
+//                boolean canJoin = meeting != null && meeting.getVisibility() != null &&
+//                        meeting.getVisibility().name().equals("PUBLIC");
+//                model.addAttribute("isOrganizer", false);
+//                model.addAttribute("isParticipant", false);
+//                model.addAttribute("isRelated", false);
+//                model.addAttribute("canJoin", canJoin);
+//                log.info("Default participation flags applied, canJoin: {}", canJoin);
+//            }
+//
+//            // Statystyki spotkania dla organizatora/admina
+//            if (userId != null && participationInfo != null && (participationInfo.isOrganizer() || isAdmin)) {
+//                try {
+//                    Optional<MeetingStatistics> statsOpt = meetingAnalyticsService.getMeetingStatistics(id);
+//                    model.addAttribute("meetingStatistics", statsOpt.orElse(null));
+//                    log.info("Meeting statistics: {}", statsOpt.orElse(null));
+//                } catch (Exception e) {
+//                    model.addAttribute("meetingStatistics", null);
+//                    log.error("Error fetching meeting statistics: {}", e.getMessage(), e);
+//                }
+//            } else {
+//                model.addAttribute("meetingStatistics", null);
+//            }
+//
+//            // Głosowania
+//            if (userId != null) {
+//                try {
+//                    List<VotingResponse> allVotings = meetingVotingService.getMeetingVotings(id, userId);
+//                    Map<Boolean, List<VotingResponse>> votings = allVotings.stream()
+//                            .collect(Collectors.partitioningBy(v -> v.getStatus().name().equals("ACTIVE")));
+//
+//                    model.addAttribute("activeVotings", votings.get(true));
+//                    model.addAttribute("closedVotings", votings.get(false));
+//
+//                    log.info("Voting info - Active: {}, Closed: {}", votings.get(true), votings.get(false));
+//                } catch (Exception e) {
+//                    model.addAttribute("activeVotings", Collections.emptyList());
+//                    model.addAttribute("closedVotings", Collections.emptyList());
+//                    log.error("Error fetching voting info: {}", e.getMessage(), e);
+//                }
+//            }
+//
+//            // Feedback użytkownika
+//            if (userId != null && participationInfo != null && participationInfo.isParticipant()) {
+//                try {
+//                    Feedback userFeedback = feedbackService.getUserFeedback(id, userId);
+//                    model.addAttribute("userFeedback", userFeedback);
+//                    log.info("User feedback: {}", userFeedback);
+//                } catch (Exception e) {
+//                    model.addAttribute("userFeedback", null);
+//                    log.error("Error fetching user feedback: {}", e.getMessage(), e);
+//                }
+//            }
+//
+//            // Zasoby spotkania
+//            if (userId != null) {
+//                try {
+//                    List<MeetingResourceResponse> resources = resourceService.getMeetingResources(id, userId);
+//                    model.addAttribute("resources", resources);
+//                    model.addAttribute("resourcesCount", resources.size());
+//                    log.info("Meeting resources count: {}, resources: {}", resources.size(), resources);
+//                } catch (Exception e) {
+//                    model.addAttribute("resources", Collections.emptyList());
+//                    model.addAttribute("resourcesCount", 0);
+//                    log.error("Error fetching meeting resources: {}", e.getMessage(), e);
+//                }
+//            }
+//
+//            // Dane użytkownika w modelu
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//                model.addAttribute("userId", userId);
+//            }
+//
+//            return "meetings/details";
+//
+//        } catch (Exception e) {
+//            log.error("ERROR in meetingDetails: {}", e.getMessage(), e);
+//            if (userDetails != null) {
+//                model.addAttribute("user", userDetails);
+//                model.addAttribute("userId", userDetails.getId());
+//            }
+//            model.addAttribute("error", "Błąd podczas ładowania szczegółów spotkania");
+//            return "redirect:/meetings";
+//        } finally {
+//            log.info("=== END meetingDetails ===");
+//        }
+//    }
 
 
 

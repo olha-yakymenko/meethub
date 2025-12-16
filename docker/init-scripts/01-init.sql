@@ -1626,6 +1626,30 @@ ALTER TABLE meeting_statistics
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
 
 
+-- Tabela oznaczania ważnych spotkań
+CREATE TABLE important_meetings (
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    meeting_id BIGINT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    is_important BOOLEAN NOT NULL DEFAULT TRUE,
+    marked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, meeting_id)
+);
+
+-- Indeks dla szybkiego wyszukiwania
+CREATE INDEX idx_important_meetings_user ON important_meetings(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_important_meetings_meeting ON important_meetings(meeting_id);
+
+
+
+
+
+
+
+
+
+
+
 --
 --INSERT INTO meethub_schema.email_templates (
 --    template_key,

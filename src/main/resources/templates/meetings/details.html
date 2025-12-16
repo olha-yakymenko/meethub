@@ -45,6 +45,40 @@
     <div class="row">
         <!-- Główne informacje -->
         <div class="col-lg-8">
+
+            <div th:if="${isImportant != null and isImportant and userId != null}"
+                 class="alert alert-warning alert-dismissible fade show mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-star-fill fs-4 me-3"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block mb-1">To spotkanie jest oznaczone jako ważne</strong>
+                        <small class="text-muted">
+                            Znajdziesz je w zakładce "Moje ważne spotkania"
+                        </small>
+                    </div>
+<!--                    <form th:action="@{/meetings/important/{id}/important/toggle(id=${meeting.id})}"-->
+<!--                          method="post"-->
+<!--                          class="d-inline">-->
+<!--                        <button type="submit" class="btn btn-outline-warning btn-sm">-->
+<!--                            <i class="bi bi-star"></i> Odznacz-->
+<!--                        </button>-->
+<!--                    </form>-->
+                </div>
+            </div>
+
+            <form th:action="@{/meetings/{id}/important/toggle(id=${meeting.id})}"
+                  method="post"
+                  id="importantForm"
+                  class="d-grid">
+                <button type="submit"
+                        class="btn"
+                        th:class="${isImportant != null and isImportant} ? 'btn-warning' : 'btn-outline-warning'">
+                    <i th:class="${isImportant != null and isImportant} ? 'bi bi-star-fill' : 'bi bi-star'"></i>
+                    <span th:text="${isImportant != null and isImportant} ? 'Odznacz jako ważne' : 'Oznacz jako ważne'"></span>
+                </button>
+            </form>
+
+
             <!-- 📊 SEKCJA ANALIZY STATYSTYK (tylko dla organizatora/admina) -->
             <div th:if="${isOrganizer != null and (isOrganizer or isAdmin)}" class="card mb-4 border-primary">
                 <div class="card-header bg-primary text-white">
@@ -55,6 +89,40 @@
                     </h5>
                 </div>
                 <div class="card-body">
+
+                    <div th:if="${userId != null}" class="border-top pt-3 mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong class="text-warning">
+                                <i class="bi bi-star me-1"></i>Ważne spotkanie:
+                            </strong>
+                            <span th:if="${isImportant != null and isImportant}" class="badge bg-warning">
+            <i class="bi bi-star-fill me-1"></i>Ważne
+        </span>
+                            <span th:if="${isImportant == null or not isImportant}" class="badge bg-secondary">
+            <i class="bi bi-star me-1"></i>Standardowe
+        </span>
+                        </div>
+
+<!--                        <form th:action="@{/api/v1/meetings/{id}/important/toggle(id=${meeting.id})}"-->
+<!--                              method="post"-->
+<!--                              id="importantForm"-->
+<!--                              class="d-grid">-->
+<!--                            <button type="submit"-->
+<!--                                    class="btn"-->
+<!--                                    th:class="${isImportant != null and isImportant} ? 'btn-warning' : 'btn-outline-warning'">-->
+<!--                                <i th:class="${isImportant != null and isImportant} ? 'bi bi-star-fill' : 'bi bi-star'"></i>-->
+<!--                                <span th:text="${isImportant != null and isImportant} ? 'Odznacz jako ważne' : 'Oznacz jako ważne'"></span>-->
+<!--                            </button>-->
+<!--                        </form>-->
+
+
+
+                        <small class="text-muted d-block mt-1">
+                            Oznacz, aby szybko znaleźć w swoich ważnych spotkaniach
+                        </small>
+                    </div>
+
+
                     <!-- Ładowanie statystyk -->
                     <div th:if="${meetingStatistics == null}" class="text-center py-3">
                         <div class="spinner-border text-primary mb-3" role="status">
@@ -148,17 +216,6 @@
                                            th:text="'Śr. ocena: ' + ${#numbers.formatDecimal(meetingStatistics.averageRating, 1, 1)} + '/5'">
                                     </small>
                                 </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Śr. czas odpowiedzi:</span>
-                                        <strong class="text-secondary"
-                                                th:text="${meetingStatistics.avgResponseTimeMinutes != null ? (#numbers.formatDecimal(meetingStatistics.avgResponseTimeMinutes, 1, 1) + ' min') : 'Brak danych'}">
-                                            0 min
-                                        </strong>
-                                    </div>
-                                    <small class="text-muted">Od zaproszenia do potwierdzenia</small>
-                                </div>
                             </div>
                         </div>
 
@@ -248,12 +305,6 @@
                         </div>
                     </div>
 
-                    <!-- Informacja o braku statystyk -->
-                    <div th:if="${meeting?.endDate != null and meeting?.endDate.isAfter(T(java.time.LocalDateTime).now())}"
-                         class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Statystyki będą dostępne po zakończeniu spotkania.
-                    </div>
                 </div>
             </div>
 
@@ -839,10 +890,20 @@
                         <div th:if="${isOrganizer}" class="border-top pt-3 mt-3">
                             <small class="text-muted d-block mb-2">Akcje organizatora:</small>
 
-                            <a th:href="@{/analytics/meetings/{meetingId}/report(meetingId=${meeting.id})}"
-                               class="btn btn-outline-info btn-sm w-100 mb-2">
-                                <i class="bi bi-graph-up me-1"></i>Analiza statystyk
-                            </a>
+                            <!-- PROSTE ROZWIĄZANIE - bez modala -->
+                            <form th:action="@{/meetings/{id}/save-as-template(id=${meeting.id})}"
+                                  method="post"
+                                  onsubmit="return confirm('Czy na pewno chcesz zapisać to spotkanie jako szablon?')">
+
+                                <!-- ✅ DODAJ UKRYTE POLE Z NAZWĄ SZABLONU -->
+                                <input type="hidden"
+                                       name="templateName"
+                                       th:value="${meeting?.title} + ' - szablon'">
+
+                                <button type="submit" class="btn btn-outline-purple btn-sm w-100 mb-2">
+                                    <i class="bi bi-file-earmark me-1"></i>Zapisz jako szablon
+                                </button>
+                            </form>
 
                             <a th:href="@{/meetings/{id}/participants/invite(id=${meeting.id})}"
                                class="btn btn-outline-primary btn-sm w-100 mb-2">

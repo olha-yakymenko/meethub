@@ -15,6 +15,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.ModelAndView;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -56,20 +57,20 @@ public class GlobalExceptionHandler {
                 details
         );
     }
-
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ErrorResponse> handleDataAccessException(
-            DataAccessException ex, WebRequest request) {
-
-        log.error("Database access error: {}", ex.getMessage(), ex);
-
-        return buildErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Błąd dostępu do bazy danych. Proszę spróbować później.",
-                request,
-                null
-        );
-    }
+//
+//    @ExceptionHandler(DataAccessException.class)
+//    public ResponseEntity<ErrorResponse> handleDataAccessException(
+//            DataAccessException ex, WebRequest request) {
+//
+//        log.error("Database access error: {}", ex.getMessage(), ex);
+//
+//        return buildErrorResponse(
+//                HttpStatus.INTERNAL_SERVER_ERROR,
+//                "Błąd dostępu do bazy danych. Proszę spróbować później.",
+//                request,
+//                null
+//        );
+//    }
 
     @ExceptionHandler(EmptyResultDataAccessException.class)
     public ResponseEntity<ErrorResponse> handleEmptyResultDataAccessException(
@@ -202,5 +203,40 @@ public class GlobalExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(error, status);
+    }
+
+
+    @ExceptionHandler(DataAccessException.class)
+    public Object handleDataAccessException(
+            DataAccessException ex,
+            WebRequest request,
+            HttpServletRequest httpRequest) {
+
+        String path = httpRequest.getRequestURI();
+
+        // Jeśli to web endpoint (/meetings/...), przekieruj do strony błędu
+        if (path != null && !path.startsWith("/api/")) {
+            log.error("Web database error for path {}: {}", path, ex.getMessage(), ex);
+
+            ModelAndView mav = new ModelAndView("error");
+            mav.addObject("error", "Błąd dostępu do bazy danych");
+            mav.addObject("message", "Proszę spróbować później");
+            mav.addObject("status", 500);
+            mav.addObject("path", path);
+            mav.addObject("timestamp", LocalDateTime.now());
+
+            return mav;
+        }
+
+        // Dla API endpointów zwróć JSON
+        log.error("API database error: {}", ex.getMessage(), ex);
+
+        return buildErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Błąd dostępu do bazy danych. Proszę spróbować później.",
+                request,
+                null
+        );
+
     }
 }
