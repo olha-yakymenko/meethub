@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-dismiss alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {
         setTimeout(() => {
@@ -10,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
 
-    // Add loading states to buttons
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
         form.addEventListener('submit', function() {
@@ -22,14 +20,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 
-// Utility functions
 const MeetHub = {
     formatDate: function(dateString) {
         const options = {

@@ -42,7 +42,6 @@ public class LocationController {
             String query,
 
             @RequestParam(required = false)
-            @Pattern(regexp = "PHYSICAL|VIRTUAL|HYBRID", message = "Nieprawidłowy typ lokalizacji")
             String type,
 
             @RequestParam(required = false)

@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -138,11 +138,51 @@ public class LocationServiceImpl implements LocationService {
             throw new BusinessException("Nie udało się pobrać lokalizacji: " + e.getMessage());
         }
     }
+//
+//    @Override
+//    @Transactional(readOnly = true)
+//    public LocationListResponse searchLocations(LocationSearchRequest request) {
+//        log.info("Searching locations with query: {}, type: {}, city: {}",
+//                request.getQuery(), request.getType(), request.getCity());
+//
+//        try {
+//            Pageable pageable = PageRequest.of(
+//                    request.getPage() != null ? request.getPage() : 0,
+//                    request.getSize() != null ? request.getSize() : 20
+//            );
+//
+//            String typeString = request.getType() != null ? request.getType().name() : null;
+//
+//            Page<Location> locationsPage = locationRepository.searchLocations(
+//                    request.getQuery(), typeString, request.getCity(), pageable);
+//
+//            List<LocationResponse> locations = locationsPage.getContent()
+//                    .stream()
+//                    .map(locationMapper::toResponse)
+//                    .collect(Collectors.toList());
+//
+//            return LocationListResponse.builder()
+//                    .locations(locations)
+//                    .currentPage(locationsPage.getNumber())
+//                    .totalPages(locationsPage.getTotalPages())
+//                    .totalItems(locationsPage.getTotalElements())
+//                    .hasNext(locationsPage.hasNext())
+//                    .hasPrevious(locationsPage.hasPrevious())
+//                    .build();
+//
+//        } catch (Exception e) {
+//            log.error("Error searching locations: {}", e.getMessage(), e);
+//            throw new BusinessException("Nie udało się wyszukać lokalizacji: " + e.getMessage());
+//        }
+//    }
+
+
 
     @Override
     @Transactional(readOnly = true)
     public LocationListResponse searchLocations(LocationSearchRequest request) {
-        log.info("Searching locations with query: {}, type: {}, city: {}",
+        log.info("=== START searchLocations ===");
+        log.info("Searching locations with query: '{}', type: '{}', city: '{}'",
                 request.getQuery(), request.getType(), request.getCity());
 
         try {
@@ -153,8 +193,28 @@ public class LocationServiceImpl implements LocationService {
 
             String typeString = request.getType() != null ? request.getType().name() : null;
 
+            // DODAJ TE LOGI
+            log.info("Type from request: {}", request.getType());
+            log.info("Type as string: '{}'", typeString);
+            log.info("Type enum value: {}", request.getType() != null ? request.getType().ordinal() : "null");
+            log.info("Type enum name: {}", request.getType() != null ? request.getType().name() : "null");
+
+            // Sprawdź wszystkie wartości enum
+            log.info("All LocationType values: {}", Arrays.toString(LocationType.values()));
+
             Page<Location> locationsPage = locationRepository.searchLocations(
                     request.getQuery(), typeString, request.getCity(), pageable);
+
+            // DODAJ WIĘCEJ INFORMACJI O WYNIKACH
+            log.info("Repository returned {} locations", locationsPage.getTotalElements());
+
+            if (!locationsPage.isEmpty()) {
+                log.info("Found locations:");
+                locationsPage.getContent().forEach(loc ->
+                        log.info("  - ID: {}, Name: '{}', Type: '{}' (as string: '{}')",
+                                loc.getId(), loc.getName(), loc.getType(),
+                                loc.getType() != null ? loc.getType().name() : "null"));
+            }
 
             List<LocationResponse> locations = locationsPage.getContent()
                     .stream()

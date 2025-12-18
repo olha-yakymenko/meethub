@@ -17,9 +17,6 @@ import java.util.Optional;
 @Repository
 public interface LocationRepository extends JpaRepository<Location, Long> {
 
-    // ============ AUTOMATYCZNE METODY SPRING DATA JPA ============
-
-    // Podstawowe metody (generowane automatycznie)
     @Override
     List<Location> findAll();
 
@@ -34,43 +31,41 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     boolean existsByNameAndAddress(String name, String address);
 
 
-    // Wyszukiwanie pojedynczego rekordu (generowane automatycznie)
     Optional<Location> findByVirtualMeetingUrl(String virtualMeetingUrl);
 
 
-    // Zaawansowane wyszukiwanie
     @Query(value = """
-        SELECT * FROM meethub_schema.locations l 
-        WHERE 
-            (:query IS NULL OR 
-             LOWER(l.name) LIKE LOWER(CONCAT('%', :query, '%')) OR 
-             LOWER(l.city) LIKE LOWER(CONCAT('%', :query, '%')) OR 
-             LOWER(l.address) LIKE LOWER(CONCAT('%', :query, '%'))) 
-        AND 
-            (:type IS NULL OR l.type = :type) 
-        AND 
-            (:city IS NULL OR LOWER(l.city) = LOWER(:city))
-        ORDER BY l.name
-        """,
+    SELECT * FROM meethub_schema.locations l 
+    WHERE 
+        (:query IS NULL OR :query = '' OR 
+         LOWER(l.name) LIKE LOWER(CONCAT('%', :query, '%')) OR 
+         LOWER(l.city) LIKE LOWER(CONCAT('%', :query, '%')) OR 
+         LOWER(l.address) LIKE LOWER(CONCAT('%', :query, '%'))) 
+    AND 
+        (:type IS NULL OR :type = '' OR l.type = :type) 
+    AND 
+        (:city IS NULL OR :city = '' OR LOWER(l.city) = LOWER(:city))
+    ORDER BY l.name
+    """,
             nativeQuery = true,
             countQuery = """
-        SELECT COUNT(*) FROM meethub_schema.locations l 
-        WHERE 
-            (:query IS NULL OR 
-             LOWER(l.name) LIKE LOWER(CONCAT('%', :query, '%')) OR 
-             LOWER(l.city) LIKE LOWER(CONCAT('%', :query, '%')) OR 
-             LOWER(l.address) LIKE LOWER(CONCAT('%', :query, '%'))) 
-        AND 
-            (:type IS NULL OR l.type = :type) 
-        AND 
-            (:city IS NULL OR LOWER(l.city) = LOWER(:city))
-        """)
+    SELECT COUNT(*) FROM meethub_schema.locations l 
+    WHERE 
+        (:query IS NULL OR :query = '' OR 
+         LOWER(l.name) LIKE LOWER(CONCAT('%', :query, '%')) OR 
+         LOWER(l.city) LIKE LOWER(CONCAT('%', :query, '%')) OR 
+         LOWER(l.address) LIKE LOWER(CONCAT('%', :query, '%'))) 
+    AND 
+        (:type IS NULL OR :type = '' OR l.type = :type) 
+    AND 
+        (:city IS NULL OR :city = '' OR LOWER(l.city) = LOWER(:city))
+    """)
     Page<Location> searchLocations(@Param("query") String query,
                                    @Param("type") String type,
                                    @Param("city") String city,
                                    Pageable pageable);
 
-    // Wyszukiwanie w pobliżu (Haversine formula)
+
     @Query(value = """
         SELECT * FROM meethub_schema.locations 
         WHERE latitude IS NOT NULL 
