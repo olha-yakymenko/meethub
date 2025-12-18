@@ -221,47 +221,47 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        log.info("🔍 SPRING SECURITY: Loading user by username/email: '{}'", email);
+        log.info(" SPRING SECURITY: Loading user by username/email: '{}'", email);
 
         try {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> {
-                        log.error("❌ SPRING SECURITY: User not found with email: '{}'", email);
+                        log.error(" SPRING SECURITY: User not found with email: '{}'", email);
                         return new UsernameNotFoundException("User not found with email: " + email);
                     });
 
-            log.info("✅ SPRING SECURITY: User found - ID: {}, Name: {} {}, Email: {}, Role: {}",
+            log.info(" SPRING SECURITY: User found - ID: {}, Name: {} {}, Email: {}, Role: {}",
                     user.getId(),
                     user.getFirstName(),
                     user.getLastName(),
                     user.getEmail(),
                     user.getRole());
 
-            log.info("🔑 SPRING SECURITY: User password hash (first 20 chars): {}...",
+            log.info("SPRING SECURITY: User password hash (first 20 chars): {}...",
                     user.getPassword() != null ?
                             user.getPassword().substring(0, Math.min(20, user.getPassword().length())) : "NULL");
 
             // Sprawdź czy konto jest zablokowane
             if (user.getAccountLockedUntil() != null &&
                     user.getAccountLockedUntil().isAfter(LocalDateTime.now())) {
-                log.warn("⛔ SPRING SECURITY: Account is locked until: {}",
+                log.warn(" SPRING SECURITY: Account is locked until: {}",
                         user.getAccountLockedUntil());
                 throw new LockedException("Account is locked");
             }
 
             // Sprawdź czy konto jest aktywne
             if (user.getEnabled() != null && !user.getEnabled()) {
-                log.warn("🚫 SPRING SECURITY: Account is disabled");
+                log.warn(" SPRING SECURITY: Account is disabled");
                 throw new DisabledException("Account is disabled");
             }
 
             return new CustomUserDetails(user);
 
         } catch (UsernameNotFoundException e) {
-            log.error("❌ SPRING SECURITY: Authentication failed - user not found");
+            log.error(" SPRING SECURITY: Authentication failed - user not found");
             throw e;
         } catch (Exception e) {
-            log.error("💥 SPRING SECURITY: Unexpected error loading user", e);
+            log.error("SPRING SECURITY: Unexpected error loading user", e);
             throw new UsernameNotFoundException("Error loading user", e);
         }
     }
@@ -271,32 +271,32 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         public CustomUserDetails(User user) {
             this.user = user;
-            log.debug("👤 Created CustomUserDetails for user: {}", user.getEmail());
+            log.debug(" Created CustomUserDetails for user: {}", user.getEmail());
         }
 
         @Override
         public Collection<? extends GrantedAuthority> getAuthorities() {
             String role = "ROLE_" + user.getRole().name();
-            log.debug("🎖️  Granted authority: {}", role);
+            log.debug("  Granted authority: {}", role);
             return Collections.singletonList(new SimpleGrantedAuthority(role));
         }
 
         @Override
         public String getPassword() {
-            log.debug("🔐 Returning password hash for user: {}", user.getEmail());
+            log.debug(" Returning password hash for user: {}", user.getEmail());
             return user.getPassword();
         }
 
         @Override
         public String getUsername() {
-            log.debug("📧 Returning username/email: {}", user.getEmail());
+            log.debug("Returning username/email: {}", user.getEmail());
             return user.getEmail();
         }
 
         @Override
         public boolean isAccountNonExpired() {
             boolean result = true;
-            log.debug("⏰ Account non-expired: {} for user: {}", result, user.getEmail());
+            log.debug(" Account non-expired: {} for user: {}", result, user.getEmail());
             return result;
         }
 
@@ -305,7 +305,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             boolean isLocked = user.getAccountLockedUntil() != null &&
                     user.getAccountLockedUntil().isAfter(LocalDateTime.now());
             boolean result = !isLocked;
-            log.debug("🔒 Account non-locked: {} for user: {} (locked until: {})",
+            log.debug("Account non-locked: {} for user: {} (locked until: {})",
                     result, user.getEmail(), user.getAccountLockedUntil());
             return result;
         }
@@ -313,14 +313,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         @Override
         public boolean isCredentialsNonExpired() {
             boolean result = true;
-            log.debug("🔑 Credentials non-expired: {} for user: {}", result, user.getEmail());
+            log.debug(" Credentials non-expired: {} for user: {}", result, user.getEmail());
             return result;
         }
 
         @Override
         public boolean isEnabled() {
             boolean result = user.getEnabled() != null ? user.getEnabled() : true;
-            log.debug("✅ Account enabled: {} for user: {}", result, user.getEmail());
+            log.debug(" Account enabled: {} for user: {}", result, user.getEmail());
             return result;
         }
 

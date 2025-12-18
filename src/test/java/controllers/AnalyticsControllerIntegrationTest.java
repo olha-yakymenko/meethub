@@ -89,10 +89,8 @@ class AnalyticsControllerIntegrationTest {
     @Test
     @WithMockUser(username = "test@example.com")
     void getMeetingReport_shouldReturnReport() throws Exception {
-        // First generate statistics
         mockMvc.perform(post("/api/v1/analytics/meetings/{meetingId}/statistics", testMeeting.getId()));
 
-        // Then get report
         mockMvc.perform(get("/api/v1/analytics/meetings/{meetingId}/report", testMeeting.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
@@ -102,10 +100,8 @@ class AnalyticsControllerIntegrationTest {
     @Test
     @WithMockUser(username = "test@example.com")
     void exportMeetingStatisticsToCsv_shouldReturnCsvFile() throws Exception {
-        // First generate statistics
         mockMvc.perform(post("/api/v1/analytics/meetings/{meetingId}/statistics", testMeeting.getId()));
 
-        // Then export
         mockMvc.perform(get("/api/v1/analytics/meetings/{meetingId}/export/csv", testMeeting.getId()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", containsString("text/csv")))

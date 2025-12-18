@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -23,9 +24,10 @@ class NotificationScheduleRepositoryTest {
     void testFindByUserId() {
         List<NotificationSchedule> schedules = notificationScheduleRepository.findByUserId(1L);
 
-        assertThat(schedules).isNotEmpty();
-        assertThat(schedules).hasSize(2);
-//        assertThat(schedules.get(0).getUserId()).isEqualTo(1L);
+        assertAll("Notification schedules for user 1",
+                () -> assertThat(schedules).isNotEmpty(),
+                () -> assertThat(schedules).hasSize(2)
+        );
     }
 
     @Test
@@ -33,6 +35,8 @@ class NotificationScheduleRepositoryTest {
     void testFindByUserIdEmpty() {
         List<NotificationSchedule> schedules = notificationScheduleRepository.findByUserId(999L);
 
-        assertThat(schedules).isEmpty();
+        assertAll("Notification schedules for non-existing user",
+                () -> assertThat(schedules).isEmpty()
+        );
     }
 }

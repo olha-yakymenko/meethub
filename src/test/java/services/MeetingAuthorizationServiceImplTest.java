@@ -21,8 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -121,393 +120,340 @@ class MeetingAuthorizationServiceImplTest {
 
     @Test
     void getUserMeetingPermissions_whenOrganizer_shouldReturnFullPermissions() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         MeetingParticipationInfo info = meetingAuthorizationService.getUserMeetingPermissions(100L, 1L);
 
-        // Then
-        assertThat(info.isOrganizer()).isTrue();
-        assertThat(info.isParticipant()).isTrue();
-        assertThat(info.isCanEdit()).isTrue();
-        assertThat(info.isCanDelete()).isTrue();
-        assertThat(info.isCanManageParticipants()).isTrue();
-        assertThat(info.isCanJoin()).isTrue();
-        assertThat(info.isCanViewDetails()).isTrue();
-        assertThat(info.isCanUpload()).isTrue();
-        assertThat(info.isCanDownload()).isTrue();
-        assertThat(info.getParticipantRole()).isEqualTo("ORGANIZER");
+        assertAll(
+                () -> assertTrue(info.isOrganizer()),
+                () -> assertTrue(info.isParticipant()),
+                () -> assertTrue(info.isCanEdit()),
+                () -> assertTrue(info.isCanDelete()),
+                () -> assertTrue(info.isCanManageParticipants()),
+                () -> assertTrue(info.isCanJoin()),
+                () -> assertTrue(info.isCanViewDetails()),
+                () -> assertTrue(info.isCanUpload()),
+                () -> assertTrue(info.isCanDownload()),
+                () -> assertEquals("ORGANIZER", info.getParticipantRole())
+        );
     }
-
-
 
     @Test
     void getUserMeetingPermissions_whenPublicMeetingExternalUser_shouldReturnViewOnly() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
-        // Nie trzeba mockować dla external user - domyślnie zwróci false
 
-        // When
         MeetingParticipationInfo info = meetingAuthorizationService.getUserMeetingPermissions(100L, 5L);
 
-        // Then
-        assertThat(info.isOrganizer()).isFalse();
-        assertThat(info.isParticipant()).isFalse();
-        assertThat(info.isCanEdit()).isFalse();
-        assertThat(info.isCanDelete()).isFalse();
-        assertThat(info.isCanManageParticipants()).isFalse();
-        assertThat(info.isCanJoin()).isFalse();
-        assertThat(info.isCanViewDetails()).isTrue(); // Public meeting - widzi szczegóły
-        assertThat(info.isCanUpload()).isFalse();
-        assertThat(info.isCanDownload()).isFalse();
-        assertThat(info.getParticipantRole()).isEqualTo("NONE");
+        assertAll(
+                () -> assertFalse(info.isOrganizer()),
+                () -> assertFalse(info.isParticipant()),
+                () -> assertFalse(info.isCanEdit()),
+                () -> assertFalse(info.isCanDelete()),
+                () -> assertFalse(info.isCanManageParticipants()),
+                () -> assertFalse(info.isCanJoin()),
+                () -> assertTrue(info.isCanViewDetails()),
+                () -> assertFalse(info.isCanUpload()),
+                () -> assertFalse(info.isCanDownload()),
+                () -> assertEquals("NONE", info.getParticipantRole())
+        );
     }
 
     @Test
     void getUserMeetingPermissions_whenPrivateMeetingExternalUser_shouldReturnNoAccess() {
-        // Given
         when(meetingRepository.findById(200L)).thenReturn(Optional.of(privateMeeting));
-        // Nie trzeba mockować dla external user - domyślnie zwróci false
 
-        // When
         MeetingParticipationInfo info = meetingAuthorizationService.getUserMeetingPermissions(200L, 5L);
 
-        // Then
-        assertThat(info.isOrganizer()).isFalse();
-        assertThat(info.isParticipant()).isFalse();
-        assertThat(info.isCanEdit()).isFalse();
-        assertThat(info.isCanDelete()).isFalse();
-        assertThat(info.isCanManageParticipants()).isFalse();
-        assertThat(info.isCanJoin()).isFalse();
-        assertThat(info.isCanViewDetails()).isFalse(); // Private meeting - nie widzi szczegółów
-        assertThat(info.isCanUpload()).isFalse();
-        assertThat(info.isCanDownload()).isFalse();
-        assertThat(info.getParticipantRole()).isEqualTo("NONE");
+        assertAll(
+                () -> assertFalse(info.isOrganizer()),
+                () -> assertFalse(info.isParticipant()),
+                () -> assertFalse(info.isCanEdit()),
+                () -> assertFalse(info.isCanDelete()),
+                () -> assertFalse(info.isCanManageParticipants()),
+                () -> assertFalse(info.isCanJoin()),
+                () -> assertFalse(info.isCanViewDetails()),
+                () -> assertFalse(info.isCanUpload()),
+                () -> assertFalse(info.isCanDownload()),
+                () -> assertEquals("NONE", info.getParticipantRole())
+        );
     }
 
     @Test
     void getUserMeetingPermissions_whenNullUserId_shouldHandleGracefully() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
 
-        // When
         MeetingParticipationInfo info = meetingAuthorizationService.getUserMeetingPermissions(100L, null);
 
-        // Then
-        assertThat(info.isOrganizer()).isFalse();
-        assertThat(info.isParticipant()).isFalse();
-        assertThat(info.isCanViewDetails()).isTrue(); // Public meeting dla niezalogowanych
-        assertThat(info.getParticipantRole()).isEqualTo("NONE");
+        assertAll(
+                () -> assertFalse(info.isOrganizer()),
+                () -> assertFalse(info.isParticipant()),
+                () -> assertTrue(info.isCanViewDetails()),
+                () -> assertEquals("NONE", info.getParticipantRole())
+        );
     }
 
     @Test
     void getUserMeetingPermissions_whenMeetingNotFound_shouldThrowException() {
-        // Given
         when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // When & Then
-        assertThatThrownBy(() -> meetingAuthorizationService.getUserMeetingPermissions(999L, 1L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Meeting not found");
+        assertThrows(ResourceNotFoundException.class, () ->
+                meetingAuthorizationService.getUserMeetingPermissions(999L, 1L)
+        );
     }
 
     @Test
     void canUserViewResource_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canView = meetingAuthorizationService.canUserViewResource(100L, 1L);
 
-        // Then
-        assertThat(canView).isTrue();
+        assertAll(
+                () -> assertTrue(canView)
+        );
     }
-
 
     @Test
     void canUserViewResource_whenPublicMeetingExternalUser_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         boolean canView = meetingAuthorizationService.canUserViewResource(100L, 5L);
 
-        // Then
-        assertThat(canView).isTrue(); // Public meeting - widzi zasoby
+        assertAll(
+                () -> assertTrue(canView)
+        );
     }
 
     @Test
     void canUserViewResource_whenPrivateMeetingExternalUser_shouldReturnFalse() {
-        // Given
         when(meetingRepository.findById(200L)).thenReturn(Optional.of(privateMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         boolean canView = meetingAuthorizationService.canUserViewResource(200L, 5L);
 
-        // Then
-        assertThat(canView).isFalse(); // Private meeting - nie widzi zasobów
+        assertAll(
+                () -> assertFalse(canView)
+        );
     }
 
     @Test
     void canUserDownloadResource_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canDownload = meetingAuthorizationService.canUserDownloadResource(100L, 1L);
 
-        // Then
-        assertThat(canDownload).isTrue();
+        assertAll(
+                () -> assertTrue(canDownload)
+        );
     }
-
 
     @Test
     void canUserDownloadResource_whenExternalUser_shouldReturnFalse() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         boolean canDownload = meetingAuthorizationService.canUserDownloadResource(100L, 5L);
 
-        // Then
-        assertThat(canDownload).isFalse();
+        assertAll(
+                () -> assertFalse(canDownload)
+        );
     }
 
     @Test
     void canUserUploadResource_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canUpload = meetingAuthorizationService.canUserUploadResource(100L, 1L);
 
-        // Then
-        assertThat(canUpload).isTrue();
+        assertAll(
+                () -> assertTrue(canUpload)
+        );
     }
-
 
     @Test
     void canUserDeleteResource_whenResourceOwner_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingResourceRepository.findById(500L)).thenReturn(Optional.of(testResource));
 
-        // When
         boolean canDelete = meetingAuthorizationService.canUserDeleteResource(100L, 500L, 2L);
 
-        // Then
-        assertThat(canDelete).isTrue(); // Właściciel zasobu może go usunąć
+        assertAll(
+                () -> assertTrue(canDelete)
+        );
     }
 
     @Test
     void canUserDeleteResource_whenNotOwnerOrOrganizer_shouldReturnFalse() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingResourceRepository.findById(500L)).thenReturn(Optional.of(testResource));
 
-        // When
         boolean canDelete = meetingAuthorizationService.canUserDeleteResource(100L, 500L, 5L);
 
-        // Then
-        assertThat(canDelete).isFalse();
+        assertAll(
+                () -> assertFalse(canDelete)
+        );
     }
 
     @Test
     void canUserDeleteResource_whenResourceNotFound_shouldReturnFalse() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingResourceRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // When
         boolean canDelete = meetingAuthorizationService.canUserDeleteResource(100L, 999L, 2L);
 
-        // Then
-        assertThat(canDelete).isFalse();
+        assertAll(
+                () -> assertFalse(canDelete)
+        );
     }
 
     @Test
     void getUserResourceAccessLevel_whenOrganizer_shouldReturnManage() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         ResourceAccessLevel level = meetingAuthorizationService.getUserResourceAccessLevel(100L, 1L);
 
-        // Then
-        assertThat(level).isEqualTo(ResourceAccessLevel.MANAGE);
+        assertAll(
+                () -> assertEquals(ResourceAccessLevel.MANAGE, level)
+        );
     }
-
 
     @Test
     void getUserResourceAccessLevel_whenPublicMeetingExternalUser_shouldReturnView() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         ResourceAccessLevel level = meetingAuthorizationService.getUserResourceAccessLevel(100L, 5L);
 
-        // Then
-        assertThat(level).isEqualTo(ResourceAccessLevel.VIEW);
+        assertAll(
+                () -> assertEquals(ResourceAccessLevel.VIEW, level)
+        );
     }
 
     @Test
     void getUserResourceAccessLevel_whenPrivateMeetingExternalUser_shouldReturnNone() {
-        // Given
         when(meetingRepository.findById(200L)).thenReturn(Optional.of(privateMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         ResourceAccessLevel level = meetingAuthorizationService.getUserResourceAccessLevel(200L, 5L);
 
-        // Then
-        assertThat(level).isEqualTo(ResourceAccessLevel.NONE);
+        assertAll(
+                () -> assertEquals(ResourceAccessLevel.NONE, level)
+        );
     }
 
     @Test
     void hasResourceAccess_whenSufficientLevel_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean hasAccess = meetingAuthorizationService.hasResourceAccess(100L, 1L, ResourceAccessLevel.UPLOAD);
 
-        // Then
-        assertThat(hasAccess).isTrue();
+        assertAll(
+                () -> assertTrue(hasAccess)
+        );
     }
-
-
 
     @Test
     void canUserComment_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canComment = meetingAuthorizationService.canUserComment(100L, 1L);
 
-        // Then
-        assertThat(canComment).isTrue();
+        assertAll(
+                () -> assertTrue(canComment)
+        );
     }
-
-
 
     @Test
     void canUserComment_whenExternalUser_shouldReturnFalse() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         boolean canComment = meetingAuthorizationService.canUserComment(100L, 5L);
 
-        // Then
-        assertThat(canComment).isFalse();
+        assertAll(
+                () -> assertFalse(canComment)
+        );
     }
 
     @Test
     void canUserViewParticipants_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canView = meetingAuthorizationService.canUserViewParticipants(100L, 1L);
 
-        // Then
-        assertThat(canView).isTrue();
+        assertAll(
+                () -> assertTrue(canView)
+        );
     }
-
-
 
     @Test
     void canUserViewParticipants_whenPublicMeetingExternalUser_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         boolean canView = meetingAuthorizationService.canUserViewParticipants(100L, 5L);
 
-        // Then
-        assertThat(canView).isTrue(); // Public meeting - widzi uczestników
+        assertAll(
+                () -> assertTrue(canView)
+        );
     }
 
     @Test
     void canUserViewParticipants_whenPrivateMeetingExternalUser_shouldReturnFalse() {
-        // Given
         when(meetingRepository.findById(200L)).thenReturn(Optional.of(privateMeeting));
-        // Nie trzeba mockować dla external user
 
-        // When
         boolean canView = meetingAuthorizationService.canUserViewParticipants(200L, 5L);
 
-        // Then
-        assertThat(canView).isFalse(); // Private meeting - nie widzi uczestników
+        assertAll(
+                () -> assertFalse(canView)
+        );
     }
 
     @Test
     void canUserEditMeeting_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canEdit = meetingAuthorizationService.canUserEditMeeting(100L, 1L);
 
-        // Then
-        assertThat(canEdit).isTrue();
+        assertAll(
+                () -> assertTrue(canEdit)
+        );
     }
 
     @Test
     void canUserDeleteMeeting_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canDelete = meetingAuthorizationService.canUserDeleteMeeting(100L, 1L);
 
-        // Then
-        assertThat(canDelete).isTrue();
+        assertAll(
+                () -> assertTrue(canDelete)
+        );
     }
-
-
 
     @Test
     void canUserManageParticipants_whenOrganizer_shouldReturnTrue() {
-        // Given
         when(meetingRepository.findById(100L)).thenReturn(Optional.of(publicMeeting));
         when(meetingParticipantService.getParticipantPermissionLevel(100L, 1L))
                 .thenReturn(PermissionLevel.ORGANIZER);
 
-        // When
         boolean canManage = meetingAuthorizationService.canUserManageParticipants(100L, 1L);
 
-        // Then
-        assertThat(canManage).isTrue();
+        assertAll(
+                () -> assertTrue(canManage)
+        );
     }
-
-
 }

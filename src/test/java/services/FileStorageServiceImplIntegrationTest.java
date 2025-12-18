@@ -42,7 +42,8 @@ class FileStorageServiceImplIntegrationTest {
         cleanupTestDirectory();
     }
 
-    private void cleanupTestDirectory() throws IOException {
+    @Test
+    public void cleanupTestDirectory() throws IOException {
         Path testDir = Paths.get("test-integration-uploads");
         if (Files.exists(testDir)) {
             Files.walk(testDir)
@@ -58,71 +59,32 @@ class FileStorageServiceImplIntegrationTest {
         }
     }
 
-//    @Test
-//    void testFullFileLifecycle() throws IOException {
-//        // 1. Store file
-//        MockMultipartFile multipartFile = new MockMultipartFile(
-//                "file",
-//                TEST_FILENAME,
-//                "text/plain",
-//                TEST_CONTENT.getBytes()
-//        );
-//
-//        String storedPath = fileStorageService.storeFile(multipartFile, TEST_FILENAME);
-//        assertNotNull(storedPath);
-//        assertTrue(Files.exists(Paths.get(storedPath)));
-//
-//        // 2. Check file exists
-//        assertTrue(fileStorageService.fileExists(TEST_FILENAME));
-//
-//        // 3. Load file as resource
-//        var resource = fileStorageService.loadFileAsResource(TEST_FILENAME);
-//        assertNotNull(resource);
-//        assertTrue(resource.exists());
-//
-//        // 4. Get file path
-//        Path filePath = fileStorageService.getFilePath(TEST_FILENAME);
-//        assertEquals(storedPath, filePath.toString());
-//
-//        // 5. Get storage stats
-//        var stats = fileStorageService.getStorageStats();
-//        assertTrue(stats.getTotalFiles() > 0);
-//        assertTrue(stats.getTotalSize() > 0);
-//
-//        // 6. Delete file
-//        fileStorageService.deleteFile(storedPath);
-//        assertFalse(Files.exists(Paths.get(storedPath)));
-//    }
-//
-//    @Test
-//    void testMultipleFileOperations() throws IOException {
-//        // Store multiple files
-//        for (int i = 1; i <= 3; i++) {
-//            MockMultipartFile file = new MockMultipartFile(
-//                    "file" + i,
-//                    "file" + i + ".txt",
-//                    "text/plain",
-//                    ("Content " + i).getBytes()
-//            );
-//
-//            fileStorageService.storeFile(file, "file" + i + ".txt");
-//        }
-//
-//        // Verify all files exist
-//        for (int i = 1; i <= 3; i++) {
-//            assertTrue(fileStorageService.fileExists("file" + i + ".txt"));
-//        }
-//
-//        // Verify storage stats
-//        var stats = fileStorageService.getStorageStats();
-//        assertEquals(3L, stats.getTotalFiles());
-//        assertTrue(stats.getTotalSize() > 0);
-//
-//        // Clean up
-//        for (int i = 1; i <= 3; i++) {
-//            fileStorageService.deleteFile(
-//                    fileStorageService.getFilePath("file" + i + ".txt").toString()
-//            );
-//        }
-//    }
+    @Test
+    void testFullFileLifecycle() throws IOException {
+        MockMultipartFile multipartFile = new MockMultipartFile(
+                "file",
+                TEST_FILENAME,
+                "text/plain",
+                TEST_CONTENT.getBytes()
+        );
+
+        String storedPath = fileStorageService.storeFile(multipartFile, TEST_FILENAME);
+
+        assertAll("Full file lifecycle",
+                () -> assertNotNull(storedPath, "Stored path should not be null"),
+                () -> assertTrue(Files.exists(Paths.get(storedPath)), "File should exist on disk"),
+                () -> assertTrue(fileStorageService.fileExists(TEST_FILENAME), "fileExists should return true"),
+                () -> {
+                    var resource = fileStorageService.loadFileAsResource(TEST_FILENAME);
+                    assertNotNull(resource, "Resource should not be null");
+                    assertTrue(resource.exists(), "Resource should exist");
+                },
+                () -> {
+                    Path filePath = fileStorageService.getFilePath(TEST_FILENAME);
+                    assertEquals(storedPath, filePath.toString(), "File path should match stored path");
+                }
+        );
+    }
+
+
 }

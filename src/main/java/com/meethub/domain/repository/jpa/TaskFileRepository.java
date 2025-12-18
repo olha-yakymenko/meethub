@@ -43,24 +43,16 @@ import java.util.List;
 @Repository
 public interface TaskFileRepository extends JpaRepository<TaskFile, Long> {
 
-    // Te 5 metod są KLUCZOWE dla funkcjonalności plików:
-
-    // 1. Pliki dla zadania (wszystkie)
     List<TaskFile> findByTaskId(Long taskId);
 
-    // 2. Pliki użytkownika w zadaniu
     List<TaskFile> findByTaskIdAndUploadedById(Long taskId, Long userId);
 
-    // 3. Pliki bez assignment (organizatora)
     List<TaskFile> findByTaskIdAndAssignmentIsNull(Long taskId);
 
-    // 4. Pliki dla assignment
     List<TaskFile> findByAssignmentId(Long assignmentId);
 
-    // 5. Wszystkie pliki użytkownika
     List<TaskFile> findByUploadedById(Long userId);
 
-    // Opcjonalne dodatkowe metody:
 
     @Query("SELECT tf FROM TaskFile tf WHERE tf.assignment.task.meeting.id = :meetingId")
     List<TaskFile> findByMeetingId(@Param("meetingId") Long meetingId);

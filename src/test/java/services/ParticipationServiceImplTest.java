@@ -44,7 +44,6 @@ class ParticipationServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Setup test meeting
         testMeeting = Meeting.builder()
                 .title("Test Meeting")
                 .description("Test Description")
@@ -53,7 +52,6 @@ class ParticipationServiceImplTest {
                 .maxParticipants(10)
                 .build();
 
-        // Setup test user
         testUser = User.builder()
                 .id(1L)
                 .email("test@example.com")
@@ -61,7 +59,6 @@ class ParticipationServiceImplTest {
                 .lastName("Doe")
                 .build();
 
-        // Setup test participant
         testParticipant = MeetingParticipant.builder()
                 .id(1L)
                 .meeting(testMeeting)
@@ -70,70 +67,61 @@ class ParticipationServiceImplTest {
                 .build();
     }
 
-    // ========== TESTY confirmParticipation ==========
-
     @Test
     void confirmParticipation_shouldConfirm_whenValidRequest() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
         when(participantRepository.countByMeetingIdAndStatusIn(eq(1L), anyList()))
-                .thenReturn(5L); // Mniej niż maxParticipants
+                .thenReturn(5L);
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.confirmParticipation(1L, 1L);
 
-        // Then
-        assertNotNull(result);
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
+
         verify(participantRepository).save(testParticipant);
     }
 
     @Test
     void confirmParticipation_shouldThrow_whenAlreadyConfirmed() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.CONFIRMED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.confirmParticipation(1L, 1L));
     }
 
     @Test
     void confirmParticipation_shouldThrow_whenAlreadyDeclined() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.DECLINED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.confirmParticipation(1L, 1L));
     }
 
     @Test
     void confirmParticipation_shouldThrow_whenMeetingReachedMaxParticipants() {
-        // Given
         testMeeting.setMaxParticipants(5);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
         when(participantRepository.countByMeetingIdAndStatusIn(eq(1L), anyList()))
-                .thenReturn(5L); // Równe maxParticipants
+                .thenReturn(5L);
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.confirmParticipation(1L, 1L));
     }
 
     @Test
     void confirmParticipation_shouldWork_whenNoMaxParticipants() {
-        // Given
         testMeeting.setMaxParticipants(null);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
@@ -141,77 +129,65 @@ class ParticipationServiceImplTest {
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.confirmParticipation(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
     }
-
-    // ========== TESTY declineParticipation ==========
 
     @Test
     void declineParticipation_shouldDecline_whenValidRequest() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.declineParticipation(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.DECLINED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.DECLINED, result.getStatus())
+        );
+
         verify(participantRepository).save(testParticipant);
     }
 
     @Test
     void declineParticipation_shouldThrow_whenParticipantNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.declineParticipation(1L, 1L));
     }
 
-    // ========== TESTY markAsAttended ==========
-
     @Test
     void markAsAttended_shouldMark_whenParticipantConfirmed() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.CONFIRMED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.markAsAttended(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.ATTENDED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.ATTENDED, result.getStatus())
+        );
     }
 
     @Test
     void markAsAttended_shouldThrow_whenParticipantNotConfirmed() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.INVITED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.markAsAttended(1L, 1L));
     }
 
-    // ========== TESTY getResponseStatistics ==========
-
     @Test
     void getResponseStatistics_shouldReturnStatistics() {
-        // Given
         MeetingParticipant confirmed1 = createParticipant(ParticipationStatus.CONFIRMED);
         MeetingParticipant confirmed2 = createParticipant(ParticipationStatus.CONFIRMED);
         MeetingParticipant declined = createParticipant(ParticipationStatus.DECLINED);
@@ -223,192 +199,169 @@ class ParticipationServiceImplTest {
 
         when(participantRepository.findByMeetingId(1L)).thenReturn(participants);
 
-        // When
         Map<ParticipationStatus, Long> statistics = participationService.getResponseStatistics(1L);
 
-        // Then
-        assertNotNull(statistics);
-        assertEquals(2, statistics.get(ParticipationStatus.CONFIRMED));
-        assertEquals(1, statistics.get(ParticipationStatus.DECLINED));
-        assertEquals(1, statistics.get(ParticipationStatus.INVITED));
-        assertNull(statistics.get(ParticipationStatus.ATTENDED));
+        assertAll(
+                () -> assertNotNull(statistics),
+                () -> assertEquals(2, statistics.get(ParticipationStatus.CONFIRMED)),
+                () -> assertEquals(1, statistics.get(ParticipationStatus.DECLINED)),
+                () -> assertEquals(1, statistics.get(ParticipationStatus.INVITED)),
+                () -> assertNull(statistics.get(ParticipationStatus.ATTENDED))
+        );
     }
 
     @Test
     void getResponseStatistics_shouldReturnEmptyMap_whenNoParticipants() {
-        // Given
         when(participantRepository.findByMeetingId(1L)).thenReturn(Collections.emptyList());
 
-        // When
         Map<ParticipationStatus, Long> statistics = participationService.getResponseStatistics(1L);
 
-        // Then
-        assertNotNull(statistics);
-        assertTrue(statistics.isEmpty());
+        assertAll(
+                () -> assertNotNull(statistics),
+                () -> assertTrue(statistics.isEmpty())
+        );
     }
-
-    // ========== TESTY getAverageResponseTime ==========
 
     @Test
     void getAverageResponseTime_shouldReturnAverage_whenDataExists() {
-        // Given
         when(participantRepository.findAverageResponseTimeHours(1L)).thenReturn(24.5);
 
-        // When
         Double result = participationService.getAverageResponseTime(1L);
 
-        // Then
-        assertEquals(24.5, result);
+        assertAll(
+                () -> assertEquals(24.5, result)
+        );
     }
 
     @Test
     void getAverageResponseTime_shouldReturnZero_whenNoData() {
-        // Given
         when(participantRepository.findAverageResponseTimeHours(1L)).thenReturn(null);
 
-        // When
         Double result = participationService.getAverageResponseTime(1L);
 
-        // Then
-        assertEquals(0.0, result);
+        assertAll(
+                () -> assertEquals(0.0, result)
+        );
     }
-
-    // ========== TESTY isUserParticipant ==========
 
     @Test
     void isUserParticipant_shouldReturnTrue_whenUserIsParticipant() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When
         boolean result = participationService.isUserParticipant(1L, 1L);
 
-        // Then
-        assertTrue(result);
+        assertAll(
+                () -> assertTrue(result)
+        );
     }
 
     @Test
     void isUserParticipant_shouldReturnFalse_whenUserIsNotParticipant() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When
         boolean result = participationService.isUserParticipant(1L, 1L);
 
-        // Then
-        assertFalse(result);
+        assertAll(
+                () -> assertFalse(result)
+        );
     }
-
-    // ========== TESTY isUserConfirmed ==========
 
     @Test
     void isUserConfirmed_shouldReturnTrue_whenUserIsConfirmed() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.CONFIRMED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When
         boolean result = participationService.isUserConfirmed(1L, 1L);
 
-        // Then
-        assertTrue(result);
+        assertAll(
+                () -> assertTrue(result)
+        );
     }
 
     @Test
     void isUserConfirmed_shouldReturnTrue_whenUserIsAttended() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.ATTENDED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When
         boolean result = participationService.isUserConfirmed(1L, 1L);
 
-        // Then
-        assertTrue(result);
+        assertAll(
+                () -> assertTrue(result)
+        );
     }
 
     @Test
     void isUserConfirmed_shouldReturnFalse_whenUserIsInvited() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.INVITED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When
         boolean result = participationService.isUserConfirmed(1L, 1L);
 
-        // Then
-        assertFalse(result);
+        assertAll(
+                () -> assertFalse(result)
+        );
     }
 
     @Test
     void isUserConfirmed_shouldReturnFalse_whenUserIsNotParticipant() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When
         boolean result = participationService.isUserConfirmed(1L, 1L);
 
-        // Then
-        assertFalse(result);
+        assertAll(
+                () -> assertFalse(result)
+        );
     }
-
-    // ========== TESTY updateUserStatus ==========
 
     @Test
     void updateUserStatus_shouldUpdateStatus_whenValidRequest() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.updateUserStatus(1L, 1L, ParticipationStatus.CONFIRMED);
 
-        // Then
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
+
         verify(participantRepository).save(testParticipant);
     }
 
     @Test
     void updateUserStatus_shouldThrow_whenChangingDeclinedToConfirmed() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.DECLINED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.updateUserStatus(1L, 1L, ParticipationStatus.CONFIRMED));
     }
 
     @Test
     void updateUserStatus_shouldWork_whenChangingConfirmedToAttended() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.CONFIRMED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.updateUserStatus(1L, 1L, ParticipationStatus.ATTENDED);
 
-        // Then
-        assertEquals(ParticipationStatus.ATTENDED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.ATTENDED, result.getStatus())
+        );
     }
-
-    // ========== TESTY getMeetingParticipants ==========
 
     @Test
     void getMeetingParticipants_shouldReturnAllParticipants() {
-        // Given
         List<MeetingParticipant> participants = Arrays.asList(
                 createParticipant(ParticipationStatus.INVITED),
                 createParticipant(ParticipationStatus.CONFIRMED),
@@ -417,55 +370,51 @@ class ParticipationServiceImplTest {
 
         when(participantRepository.findByMeetingId(1L)).thenReturn(participants);
 
-        // When
         List<MeetingParticipant> result = participationService.getMeetingParticipants(1L);
 
-        // Then
-        assertEquals(3, result.size());
+        assertAll(
+                () -> assertEquals(3, result.size())
+        );
+
         verify(participantRepository).findByMeetingId(1L);
     }
 
     @Test
     void getMeetingParticipants_shouldReturnEmptyList_whenNoParticipants() {
-        // Given
         when(participantRepository.findByMeetingId(1L)).thenReturn(Collections.emptyList());
 
-        // When
         List<MeetingParticipant> result = participationService.getMeetingParticipants(1L);
 
-        // Then
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertTrue(result.isEmpty())
+        );
     }
-
-    // ========== TESTY getConfirmedParticipants ==========
 
     @Test
     void getConfirmedParticipants_shouldReturnOnlyConfirmedAndAttended() {
-        // Given
         List<MeetingParticipant> allParticipants = Arrays.asList(
-                createParticipant(ParticipationStatus.INVITED),        // Nie powinien być włączony
-                createParticipant(ParticipationStatus.CONFIRMED),      // Powinien być włączony
-                createParticipant(ParticipationStatus.DECLINED),       // Nie powinien być włączony
-                createParticipant(ParticipationStatus.ATTENDED),       // Powinien być włączony
-                createParticipant(ParticipationStatus.PENDING)    // Nie powinien być włączony
+                createParticipant(ParticipationStatus.INVITED),
+                createParticipant(ParticipationStatus.CONFIRMED),
+                createParticipant(ParticipationStatus.DECLINED),
+                createParticipant(ParticipationStatus.ATTENDED),
+                createParticipant(ParticipationStatus.PENDING)
         );
 
         when(participantRepository.findByMeetingId(1L)).thenReturn(allParticipants);
 
-        // When
         List<MeetingParticipant> result = participationService.getConfirmedParticipants(1L);
 
-        // Then
-        assertEquals(2, result.size());
-        assertTrue(result.stream().allMatch(p ->
-                p.getStatus() == ParticipationStatus.CONFIRMED ||
-                        p.getStatus() == ParticipationStatus.ATTENDED));
+        assertAll(
+                () -> assertEquals(2, result.size()),
+                () -> assertTrue(result.stream().allMatch(p ->
+                        p.getStatus() == ParticipationStatus.CONFIRMED ||
+                                p.getStatus() == ParticipationStatus.ATTENDED))
+        );
     }
 
     @Test
     void getConfirmedParticipants_shouldReturnEmptyList_whenNoConfirmed() {
-        // Given
         List<MeetingParticipant> allParticipants = Arrays.asList(
                 createParticipant(ParticipationStatus.INVITED),
                 createParticipant(ParticipationStatus.DECLINED),
@@ -474,19 +423,16 @@ class ParticipationServiceImplTest {
 
         when(participantRepository.findByMeetingId(1L)).thenReturn(allParticipants);
 
-        // When
         List<MeetingParticipant> result = participationService.getConfirmedParticipants(1L);
 
-        // Then
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertTrue(result.isEmpty())
+        );
     }
-
-    // ========== TESTY addToWaitingList ==========
 
     @Test
     void addToWaitingList_shouldAddUser_whenNotAlreadyParticipant() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
@@ -498,90 +444,80 @@ class ParticipationServiceImplTest {
                     return p;
                 });
 
-        // When
         MeetingParticipant result = participationService.addToWaitingList(1L, 1L);
 
-        // Then
-        assertNotNull(result);
-        assertEquals(ParticipationStatus.PENDING, result.getStatus());
-        assertEquals(testMeeting, result.getMeeting());
-        assertEquals(testUser, result.getUser());
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertEquals(ParticipationStatus.PENDING, result.getStatus()),
+                () -> assertEquals(testMeeting, result.getMeeting()),
+                () -> assertEquals(testUser, result.getUser())
+        );
+
         verify(participantRepository).save(any(MeetingParticipant.class));
     }
 
     @Test
     void addToWaitingList_shouldThrow_whenUserAlreadyParticipant() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.addToWaitingList(1L, 1L));
     }
 
     @Test
     void addToWaitingList_shouldThrow_whenMeetingNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
         when(meetingRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.addToWaitingList(1L, 1L));
     }
 
     @Test
     void addToWaitingList_shouldThrow_whenUserNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.addToWaitingList(1L, 1L));
     }
 
-    // ========== TESTY promoteFromWaitingList ==========
-
     @Test
     void promoteFromWaitingList_shouldPromote_whenValidRequest() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.PENDING);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
         when(participantRepository.countByMeetingIdAndStatusIn(eq(1L), anyList()))
-                .thenReturn(5L); // Mniej niż maxParticipants
+                .thenReturn(5L);
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.promoteFromWaitingList(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
+
         verify(participantRepository).save(testParticipant);
     }
 
     @Test
     void promoteFromWaitingList_shouldThrow_whenNotOnWaitingList() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.INVITED);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.promoteFromWaitingList(1L, 1L));
     }
 
     @Test
     void promoteFromWaitingList_shouldThrow_whenNoAvailableSpots() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.PENDING);
         testMeeting.setMaxParticipants(5);
 
@@ -589,16 +525,14 @@ class ParticipationServiceImplTest {
                 .thenReturn(Optional.of(testParticipant));
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
         when(participantRepository.countByMeetingIdAndStatusIn(eq(1L), anyList()))
-                .thenReturn(5L); // Równe maxParticipants
+                .thenReturn(5L);
 
-        // When & Then
         assertThrows(BusinessException.class,
                 () -> participationService.promoteFromWaitingList(1L, 1L));
     }
 
     @Test
     void promoteFromWaitingList_shouldWork_whenNoMaxParticipants() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.PENDING);
         testMeeting.setMaxParticipants(null);
 
@@ -608,108 +542,61 @@ class ParticipationServiceImplTest {
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.promoteFromWaitingList(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
     }
 
-    // ========== TESTY validateCanChangeStatus ==========
-
-    @Test
-    void validateCanChangeStatus_shouldThrow_whenChangingDeclinedToConfirmed() {
-        // Given
-        testParticipant.setStatus(ParticipationStatus.DECLINED);
-        ParticipationStatus newStatus = ParticipationStatus.CONFIRMED;
-
-        // When & Then
-        assertThrows(BusinessException.class,
-                () -> participationService.validateCanChangeStatus(testParticipant, newStatus));
-    }
-
-    @Test
-    void validateCanChangeStatus_shouldThrow_whenChangingConfirmedToDeclined() {
-        // Given
-        testParticipant.setStatus(ParticipationStatus.CONFIRMED);
-        ParticipationStatus newStatus = ParticipationStatus.DECLINED;
-
-        // When & Then
-        assertThrows(BusinessException.class,
-                () -> participationService.validateCanChangeStatus(testParticipant, newStatus));
-    }
-
-    @Test
-    void validateCanChangeStatus_shouldNotThrow_whenValidTransition() {
-        // Given
-        testParticipant.setStatus(ParticipationStatus.INVITED);
-        ParticipationStatus newStatus = ParticipationStatus.CONFIRMED;
-
-        // When & Then
-        assertDoesNotThrow(() ->
-                participationService.validateCanChangeStatus(testParticipant, newStatus));
-    }
-
-    // ========== DODATKOWE TESTY ==========
 
     @Test
     void confirmParticipation_shouldThrow_whenParticipantNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.confirmParticipation(1L, 1L));
     }
 
     @Test
     void markAsAttended_shouldThrow_whenParticipantNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.markAsAttended(1L, 1L));
     }
 
     @Test
     void updateUserStatus_shouldThrow_whenParticipantNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.updateUserStatus(1L, 1L, ParticipationStatus.CONFIRMED));
     }
 
     @Test
     void promoteFromWaitingList_shouldThrow_whenParticipantNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.promoteFromWaitingList(1L, 1L));
     }
 
     @Test
     void getParticipant_shouldThrow_whenNotFound() {
-        // Given
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // When & Then
         assertThrows(ResourceNotFoundException.class,
                 () -> participationService.getParticipant(1L, 1L));
     }
 
     @Test
     void confirmParticipation_shouldHandleNullMeeting() {
-        // Given
         testMeeting.setMaxParticipants(null);
         when(participantRepository.findByMeetingIdAndUserId(1L, 1L))
                 .thenReturn(Optional.of(testParticipant));
@@ -717,16 +604,15 @@ class ParticipationServiceImplTest {
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.confirmParticipation(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
     }
 
     @Test
     void promoteFromWaitingList_shouldHandleNullMeeting() {
-        // Given
         testParticipant.setStatus(ParticipationStatus.PENDING);
         testMeeting.setMaxParticipants(null);
 
@@ -736,14 +622,12 @@ class ParticipationServiceImplTest {
         when(participantRepository.save(any(MeetingParticipant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // When
         MeetingParticipant result = participationService.promoteFromWaitingList(1L, 1L);
 
-        // Then
-        assertEquals(ParticipationStatus.CONFIRMED, result.getStatus());
+        assertAll(
+                () -> assertEquals(ParticipationStatus.CONFIRMED, result.getStatus())
+        );
     }
-
-    // ========== POMOCNICZE METODY ==========
 
     private MeetingParticipant createParticipant(ParticipationStatus status) {
         User user = User.builder()
@@ -760,8 +644,6 @@ class ParticipationServiceImplTest {
                 .build();
     }
 
-    // Metoda pomocnicza do testowania prywatnej metody getParticipant
-    // Uwaga: To wymaga refleksji, w normalnych warunkach nie testujemy prywatnych metod
     private MeetingParticipant getParticipant(Long meetingId, Long userId) {
         try {
             var method = ParticipationServiceImpl.class.getDeclaredMethod("getParticipant", Long.class, Long.class);
@@ -772,7 +654,6 @@ class ParticipationServiceImplTest {
         }
     }
 
-    // Metoda pomocnicza do testowania prywatnej metody validateCanChangeStatus
     private void validateCanChangeStatus(MeetingParticipant participant, ParticipationStatus newStatus) {
         try {
             var method = ParticipationServiceImpl.class.getDeclaredMethod("validateCanChangeStatus",

@@ -25,10 +25,10 @@ public class NotificationSchedule {
     private User user;
 
     @Column(name = "schedule_type", nullable = false, length = 50)
-    private String scheduleType; // MEETING_REMINDER, DIGEST, etc.
+    private String scheduleType;
 
     @Column(name = "trigger_time", length = 20)
-    private String triggerTime; // 15min, 1hour, 1day, etc.
+    private String triggerTime;
 
     @Column(name = "enabled", nullable = false)
     @Builder.Default

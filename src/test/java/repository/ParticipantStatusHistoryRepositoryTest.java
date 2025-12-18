@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -21,20 +22,18 @@ class ParticipantStatusHistoryRepositoryTest {
     @Test
     @DisplayName("Should find status history by meeting id")
     void testFindByMeetingId() {
-        // Używamy istniejącego meetingId z danych testowych
         Long meetingId = 1L;
 
         List<ParticipantStatusHistory> historyList = participantStatusHistoryRepository.findByMeetingId(meetingId);
 
-        // Asercje
-        assertThat(historyList).isNotEmpty(); // lista nie może być pusta
-        assertThat(historyList.get(0).getParticipant().getMeeting().getId()).isEqualTo(meetingId);
-        assertThat(historyList).isSortedAccordingTo(
-                (h1, h2) -> h2.getChangedAt().compareTo(h1.getChangedAt()) // od najnowszych do najstarszych
+        assertAll("Participant status history for meeting 1",
+                () -> assertThat(historyList).isNotEmpty(),
+                () -> assertThat(historyList.get(0).getParticipant().getMeeting().getId()).isEqualTo(meetingId),
+                () -> assertThat(historyList).isSortedAccordingTo(
+                        (h1, h2) -> h2.getChangedAt().compareTo(h1.getChangedAt())
+                )
         );
     }
-
-
 
     @Test
     @DisplayName("Should return empty list for non-existing meeting id")
@@ -43,6 +42,8 @@ class ParticipantStatusHistoryRepositoryTest {
 
         List<ParticipantStatusHistory> historyList = participantStatusHistoryRepository.findByMeetingId(meetingId);
 
-        assertThat(historyList).isEmpty();
+        assertAll("Participant status history for non-existing meeting",
+                () -> assertThat(historyList).isEmpty()
+        );
     }
 }

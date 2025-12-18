@@ -45,19 +45,17 @@ class FeedbackRepositoryTest {
                 .build();
         userRepository.save(user);
 
-        // przypisujemy do pola klasy, nie tworzymy nowej zmiennej lokalnej
         meeting = Meeting.builder()
                 .title("Test Meeting")
                 .description("Test Description")
-                .type(MeetingType.PHYSICAL) // <- obowiązkowe
+                .type(MeetingType.PHYSICAL)
                 .startDate(LocalDateTime.now().plusDays(1))
                 .endDate(LocalDateTime.now().plusDays(1).plusHours(2))
-                .organizer(user) // jeśli wymagane
+                .organizer(user)
                 .visibility(MeetingVisibility.PUBLIC)
                 .build();
         meetingRepository.save(meeting);
 
-        // przykładowy feedback
         Feedback feedback = Feedback.builder()
                 .meeting(meeting)
                 .user(user)

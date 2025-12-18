@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6"
+      lang="pl"
+      th:replace="~{layout}">
+<head>
+    <title>Mój Pulpit - MeetHub</title>
+</head>
+<body>
+<div th:fragment="content">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-bell me-2"></i>Moje powiadomienia
+            <span th:if="${unreadCount > 0}" class="badge bg-danger" th:text="${unreadCount}"></span>
+        </h2>
+        <div>
+            <a th:href="@{/profile}" class="btn btn-outline-primary ms-2">
+                <i class="bi bi-arrow-left me-2"></i>Powrót do profilu
+            </a>
+        </div>
+    </div>
+
+
+    <div class="card">
+        <div class="card-body">
+            <div th:if="${notifications.empty}" class="text-center text-muted py-5">
+                <i class="bi bi-bell-slash" style="font-size: 4rem;"></i>
+                <h4 class="mt-3">Brak powiadomień</h4>
+                <p>Gdy pojawią się nowe powiadomienia, zobaczysz je tutaj.</p>
+            </div>
+
+            <div th:each="notification : ${notifications}"
+                 class="notification-item p-3 border-bottom"
+                 th:classappend="${notification.readAt == null} ? 'unread' : ''">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-1">
+                            <h6 th:text="${notification.title}" class="mb-0 me-2"></h6>
+                            <span th:if="${notification.readAt == null}" class="badge bg-danger">Nowe</span>
+                        </div>
+                        <!-- Zmiana tutaj: th:utext zamiast th:text -->
+                        <p th:utext="${notification.message}" class="text-muted mb-2"></p>
+                        <div class="d-flex align-items-center">
+                            <small class="text-muted me-3">
+                                <i class="bi bi-clock me-1"></i>
+                                <span th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <form th:action="@{'/profile/notifications/' + ${notification.id} + '/read'}"
+                              method="post"
+                              th:if="${notification.readAt == null}">
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Oznacz jako przeczytane">
+                                <i class="bi bi-check"></i>
+                            </button>
+                        </form>
+                        <i th:if="${notification.readAt != null}"
+                           class="bi bi-check-circle text-success"
+                           title="Przeczytane"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Paginacja -->
+    <nav th:if="${totalPages > 1}" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                <a class="page-link" th:href="@{/profile/notifications(page=${currentPage - 1})}">Poprzednia</a>
+            </li>
+            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                class="page-item"
+                th:classappend="${i == currentPage} ? 'active' : ''">
+                <a class="page-link" th:href="@{/profile/notifications(page=${i})}" th:text="${i + 1}"></a>
+            </li>
+            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                <a class="page-link" th:href="@{/profile/notifications(page=${currentPage + 1})}">Następna</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

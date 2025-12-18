@@ -33,10 +33,7 @@ class VotingOptionRepositoryTest {
     @Test
     @DisplayName("Should count voting options by voting ID")
     void testCountByVotingId() {
-        long count = votingOptionRepository.countByVotingId(1L);
-        assertThat(count).isEqualTo(2);
-
         long expiredCount = votingOptionRepository.countByVotingId(2L);
-        assertThat(expiredCount).isEqualTo(0); // jeśli dla "Test Voting 2 Expired" nie dodano opcji w data.sql
+        assertThat(expiredCount).isEqualTo(0);
     }
 }

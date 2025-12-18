@@ -19,33 +19,23 @@ class MeetingStatisticsRepositoryTest {
     @Autowired
     private MeetingStatisticsRepository statisticsRepository;
 
-    /**
-     * data.sql NIE zawiera wpisów w meeting_statistics
-     * → repozytorium powinno zwrócić Optional.empty()
-     */
     @Test
     void findByMeetingId_shouldReturnEmpty_whenStatisticsDoNotExist() {
         Optional<MeetingStatistics> result =
                 statisticsRepository.findByMeetingId(1L);
 
-        assertThat(result).isEmpty(); // ✅ 1 asercja
+        assertThat(result).isEmpty();
     }
 
-    /**
-     * Brak statystyk → brak wyników dla organizatora
-     */
+
     @Test
     void findByOrganizerId_shouldReturnEmptyList_whenNoStatisticsExist() {
         List<MeetingStatistics> result =
                 statisticsRepository.findByOrganizerId(2L); // organizer z data.sql
 
-        assertThat(result).isEmpty(); // ✅ 1 asercja
+        assertThat(result).isEmpty();
     }
 
-    /**
-     * Usunięcie statystyk dla spotkania,
-     * które ich nie ma → brak wyjątku + nadal brak danych
-     */
     @Test
     void deleteByMeetingId_shouldNotFail_whenStatisticsDoNotExist() {
 

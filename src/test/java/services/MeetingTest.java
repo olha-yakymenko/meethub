@@ -320,19 +320,6 @@ class MeetingTest {
             assertThat(meeting.hasAvailableSpots()).isTrue();
         }
 
-//        @Test
-//        @DisplayName("hasAvailableSpots powinno zwracać false gdy brak wolnych miejsc")
-//        void hasAvailableSpots_ShouldReturnFalseWhenNoSpotsAvailable() {
-//            // Given
-//            meeting.setMaxParticipants(2);
-//            Set<MeetingParticipant> participants = new HashSet<>();
-//            participants.add(confirmedParticipant);
-//            participants.add(confirmedParticipant); // Dwa potwierdzone
-//            meeting.setParticipants(participants);
-//
-//            // When & Then
-//            assertThat(meeting.hasAvailableSpots()).isFalse();
-//        }
 
         @Test
         @DisplayName("hasAvailableSpots powinno ignorować niepotwierdzonych uczestników")

@@ -46,10 +46,8 @@ class MeetingResourceControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Tylko tworzenie mocka, bez stubowania
         mockUserDetails = mock(CustomUserDetailsService.CustomUserDetails.class);
 
-        // Set up SecurityContext
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 mockUserDetails, null, null); // authorities mogą być null
         SecurityContextHolder.getContext().setAuthentication(auth);

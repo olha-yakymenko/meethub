@@ -14,8 +14,8 @@ class BoundaryValueTests {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "ab",        // min boundary
-            "abc",       // just above min
+            "ab",
+            "abc",
 
     })
 

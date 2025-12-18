@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Validated // Dodanie walidacji na poziomie kontrolera
+@Validated
 @RestController
 @RequestMapping("/api/v1/feedbacks")
 @RequiredArgsConstructor

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -27,9 +28,11 @@ class UserRepositoryTest {
 
         Optional<User> userOpt = userRepository.findByEmail(email);
 
-        assertThat(userOpt).isPresent();
-        assertThat(userOpt.get().getEmail()).isEqualTo(email);
-        assertThat(userOpt.get().getFirstName()).isEqualTo("User");
+        assertAll("User by email",
+                () -> assertThat(userOpt).isPresent(),
+                () -> assertThat(userOpt).map(User::getEmail).hasValue(email),
+                () -> assertThat(userOpt).map(User::getFirstName).hasValue("User")
+        );
     }
 
     @Test
@@ -38,8 +41,10 @@ class UserRepositoryTest {
         boolean exists = userRepository.existsByEmail("test.admin@example.com");
         boolean notExists = userRepository.existsByEmail("non.existing@example.com");
 
-        assertThat(exists).isTrue();
-        assertThat(notExists).isFalse();
+        assertAll("Email existence check",
+                () -> assertThat(exists).isTrue(),
+                () -> assertThat(notExists).isFalse()
+        );
     }
 
     @Test
@@ -49,12 +54,13 @@ class UserRepositoryTest {
                 "test.user", "Admin", "Test"
         );
 
-        assertThat(users).isNotEmpty();
-        // Sprawdź, że wszyscy użytkownicy zawierają jeden z fragmentów
-        assertThat(users).allSatisfy(user ->
-                assertThat(user.getEmail().contains("test.user") ||
-                        user.getFirstName().contains("Admin") ||
-                        user.getLastName().contains("Test")).isTrue()
+        assertAll("Users matching keyword",
+                () -> assertThat(users).isNotEmpty(),
+                () -> users.forEach(user ->
+                        assertThat(user.getEmail().contains("test.user") ||
+                                user.getFirstName().contains("Admin") ||
+                                user.getLastName().contains("Test")).isTrue()
+                )
         );
     }
 
@@ -71,7 +77,13 @@ class UserRepositoryTest {
 
         User savedUser = userRepository.save(newUser);
 
-        assertThat(savedUser.getId()).isNotNull();
-        assertThat(savedUser.getEmail()).isEqualTo("new.user@example.com");
+        assertAll("Saved user properties",
+                () -> assertThat(savedUser.getId()).isNotNull(),
+                () -> assertThat(savedUser.getEmail()).isEqualTo("new.user@example.com"),
+                () -> assertThat(savedUser.getFirstName()).isEqualTo("New"),
+                () -> assertThat(savedUser.getLastName()).isEqualTo("User"),
+                () -> assertThat(savedUser.getRole()).isEqualTo(UserRole.MODERATOR),
+                () -> assertThat(savedUser.isEnabled()).isTrue()
+        );
     }
 }

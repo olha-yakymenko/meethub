@@ -33,12 +33,18 @@ package com.meethub.domain.model.request;
 
 import com.meethub.domain.model.enums.AccessLevel;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Set;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MeetingResourceRequest {
 
     @NotBlank(message = "Original filename is required")

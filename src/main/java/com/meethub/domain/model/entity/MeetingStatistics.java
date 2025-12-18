@@ -378,21 +378,4 @@ public class MeetingStatistics {
         private BigDecimal avgResponseTime;
         private BigDecimal avgParticipationTime;
     }
-
-    // Builder z domyślnymi wartościami
-    public static class MeetingStatisticsBuilder {
-        private Integer totalParticipants = 0;
-        private Integer attendedParticipants = 0;
-        private Integer confirmedParticipants = 0;
-        private Integer declinedParticipants = 0;
-        private Integer pendingParticipants = 0;
-        private StatisticsStatus status = StatisticsStatus.DRAFT;
-        private Boolean finalized = false;
-        private Map<String, Object> additionalMetrics = new HashMap<>();
-        private BigDecimal attendanceRate = BigDecimal.ZERO;
-        private BigDecimal confirmationRate = BigDecimal.ZERO;
-        private BigDecimal avgResponseTimeMinutes = BigDecimal.ZERO;
-        private BigDecimal averageRating = BigDecimal.ZERO;
-        private BigDecimal dataQualityScore = BigDecimal.ZERO;
-    }
 }

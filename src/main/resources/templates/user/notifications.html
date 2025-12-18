@@ -15,22 +15,17 @@
             <span th:if="${unreadCount > 0}" class="badge bg-danger" th:text="${unreadCount}"></span>
         </h2>
         <div>
-            <form th:action="@{/profile/notifications/mark-all-read}" method="post" class="d-inline">
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check-all me-2"></i>Oznacz wszystkie jako przeczytane
-                </button>
-            </form>
+<!--            <form th:action="@{/profile/notifications/mark-all-read}" method="post" class="d-inline">-->
+<!--                <button type="submit" class="btn btn-success">-->
+<!--                    <i class="bi bi-check-all me-2"></i>Oznacz wszystkie jako przeczytane-->
+<!--                </button>-->
+<!--            </form>-->
             <a th:href="@{/profile}" class="btn btn-outline-primary ms-2">
                 <i class="bi bi-arrow-left me-2"></i>Powrót do profilu
             </a>
         </div>
     </div>
 
-    <!-- Komunikaty -->
-    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${success}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
 
     <div class="card">
         <div class="card-body">
@@ -39,6 +34,39 @@
                 <h4 class="mt-3">Brak powiadomień</h4>
                 <p>Gdy pojawią się nowe powiadomienia, zobaczysz je tutaj.</p>
             </div>
+
+<!--            <div th:each="notification : ${notifications}"-->
+<!--                 class="notification-item p-3 border-bottom"-->
+<!--                 th:classappend="${notification.readAt == null} ? 'unread' : ''">-->
+<!--                <div class="d-flex justify-content-between align-items-start">-->
+<!--                    <div class="flex-grow-1">-->
+<!--                        <div class="d-flex align-items-center mb-1">-->
+<!--                            <h6 th:text="${notification.title}" class="mb-0 me-2"></h6>-->
+<!--                            <span th:if="${notification.readAt == null}" class="badge bg-danger">Nowe</span>-->
+<!--                        </div>-->
+<!--                        <p th:text="${notification.message}" class="text-muted mb-2"></p>-->
+<!--                        <div class="d-flex align-items-center">-->
+<!--                            <small class="text-muted me-3">-->
+<!--                                <i class="bi bi-clock me-1"></i>-->
+<!--                                <span th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></span>-->
+<!--                            </small>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="ms-3">-->
+<!--                        <form th:action="@{'/profile/notifications/' + ${notification.id} + '/read'}"-->
+<!--                              method="post"-->
+<!--                              th:if="${notification.readAt == null}">-->
+<!--                            <button type="submit" class="btn btn-sm btn-outline-success" title="Oznacz jako przeczytane">-->
+<!--                                <i class="bi bi-check"></i>-->
+<!--                            </button>-->
+<!--                        </form>-->
+<!--                        <i th:if="${notification.readAt != null}"-->
+<!--                           class="bi bi-check-circle text-success"-->
+<!--                           title="Przeczytane"></i>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+
 
             <div th:each="notification : ${notifications}"
                  class="notification-item p-3 border-bottom"
@@ -49,17 +77,13 @@
                             <h6 th:text="${notification.title}" class="mb-0 me-2"></h6>
                             <span th:if="${notification.readAt == null}" class="badge bg-danger">Nowe</span>
                         </div>
-                        <p th:text="${notification.message}" class="text-muted mb-2"></p>
+                        <!-- Zmiana tutaj: th:utext zamiast th:text -->
+                        <p th:utext="${notification.message}" class="text-muted mb-2"></p>
                         <div class="d-flex align-items-center">
                             <small class="text-muted me-3">
                                 <i class="bi bi-clock me-1"></i>
                                 <span th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
                             </small>
-                            <span class="badge channel-badge"
-                                  th:class="'bg-' + ${notification.channel == 'EMAIL'} ? 'primary' :
-                                          ${notification.channel == 'PUSH'} ? 'warning' :
-                                          ${notification.channel == 'SMS'} ? 'success' : 'secondary'"
-                                  th:text="${notification.channel}"></span>
                         </div>
                     </div>
                     <div class="ms-3">
@@ -76,6 +100,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 

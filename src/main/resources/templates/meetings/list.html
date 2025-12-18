@@ -676,16 +676,7 @@
                         <option value="CANCELLED" th:selected="${statusParam == 'CANCELLED'}">Anulowane</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Kategoria</label>
-                    <select name="categoryId" class="form-select">
-                        <option value="">Wszystkie kategorie</option>
-                        <option th:each="category : ${userCategories}"
-                                th:value="${category.id}"
-                                th:text="${category.name}"
-                                th:selected="${category.id == categoryParam}"></option>
-                    </select>
-                </div>
+
                 <div class="col-md-2 d-flex align-items-end">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">

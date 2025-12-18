@@ -13,7 +13,6 @@ import java.util.Optional;
 @Repository
 public interface UserPreferenceRepository extends JpaRepository<UserPreference, Long> {
 
-    // Podstawowe metody wyszukiwania
     List<UserPreference> findByUserId(Long userId);
     Optional<UserPreference> findByUserIdAndPreferenceKey(Long userId, String preferenceKey);
 }

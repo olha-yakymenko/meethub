@@ -37,7 +37,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-//@ActiveProfiles("test")
 @Transactional
 @Rollback
 class ParticipationControllerIntegrationTest {
@@ -87,23 +86,6 @@ class ParticipationControllerIntegrationTest {
                 .status(ParticipationStatus.CONFIRMED)
                 .build();
     }
-//
-//    @Test
-//    @WithMockUser(username = "test.user@example.com")
-//    void declineParticipation_ShouldReturnDeclinedParticipant() throws Exception {
-//        // Given
-//        mockParticipant.setStatus(ParticipationStatus.DECLINED);
-//        when(participationService.declineParticipation(eq(MEETING_ID), eq(testUser.getId())))
-//                .thenReturn(mockParticipant);
-//
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/participations/meetings/{meetingId}/decline", MEETING_ID)
-//                        .with(csrf())
-//                        .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success", is(true)))
-//                .andExpect(jsonPath("$.message", is("Participation declined")));
-//    }
 
     @Test
     @WithMockUser(username = "test.user@example.com")
@@ -175,37 +157,4 @@ class ParticipationControllerIntegrationTest {
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data").isEmpty());
     }
-
-//    // Dodatkowe testy dla lepszego pokrycia
-//    @Test
-//    @WithMockUser(username = "test.user@example.com")
-//    void confirmParticipation_ShouldReturnConfirmedParticipant() throws Exception {
-//        // Given
-//        mockParticipant.setStatus(ParticipationStatus.CONFIRMED);
-//        when(participationService.confirmParticipation(eq(MEETING_ID), eq(testUser.getId())))
-//                .thenReturn(mockParticipant);
-//
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/participations/meetings/{meetingId}/confirm", MEETING_ID)
-//                        .with(csrf())
-//                        .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success", is(true)))
-//                .andExpect(jsonPath("$.message", is("Participation confirmed")));
-//    }
-
-//    @Test
-//    @WithMockUser(username = "test.user@example.com")
-//    void getParticipationStatus_ShouldReturnStatus() throws Exception {
-//        // Given
-//        when(participationService.getParticipationStatus(eq(MEETING_ID), eq(testUser.getId())))
-//                .thenReturn(ParticipationStatus.CONFIRMED);
-//
-//        // When & Then
-//        mockMvc.perform(get("/api/v1/participations/meetings/{meetingId}/status", MEETING_ID)
-//                        .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success", is(true)))
-//                .andExpect(jsonPath("$.data", is("CONFIRMED")));
-//    }
 }

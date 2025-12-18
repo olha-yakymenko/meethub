@@ -45,4 +45,6 @@ public interface AttendanceTokenService {
             @NotNull @Min(1) Long userId,
             @NotNull @Min(1) Long meetingId
     );
+
+    Optional<Long> getUserIdFromToken(String token, Long meetingId);
 }

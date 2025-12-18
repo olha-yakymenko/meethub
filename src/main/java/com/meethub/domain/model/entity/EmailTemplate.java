@@ -56,7 +56,7 @@ public class EmailTemplate {
 
     @Column(name = "channel", length = 20)
     @Builder.Default
-    private String channel = "EMAIL"; // EMAIL, SMS, PUSH
+    private String channel = "EMAIL";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -65,11 +65,6 @@ public class EmailTemplate {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    // Metody pomocnicze
-    public String getAvailableVariables() {
-        return variablesHelp != null ? variablesHelp : generateVariablesHelp();
-    }
 
     private String generateVariablesHelp() {
         switch (templateKey) {

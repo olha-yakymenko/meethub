@@ -27,7 +27,7 @@ public class Category {
     private String description;
 
     @Column(name = "color_code", length = 7)
-    private String colorCode; // np: "#FF5733"
+    private String colorCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")

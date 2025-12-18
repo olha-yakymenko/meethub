@@ -13,6 +13,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
@@ -28,23 +31,32 @@ class MeetingRepositoryTest {
     @Test
     void testFindUpcomingPublicMeetings() {
         List<Meeting> meetings = meetingRepository.findUpcomingPublicMeetings(LocalDateTime.now());
-        assertThat(meetings).isNotEmpty();
-        // Wszystkie powinny mieć PUBLIC visibility
-        assertThat(meetings).allMatch(m -> m.getVisibility() == MeetingVisibility.PUBLIC);
+
+        assertAll("Upcoming public meetings",
+                () -> assertThat(meetings).isNotEmpty(),
+                () -> assertThat(meetings).allMatch(m -> m.getVisibility() == MeetingVisibility.PUBLIC)
+        );
     }
 
     @Test
     void testFindByTitle() {
         Optional<Meeting> meeting = meetingRepository.findByTitle("Test Meeting");
-        assertThat(meeting).isPresent();
-        assertThat(meeting.get().getType()).isEqualTo(MeetingType.PHYSICAL);
+
+        assertAll("Find by title",
+                () -> assertThat(meeting).isPresent(),
+                () -> meeting.ifPresent(m -> assertThat(m.getType()).isEqualTo(MeetingType.PHYSICAL))
+        );
     }
 
     @Test
     void testCountUpcomingMeetingsByUserId() {
         User user = userRepository.findByEmail("test.user@example.com").orElseThrow();
         Long count = meetingRepository.countUpcomingMeetingsByUserId(user.getId());
-        assertThat(count).isEqualTo(1); // bo w data.sql tylko 1 meeting dla tego usera jako participant
+
+        assertAll("Count upcoming meetings by user",
+                () -> assertNotNull(count),
+                () -> assertThat(count).isEqualTo(1)
+        );
     }
 
     @Test
@@ -52,15 +64,21 @@ class MeetingRepositoryTest {
         User organizer = userRepository.findByEmail("test.organizer@example.com").orElseThrow();
         Meeting meeting = meetingRepository.findByTitle("Test Meeting").orElseThrow();
         Optional<Meeting> found = meetingRepository.findByIdAndOrganizerId(meeting.getId(), organizer.getId());
-        assertThat(found).isPresent();
-        assertThat(found.get().getTitle()).isEqualTo("Test Meeting");
+
+        assertAll("Find by ID and organizer ID",
+                () -> assertThat(found).isPresent(),
+                () -> found.ifPresent(m -> assertThat(m.getTitle()).isEqualTo("Test Meeting"))
+        );
     }
 
     @Test
     void testFindAllMeetingIds() {
         List<Long> ids = meetingRepository.findAllMeetingIds();
-        assertThat(ids).isNotEmpty();
-        assertThat(ids).hasSize(1); // tylko jedno spotkanie w data.sql
+
+        assertAll("Find all meeting IDs",
+                () -> assertThat(ids).isNotEmpty(),
+                () -> assertThat(ids).hasSize(1)
+        );
     }
 
     @Test
@@ -68,6 +86,9 @@ class MeetingRepositoryTest {
         User organizer = userRepository.findByEmail("test.organizer@example.com").orElseThrow();
         Meeting meeting = meetingRepository.findByTitle("Test Meeting").orElseThrow();
         boolean isOrganizer = meetingRepository.isUserOrganizer(meeting.getId(), organizer.getId());
-        assertThat(isOrganizer).isTrue();
+
+        assertAll("Check if user is organizer",
+                () -> assertTrue(isOrganizer)
+        );
     }
 }

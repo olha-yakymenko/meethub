@@ -22,10 +22,8 @@ import java.util.Optional;
 @Repository
 public interface MeetingParticipantRepository extends JpaRepository<MeetingParticipant, Long> {
 
-    // ✅ Te metody są OK (nie używają @Query)
     List<MeetingParticipant> findByMeetingId(Long meetingId);
 
-    // ✅ POPRAWIONE: Usuń @Query dla tej metody (użyj query derivation)
     List<MeetingParticipant> findByUserId(Long userId);
 
     List<MeetingParticipant> findByMeetingIdAndStatus(Long meetingId, ParticipationStatus status);
@@ -37,18 +35,15 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
     boolean existsByMeetingIdAndUserId(Long meetingId, Long userId);
 
 
-    // ✅ POPRAWIONE: Ta metoda jest OK
     @Query("SELECT COUNT(mp) FROM MeetingParticipant mp WHERE mp.meeting.organizer.id = :organizerId")
     long countByMeetingOrganizerId(@Param("organizerId") Long organizerId);
 
-    // ✅ POPRAWIONE: Zmień na query derivation
     Optional<MeetingParticipant> findByMeetingIdAndUserId(Long meetingId, Long userId);
 
     List<MeetingParticipant> findByUserIdAndStatus(Long userId, ParticipationStatus status);
 
     long countByMeetingId(Long meetingId);
 
-    // ✅ POPRAWIONE: Ta metoda jest już OK
     @Query(value = "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (mp.response_date - mp.created_at)) / 3600.0), 0.0) " +
             "FROM meeting_participants mp " +
             "WHERE mp.meeting_id = :meetingId AND mp.response_date IS NOT NULL", nativeQuery = true)
@@ -62,12 +57,6 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 
 
     boolean existsByMeetingIdAndUserIdAndStatusIn(Long meetingId, Long userId, List<ParticipationStatus> statuses);
-
-
-    @Query("SELECT p FROM MeetingParticipant p " +
-            "WHERE p.meeting.id = :meetingId " +
-            "AND p.status = 'CONFIRMED' AND p.status = 'ORGANIZER'")
-    List<MeetingParticipant> findConfirmedParticipantsByMeetingId(@Param("meetingId") Long meetingId);
 
     @Query("""
         SELECT COUNT(p) 

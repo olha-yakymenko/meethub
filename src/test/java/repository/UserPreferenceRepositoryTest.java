@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -27,9 +28,13 @@ class UserPreferenceRepositoryTest {
 
         List<UserPreference> preferences = userPreferenceRepository.findByUserId(userId);
 
-        assertThat(preferences).isNotEmpty();
-        assertThat(preferences).hasSize(4);
-        assertThat(preferences).allSatisfy(pref -> assertThat(pref.getUser().getId()).isEqualTo(userId));
+        assertAll("All preferences by user",
+                () -> assertThat(preferences).isNotEmpty(),
+                () -> assertThat(preferences).hasSize(4),
+                () -> preferences.forEach(pref ->
+                        assertThat(pref.getUser().getId()).isEqualTo(userId)
+                )
+        );
     }
 
     @Test
@@ -40,9 +45,10 @@ class UserPreferenceRepositoryTest {
 
         Optional<UserPreference> preference = userPreferenceRepository.findByUserIdAndPreferenceKey(userId, key);
 
-        assertThat(preference).isPresent();
-        assertThat(preference.get().getPreferenceKey()).isEqualTo(key);
-        assertThat(preference.get().getUser().getId()).isEqualTo(userId);
+        assertAll("Preference by user and key",
+                () -> assertThat(preference).isPresent(),
+                () -> assertThat(preference).map(UserPreference::getPreferenceKey).hasValue(key),
+                () -> assertThat(preference).map(pref -> pref.getUser().getId()).hasValue(userId)
+        );
     }
-
 }

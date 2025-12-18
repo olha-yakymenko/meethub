@@ -282,7 +282,6 @@ import java.util.List;
 @Slf4j
 public class MeetingSpecification {
 
-    // ✅ METODA GŁÓWNA - dynamicznie buduje Specification na podstawie wszystkich parametrów
     public static Specification<Meeting> buildDynamicSpecification(
             String keywords,
             List<String> searchFields,
@@ -305,32 +304,26 @@ public class MeetingSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // ✅ 1. Tekstowe wyszukiwanie
             if (StringUtils.hasText(keywords)) {
                 predicates.add(buildTextPredicate(root, cb, keywords, searchFields));
             }
 
-            // ✅ 2. Tagi
             if (StringUtils.hasText(tags)) {
                 predicates.add(buildTagsPredicate(root, cb, tags));
             }
 
-            // ✅ 3. Zakres dat
             if (dateFrom != null || dateTo != null) {
                 predicates.add(buildDateRangePredicate(root, cb, dateFrom, dateTo));
             }
 
-            // ✅ 4. Typ spotkania
             if (type != null) {
                 predicates.add(cb.equal(root.get("type"), type));
             }
 
-            // ✅ 5. Statusy
             if (statuses != null && !statuses.isEmpty()) {
                 predicates.add(buildStatusPredicate(root, cb, statuses));
             }
 
-            // ✅ 6. Liczba uczestników
             if (minParticipants != null && minParticipants > 0) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("maxParticipants"), minParticipants));
             }
@@ -338,47 +331,34 @@ public class MeetingSpecification {
                 predicates.add(cb.lessThanOrEqualTo(root.get("maxParticipants"), maxParticipants));
             }
 
-            // ✅ 7. Organizator
             if (StringUtils.hasText(organizerName)) {
                 predicates.add(buildOrganizerPredicate(root, query, cb, organizerName));
             }
 
-            // ✅ 8. Mój udział
             if (currentUserId != null && StringUtils.hasText(myParticipation)) {
                 predicates.add(buildMyParticipationPredicate(root, query, cb, currentUserId, myParticipation));
             }
 
-            // ✅ 9. Widoczność i kontrola dostępu
             predicates.add(buildVisibilityPredicate(root, query, cb, currentUserId, visibility));
 
-            // ✅ 10. Cykliczne spotkania
             if (Boolean.TRUE.equals(recurringOnly)) {
                 predicates.add(cb.isTrue(root.get("recurring")));
             }
 
-            // ✅ 11. Szablony
             if (Boolean.TRUE.equals(templatesOnly)) {
                 predicates.add(cb.isTrue(root.get("template")));
             }
 
-            // ✅ 12. Kategorie
-//            if (categoryIds != null && !categoryIds.isEmpty()) {
-//                predicates.add(buildCategoriesPredicate(root, cb, categoryIds));
-//            }
-
-            // ✅ 13. Załączniki
             if (Boolean.TRUE.equals(hasAttachments)) {
                 predicates.add(cb.isNotEmpty(root.get("attachments")));
             }
 
-            // ✅ Zawsze distinct dla zapytań z JOIN
             query.distinct(true);
 
             return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
-    // ✅ METODY POMOCNICZE
 
     private static Predicate buildTextPredicate(Root<Meeting> root, CriteriaBuilder cb,
                                                 String keywords, List<String> searchFields) {
@@ -469,9 +449,6 @@ public class MeetingSpecification {
             case "ORGANIZER":
                 return cb.equal(root.get("organizer").get("id"), currentUserId);
 
-//            case "NOT_PARTICIPATING":
-//                return buildNotParticipatingPredicate(root, query, cb, currentUserId);
-//
             case "CONFIRMED":
                 return buildParticipationStatusPredicate(root, query, cb, currentUserId,
                         ParticipationStatus.CONFIRMED);
@@ -487,10 +464,6 @@ public class MeetingSpecification {
             case "DECLINED":
                 return buildParticipationStatusPredicate(root, query, cb, currentUserId,
                         ParticipationStatus.DECLINED);
-
-//            case "WAITING":
-//                return buildParticipationStatusPredicate(root, query, cb, currentUserId,
-//                        ParticipationStatus.WAITING_LIST);
 
             case "ATTENDED":
                 return buildParticipationStatusPredicate(root, query, cb, currentUserId,
@@ -563,13 +536,6 @@ public class MeetingSpecification {
         }
     }
 
-//    private static Predicate buildCategoriesPredicate(Root<Meeting> root, CriteriaBuilder cb,
-//                                                      List<Long> categoryIds) {
-//        Join<Meeting, ?> categoryJoin = root.join("categories", JoinType.INNER);
-//        return categoryJoin.get("id").in(categoryIds);
-//    }
-
-    // ✅ INDYWIDUALNE SPECIFICATIONS (dla elastyczności)
 
     public static Specification<Meeting> hasKeywords(String keywords, List<String> searchFields) {
         return (root, query, cb) -> {
@@ -586,24 +552,17 @@ public class MeetingSpecification {
         return (root, query, cb) -> type != null ? cb.equal(root.get("type"), type) : null;
     }
 
-//    public static Specification<Meeting> byStatuses(List<String> statuses) {
-//        return (root, query, cb) -> {
-//            if (statuses == null || statuses.isEmpty()) return null;
-//            return buildStatusPredicate(root, cb, statuses);
-//        };
-//    }
-
 
     public static Specification<Meeting> byStatuses(List<String> statuses) {
         return (root, query, cb) -> {
             if (statuses == null || statuses.isEmpty()) return null;
 
-            log.info("🟡 byStatuses called with: {}", statuses); // DODAJ LOG
+            log.info(" byStatuses called with: {}", statuses); // DODAJ LOG
 
             // Jeśli któryś status to "CONFIRMED" - to jest ParticipationStatus, nie MeetingStatus!
             for (String status : statuses) {
                 if ("CONFIRMED".equalsIgnoreCase(status)) {
-                    log.error("❌ CONFIRMED is a ParticipationStatus, not MeetingStatus!");
+                    log.error("CONFIRMED is a ParticipationStatus, not MeetingStatus!");
                     log.error("   Available MeetingStatus values: {}",
                             Arrays.toString(MeetingStatus.values()));
                     // Możesz albo zignorować, albo rzucić wyjątek
@@ -620,13 +579,6 @@ public class MeetingSpecification {
     public static Specification<Meeting> accessibleToUser(Long userId) {
         return (root, query, cb) -> buildVisibilityPredicate(root, query, cb, userId, null);
     }
-
-//    public static Specification<Meeting> byCategories(List<Long> categoryIds) {
-//        return (root, query, cb) -> {
-//            if (categoryIds == null || categoryIds.isEmpty()) return null;
-//            return buildCategoriesPredicate(root, cb, categoryIds);
-//        };
-//    }
 
     public static Specification<Meeting> isRecurring() {
         return (root, query, cb) -> cb.isTrue(root.get("recurring"));
@@ -648,32 +600,26 @@ public class MeetingSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // ✅ 1. Kryteria tekstowe
             if (StringUtils.hasText(criteria.getKeywords())) {
                 predicates.add(buildTextPredicate(root, cb, criteria.getKeywords(), criteria.getSearchFields()));
             }
 
-            // ✅ 2. Tagi
             if (StringUtils.hasText(criteria.getTags())) {
                 predicates.add(buildTagsPredicate(root, cb, criteria.getTags()));
             }
 
-            // ✅ 3. Zakres dat
             if (criteria.getDateFrom() != null || criteria.getDateTo() != null) {
                 predicates.add(buildDateRangePredicate(root, cb, criteria.getDateFrom(), criteria.getDateTo()));
             }
 
-            // ✅ 4. Typ spotkania
             if (criteria.hasType()) {
                 predicates.add(cb.equal(root.get("type"), criteria.getType()));
             }
 
-            // ✅ 5. Statusy spotkań
             if (criteria.hasStatuses()) {
                 predicates.add(buildStatusPredicate(root, cb, criteria.getStatuses()));
             }
 
-            // ✅ 6. Liczba uczestników
             if (criteria.getMinParticipants() != null && criteria.getMinParticipants() > 0) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("maxParticipants"), criteria.getMinParticipants()));
             }
@@ -682,49 +628,42 @@ public class MeetingSpecification {
                 predicates.add(cb.lessThanOrEqualTo(root.get("maxParticipants"), criteria.getMaxParticipants()));
             }
 
-            // ✅ 7. Organizator
             if (StringUtils.hasText(criteria.getOrganizerName())) {
                 predicates.add(buildOrganizerPredicate(root, query, cb, criteria.getOrganizerName()));
             }
 
-            // ✅ 8. Mój udział
             if (criteria.getCurrentUserId() != null && StringUtils.hasText(criteria.getMyParticipation())) {
                 predicates.add(buildMyParticipationPredicate(root, query, cb,
                         criteria.getCurrentUserId(), criteria.getMyParticipation()));
             }
 
-            // ✅ 9. Widoczność i kontrola dostępu
             predicates.add(buildVisibilityPredicate(root, query, cb,
                     criteria.getCurrentUserId(), criteria.getVisibility()));
 
-            // ✅ 10. Tylko cykliczne
+
             if (criteria.hasRecurringFilter()) {
                 predicates.add(cb.isTrue(root.get("recurring")));
             }
 
-            // ✅ 11. Tylko szablony
+
             if (criteria.hasTemplatesFilter()) {
                 predicates.add(cb.isTrue(root.get("template")));
             }
 
-            // ✅ 12. Kategorie
             if (criteria.hasCategoryFilter()) {
                 predicates.add(buildCategoriesPredicate(root, cb, criteria.getCategoryIds()));
             }
 
-            // ✅ 13. Spotkania z załącznikami
             if (criteria.hasAttachmentsFilter()) {
                 predicates.add(cb.isNotEmpty(root.get("attachments")));
             }
 
-            // ✅ Ustaw distinct
             query.distinct(true);
 
             return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
-    // ✅ METODA POMOCNICZA dla kategorii
     private static Predicate buildCategoriesPredicate(Root<Meeting> root, CriteriaBuilder cb,
                                                       List<Long> categoryIds) {
         Join<Meeting, ?> categoryJoin = root.join("categories", JoinType.INNER);

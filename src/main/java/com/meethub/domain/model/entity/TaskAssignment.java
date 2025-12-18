@@ -22,8 +22,8 @@ public class TaskAssignment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING) // DODAJ TE ADNOTACJĘ
-    private AssignmentStatus status; // DODAJ TO POLE
+    @Enumerated(EnumType.STRING)
+    private AssignmentStatus status;
 
     private String comment;
     private LocalDateTime completedAt;

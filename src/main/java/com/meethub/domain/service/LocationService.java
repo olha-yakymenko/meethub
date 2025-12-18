@@ -65,7 +65,6 @@ import java.util.List;
 
 public interface LocationService {
 
-    // ================= CRUD operations =================
     LocationResponse createLocation(
             @Valid @NotNull(message = "Żądanie utworzenia lokalizacji nie może być puste")
             CreateLocationRequest request
@@ -92,7 +91,6 @@ public interface LocationService {
             Long id
     );
 
-    // ================= Search and filtering =================
     LocationListResponse searchLocations(
             @Valid @NotNull(message = "Żądanie wyszukiwania lokalizacji nie może być puste")
             LocationSearchRequest request
@@ -114,7 +112,6 @@ public interface LocationService {
             Double radiusKm
     );
 
-    // ================= Tools =================
     String generateMapUrl(
             @NotNull(message = "Identyfikator lokalizacji nie może być pusty")
             @Positive(message = "Identyfikator lokalizacji musi być liczbą dodatnią")

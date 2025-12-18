@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -23,33 +24,45 @@ class NotificationRepositoryTest {
     private NotificationRepository notificationRepository;
 
     @Test
-    @DisplayName("Should find notifications by user id")
+    @DisplayName("Should find notifications.html by user id")
     void testFindByUserIdOrderByCreatedAtDesc() {
         Page<Notification> page = notificationRepository.findByUserIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10));
-        assertThat(page).isNotEmpty();
-        assertThat(page.getContent().get(0).getUser().getId()).isEqualTo(1L);
+
+        assertAll("Find notifications by user id",
+                () -> assertThat(page).isNotEmpty(),
+                () -> assertThat(page.getContent().get(0).getUser().getId()).isEqualTo(1L)
+        );
     }
 
     @Test
-    @DisplayName("Should count notifications by user id and status")
+    @DisplayName("Should count notifications.html by user id and status")
     void testCountByUserIdAndStatus() {
         Long count = notificationRepository.countByUserIdAndStatus(1L, NotificationStatus.PENDING);
-        assertThat(count).isGreaterThanOrEqualTo(0);
+
+        assertAll("Count notifications by user id and status",
+                () -> assertThat(count).isGreaterThanOrEqualTo(0)
+        );
     }
 
     @Test
     @DisplayName("Should find in-app messages by user id")
     void testFindInAppMessagesByUserId() {
         List<String> messages = notificationRepository.findInAppMessagesByUserId(1L);
-        assertThat(messages).isNotEmpty();
-        assertThat(messages.get(0)).contains("message");
+
+        assertAll("Find in-app messages",
+                () -> assertThat(messages).isNotEmpty(),
+                () -> assertThat(messages.get(0)).contains("message")
+        );
     }
 
     @Test
     @DisplayName("Should find notification by id and user id")
     void testFindByIdAndUserId() {
         Optional<Notification> notification = notificationRepository.findByIdAndUserId(1L, 1L);
-        assertThat(notification).isPresent();
-        assertThat(notification.get().getUser().getId()).isEqualTo(1L);
+
+        assertAll("Find notification by id and user id",
+                () -> assertThat(notification).isPresent(),
+                () -> notification.ifPresent(n -> assertThat(n.getUser().getId()).isEqualTo(1L))
+        );
     }
 }

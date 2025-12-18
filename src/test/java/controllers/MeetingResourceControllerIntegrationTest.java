@@ -621,44 +621,7 @@ class MeetingResourceControllerIntegrationTest {
                 result.getResponse().getStatus(),
                 result.getResponse().getStatus() == 200);
     }
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = "USER")
-//    void getResources_shouldReturnEmptyList() throws Exception {
-//        mockMvc.perform(get("/api/meetings/{meetingId}/resources", testMeeting.getId())
-//                        .accept(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success", is(true)))
-//                .andExpect(jsonPath("$.data", hasSize(0)));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "organizer@example.com", roles = "USER")
-//    void simpleAddResource_shouldWork() throws Exception {
-//        // Najprostszy możliwy przypadek
-//        MockMultipartFile file = new MockMultipartFile(
-//                "file",
-//                "simple.txt",
-//                "text/plain",
-//                "Simple".getBytes()
-//        );
-//
-//        MvcResult result = mockMvc.perform(multipart("/api/meetings/{meetingId}/resources", testMeeting.getId())
-//                        .file(file)
-//                        .param("title", "Simple Title")
-//                        .param("type", "OTHER") // OTHER jako fallback
-//                        .param("accessLevel", "PUBLIC")
-//                        .with(csrf()))
-//                .andDo(print())
-//                .andReturn();
-//
-//        if (result.getResponse().getStatus() == 400) {
-//            String body = result.getResponse().getContentAsString();
-//            log.error("Failed with body: {}", body);
-//        }
-//
-//        assertEquals(200, result.getResponse().getStatus());
-//    }
+
 
     @Test
     @WithMockUser(username = "organizer@example.com", roles = "PARTICIPANT")

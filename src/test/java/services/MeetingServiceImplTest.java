@@ -1421,28 +1421,6 @@ class MeetingServiceImplTest {
         verify(meetingRepository).findUpcomingPublicMeetings(any(LocalDateTime.class));
     }
 
-    // ============ CHANGE MEETING STATUS TESTS ============
-
-//    @Test
-//    void changeMeetingStatus_Success() {
-//        // Given
-//        Meeting meetingToUpdate = Meeting.builder()
-//                .build();
-//
-//        when(meetingAuthorizationService.canUserEditMeeting(1L, 1L)).thenReturn(true);
-//        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meetingToUpdate));
-//        when(meetingRepository.save(any(Meeting.class))).thenReturn(meetingToUpdate);
-//
-//        // When
-//        meetingService.changeMeetingStatus(1L, MeetingStatus.PLANNED, 1L);
-//
-//        // Then
-//        assertAll(
-//                () -> verify(meetingAuthorizationService).canUserEditMeeting(1L, 1L),
-//                () -> verify(meetingRepository).findById(1L),
-//                () -> verify(meetingRepository).save(any(Meeting.class))
-//        );
-//    }
 
     @Test
     void changeMeetingStatus_NoPermission_ThrowsBusinessException() {
@@ -1626,19 +1604,6 @@ class MeetingServiceImplTest {
 
         verify(meetingRepository).findAll(any(Specification.class), eq(pageable));
     }
-
-//    @Test
-//    void searchMeetings_NoUserId_ThrowsBusinessException() {
-//        // Given
-//        SearchCriteria criteria = SearchCriteria.builder().build();
-//        Pageable pageable = PageRequest.of(0, 10);
-//
-//        // When & Then
-//        BusinessException exception = assertThrows(BusinessException.class,
-//                () -> meetingService.searchMeetings(criteria, pageable));
-//
-//        assertTrue(exception.getMessage().contains("User ID is required"));
-//    }
 
     // ============ MEETING PARTICIPATION TESTS ============
 
@@ -1852,9 +1817,6 @@ class MeetingServiceImplTest {
 
         assertEquals("This meeting is not recurring", exception.getMessage());
     }
-
-    // ============ GET MEETING (WITHOUT RESPONSE) TESTS ============
-
 
 
 }

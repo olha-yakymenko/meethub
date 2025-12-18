@@ -19,9 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -68,46 +66,40 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should return user response when user exists")
         void shouldReturnUserResponseWhenUserExists() {
-            // Given
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
-            // When
             UserResponse result = userService.getUserById(1L);
 
-            // Then
-            assertThat(result.getId()).isEqualTo(1L);
+            assertAll(
+                    () -> assertEquals(1L, result.getId())
+            );
         }
 
         @Test
         @DisplayName("Should map all user fields correctly")
         void shouldMapAllUserFieldsCorrectly() {
-            // Given
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
-            // When
             UserResponse result = userService.getUserById(1L);
 
-            // Then
             assertAll(
-                    () -> assertThat(result.getEmail()).isEqualTo("john.doe@example.com"),
-                    () -> assertThat(result.getFirstName()).isEqualTo("John"),
-                    () -> assertThat(result.getLastName()).isEqualTo("Doe"),
-                    () -> assertThat(result.getPhoneNumber()).isEqualTo("123456789"),
-                    () -> assertThat(result.getRole()).isEqualTo(UserRole.PARTICIPANT),
-                    () -> assertThat(result.getCreatedAt()).isEqualTo(testUser.getCreatedAt())
+                    () -> assertEquals("john.doe@example.com", result.getEmail()),
+                    () -> assertEquals("John", result.getFirstName()),
+                    () -> assertEquals("Doe", result.getLastName()),
+                    () -> assertEquals("123456789", result.getPhoneNumber()),
+                    () -> assertEquals(UserRole.PARTICIPANT, result.getRole()),
+                    () -> assertEquals(testUser.getCreatedAt(), result.getCreatedAt())
             );
         }
 
         @Test
         @DisplayName("Should throw ResourceNotFoundException when user not found")
         void shouldThrowExceptionWhenUserNotFound() {
-            // Given
             when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
-            // When & Then
-            assertThatThrownBy(() -> userService.getUserById(999L))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("User not found with id: 999");
+            assertThrows(ResourceNotFoundException.class,
+                    () -> userService.getUserById(999L)
+            );
         }
     }
 
@@ -118,28 +110,25 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should return user response when email exists")
         void shouldReturnUserResponseWhenEmailExists() {
-            // Given
             when(userRepository.findByEmail("john.doe@example.com"))
                     .thenReturn(Optional.of(testUser));
 
-            // When
             UserResponse result = userService.getUserByEmail("john.doe@example.com");
 
-            // Then
-            assertThat(result.getEmail()).isEqualTo("john.doe@example.com");
+            assertAll(
+                    () -> assertEquals("john.doe@example.com", result.getEmail())
+            );
         }
 
         @Test
         @DisplayName("Should throw ResourceNotFoundException when email not found")
         void shouldThrowExceptionWhenEmailNotFound() {
-            // Given
             when(userRepository.findByEmail("nonexistent@example.com"))
                     .thenReturn(Optional.empty());
 
-            // When & Then
-            assertThatThrownBy(() -> userService.getUserByEmail("nonexistent@example.com"))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("User not found with email: nonexistent@example.com");
+            assertThrows(ResourceNotFoundException.class,
+                    () -> userService.getUserByEmail("nonexistent@example.com")
+            );
         }
     }
 
@@ -150,28 +139,25 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should return user ID when email exists")
         void shouldReturnUserIdWhenEmailExists() {
-            // Given
             when(userRepository.findByEmail("john.doe@example.com"))
                     .thenReturn(Optional.of(testUser));
 
-            // When
             Long userId = userService.getUserIdByEmail("john.doe@example.com");
 
-            // Then
-            assertThat(userId).isEqualTo(1L);
+            assertAll(
+                    () -> assertEquals(1L, userId)
+            );
         }
 
         @Test
         @DisplayName("Should throw RuntimeException when email not found")
         void shouldThrowRuntimeExceptionWhenEmailNotFound() {
-            // Given
             when(userRepository.findByEmail("nonexistent@example.com"))
                     .thenReturn(Optional.empty());
 
-            // When & Then
-            assertThatThrownBy(() -> userService.getUserIdByEmail("nonexistent@example.com"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessage("User not found with email: nonexistent@example.com");
+            assertThrows(RuntimeException.class,
+                    () -> userService.getUserIdByEmail("nonexistent@example.com")
+            );
         }
     }
 
@@ -182,7 +168,6 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should update first name when provided")
         void shouldUpdateFirstNameWhenProvided() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .firstName("Jonathan")
                     .build();
@@ -190,20 +175,17 @@ class UserServiceImplTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-            // When
-            UserResponse result = userService.updateUser(1L, request);
+            userService.updateUser(1L, request);
 
-            // Then
             verify(userRepository).save(argThat(user ->
                     user.getFirstName().equals("Jonathan") &&
-                            user.getLastName().equals("Doe") // unchanged
+                            user.getLastName().equals("Doe")
             ));
         }
 
         @Test
         @DisplayName("Should update last name when provided")
         void shouldUpdateLastNameWhenProvided() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .lastName("Smith")
                     .build();
@@ -211,12 +193,10 @@ class UserServiceImplTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-            // When
             userService.updateUser(1L, request);
 
-            // Then
             verify(userRepository).save(argThat(user ->
-                    user.getFirstName().equals("John") && // unchanged
+                    user.getFirstName().equals("John") &&
                             user.getLastName().equals("Smith")
             ));
         }
@@ -224,7 +204,6 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should update phone number when provided")
         void shouldUpdatePhoneNumberWhenProvided() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .phoneNumber("987654321")
                     .build();
@@ -232,10 +211,8 @@ class UserServiceImplTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-            // When
             userService.updateUser(1L, request);
 
-            // Then
             verify(userRepository).save(argThat(user ->
                     user.getPhoneNumber().equals("987654321")
             ));
@@ -244,7 +221,6 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should update multiple fields when provided")
         void shouldUpdateMultipleFieldsWhenProvided() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .firstName("Jane")
                     .lastName("Smith")
@@ -254,10 +230,8 @@ class UserServiceImplTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-            // When
             userService.updateUser(1L, request);
 
-            // Then
             verify(userRepository).save(argThat(user ->
                     user.getFirstName().equals("Jane") &&
                             user.getLastName().equals("Smith") &&
@@ -268,7 +242,6 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should not update fields when null")
         void shouldNotUpdateFieldsWhenNull() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .firstName(null)
                     .lastName(null)
@@ -278,37 +251,32 @@ class UserServiceImplTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-            // When
             userService.updateUser(1L, request);
 
-            // Then
             verify(userRepository).save(argThat(user ->
-                    user.getFirstName().equals("John") && // unchanged
-                            user.getLastName().equals("Doe") && // unchanged
-                            user.getPhoneNumber().equals("123456789") // unchanged
+                    user.getFirstName().equals("John") &&
+                            user.getLastName().equals("Doe") &&
+                            user.getPhoneNumber().equals("123456789")
             ));
         }
 
         @Test
         @DisplayName("Should throw ResourceNotFoundException when user not found")
         void shouldThrowExceptionWhenUserNotFoundForUpdate() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .firstName("NewName")
                     .build();
 
             when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
-            // When & Then
-            assertThatThrownBy(() -> userService.updateUser(999L, request))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("User not found with id: 999");
+            assertThrows(ResourceNotFoundException.class,
+                    () -> userService.updateUser(999L, request)
+            );
         }
 
         @Test
         @DisplayName("Should save updated user to repository")
         void shouldSaveUpdatedUserToRepository() {
-            // Given
             UpdateUserRequest request = UpdateUserRequest.builder()
                     .firstName("Updated")
                     .build();
@@ -316,10 +284,8 @@ class UserServiceImplTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-            // When
             userService.updateUser(1L, request);
 
-            // Then
             verify(userRepository).save(any(User.class));
         }
     }
@@ -331,38 +297,30 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should delete user when exists")
         void shouldDeleteUserWhenExists() {
-            // Given
             when(userRepository.existsById(1L)).thenReturn(true);
 
-            // When
             userService.deleteUser(1L);
 
-            // Then
             verify(userRepository).deleteById(1L);
         }
 
         @Test
         @DisplayName("Should throw ResourceNotFoundException when user not found")
         void shouldThrowExceptionWhenUserNotFoundForDelete() {
-            // Given
             when(userRepository.existsById(999L)).thenReturn(false);
 
-            // When & Then
-            assertThatThrownBy(() -> userService.deleteUser(999L))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("User not found with id: 999");
+            assertThrows(ResourceNotFoundException.class,
+                    () -> userService.deleteUser(999L)
+            );
         }
 
         @Test
         @DisplayName("Should check if user exists before deletion")
         void shouldCheckIfUserExistsBeforeDeletion() {
-            // Given
             when(userRepository.existsById(1L)).thenReturn(true);
 
-            // When
             userService.deleteUser(1L);
 
-            // Then
             verify(userRepository).existsById(1L);
             verify(userRepository).deleteById(1L);
         }
@@ -403,76 +361,71 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should return users matching email query")
         void shouldReturnUsersMatchingEmailQuery() {
-            // Given
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3));
 
-            // When
             List<UserResponse> results = userService.searchUsers("alice@example.com");
 
-            // Then
-            assertThat(results).hasSize(1);
-            assertThat(results.get(0).getEmail()).isEqualTo("alice@example.com");
+            assertAll(
+                    () -> assertEquals(1, results.size()),
+                    () -> assertEquals("alice@example.com", results.get(0).getEmail())
+            );
         }
 
         @Test
         @DisplayName("Should return users matching first name query")
         void shouldReturnUsersMatchingFirstNameQuery() {
-            // Given
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3));
 
-            // When
             List<UserResponse> results = userService.searchUsers("Alice");
 
-            // Then
-            assertThat(results).hasSize(1);
-            assertThat(results.get(0).getFirstName()).isEqualTo("Alice");
+            assertAll(
+                    () -> assertEquals(1, results.size()),
+                    () -> assertEquals("Alice", results.get(0).getFirstName())
+            );
         }
 
         @Test
         @DisplayName("Should return users matching last name query")
         void shouldReturnUsersMatchingLastNameQuery() {
-            // Given
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3));
 
-            // When
             List<UserResponse> results = userService.searchUsers("Smith");
 
-            // Then
-            assertThat(results).hasSize(1);
-            assertThat(results.get(0).getLastName()).isEqualTo("Smith");
+            assertAll(
+                    () -> assertEquals(1, results.size()),
+                    () -> assertEquals("Smith", results.get(0).getLastName())
+            );
         }
 
         @Test
         @DisplayName("Should be case insensitive")
         void shouldBeCaseInsensitive() {
-            // Given
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3));
 
-            // When
             List<UserResponse> results = userService.searchUsers("ALICE");
 
-            // Then
-            assertThat(results).hasSize(1);
-            assertThat(results.get(0).getFirstName()).isEqualTo("Alice");
+            assertAll(
+                    () -> assertEquals(1, results.size()),
+                    () -> assertEquals("Alice", results.get(0).getFirstName())
+            );
         }
 
         @Test
         @DisplayName("Should return empty list when no matches")
         void shouldReturnEmptyListWhenNoMatches() {
-            // Given
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3));
 
-            // When
             List<UserResponse> results = userService.searchUsers("nonexistent");
 
-            // Then
-            assertThat(results).isEmpty();
+            assertAll(
+                    () -> assertNotNull(results),
+                    () -> assertTrue(results.isEmpty())
+            );
         }
 
         @Test
         @DisplayName("Should return multiple users when query matches multiple")
         void shouldReturnMultipleUsersWhenQueryMatchesMultiple() {
-            // Given
             User user4 = User.builder()
                     .id(4L)
                     .email("test@example.com")
@@ -482,26 +435,25 @@ class UserServiceImplTest {
 
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3, user4));
 
-            // When
             List<UserResponse> results = userService.searchUsers("example");
 
-            // Then
-            assertThat(results).hasSize(3);
-            assertThat(results).extracting("email")
-                    .contains("alice@example.com", "bob.smith@example.com");
+            assertAll(
+                    () -> assertEquals(3, results.size()),
+                    () -> assertTrue(results.stream().anyMatch(r -> r.getEmail().equals("alice@example.com"))),
+                    () -> assertTrue(results.stream().anyMatch(r -> r.getEmail().equals("bob.smith@example.com")))
+            );
         }
 
         @Test
         @DisplayName("Should handle empty query string")
         void shouldHandleEmptyQueryString() {
-            // Given
             when(userRepository.findAll()).thenReturn(List.of(user1, user2, user3));
 
-            // When
             List<UserResponse> results = userService.searchUsers("");
 
-            // Then
-            assertThat(results).hasSize(3);
+            assertAll(
+                    () -> assertEquals(3, results.size())
+            );
         }
     }
 
@@ -512,27 +464,25 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should return true when user exists")
         void shouldReturnTrueWhenUserExists() {
-            // Given
             when(userRepository.existsById(1L)).thenReturn(true);
 
-            // When
             boolean exists = userService.existsById(1L);
 
-            // Then
-            assertThat(exists).isTrue();
+            assertAll(
+                    () -> assertTrue(exists)
+            );
         }
 
         @Test
         @DisplayName("Should return false when user does not exist")
         void shouldReturnFalseWhenUserDoesNotExist() {
-            // Given
             when(userRepository.existsById(999L)).thenReturn(false);
 
-            // When
             boolean exists = userService.existsById(999L);
 
-            // Then
-            assertThat(exists).isFalse();
+            assertAll(
+                    () -> assertFalse(exists)
+            );
         }
     }
 
@@ -543,25 +493,22 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should map all fields from User to UserResponse")
         void shouldMapAllFieldsFromUserToUserResponse() {
-            // When
             UserResponse result = userService.mapToUserResponse(testUser);
 
-            // Then
             assertAll(
-                    () -> assertThat(result.getId()).isEqualTo(testUser.getId()),
-                    () -> assertThat(result.getEmail()).isEqualTo(testUser.getEmail()),
-                    () -> assertThat(result.getFirstName()).isEqualTo(testUser.getFirstName()),
-                    () -> assertThat(result.getLastName()).isEqualTo(testUser.getLastName()),
-                    () -> assertThat(result.getPhoneNumber()).isEqualTo(testUser.getPhoneNumber()),
-                    () -> assertThat(result.getRole()).isEqualTo(testUser.getRole()),
-                    () -> assertThat(result.getCreatedAt()).isEqualTo(testUser.getCreatedAt())
+                    () -> assertEquals(testUser.getId(), result.getId()),
+                    () -> assertEquals(testUser.getEmail(), result.getEmail()),
+                    () -> assertEquals(testUser.getFirstName(), result.getFirstName()),
+                    () -> assertEquals(testUser.getLastName(), result.getLastName()),
+                    () -> assertEquals(testUser.getPhoneNumber(), result.getPhoneNumber()),
+                    () -> assertEquals(testUser.getRole(), result.getRole()),
+                    () -> assertEquals(testUser.getCreatedAt(), result.getCreatedAt())
             );
         }
 
         @Test
         @DisplayName("Should handle null phone number")
         void shouldHandleNullPhoneNumber() {
-            // Given
             User userWithoutPhone = User.builder()
                     .id(2L)
                     .email("test@example.com")
@@ -572,37 +519,31 @@ class UserServiceImplTest {
                     .createdAt(LocalDateTime.now())
                     .build();
 
-            // When
             UserResponse result = userService.mapToUserResponse(userWithoutPhone);
 
-            // Then
-            assertThat(result.getPhoneNumber()).isNull();
+            assertAll(
+                    () -> assertNull(result.getPhoneNumber())
+            );
         }
     }
 
     @Test
     @DisplayName("Should use read-only transaction for getUserById")
     void shouldUseReadOnlyTransactionForGetUserById() {
-        // Given
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
-        // When
         userService.getUserById(1L);
 
-        // Then - test passes if no exception, annotation is checked at runtime
         verify(userRepository).findById(1L);
     }
 
     @Test
     @DisplayName("Should use read-only transaction for searchUsers")
     void shouldUseReadOnlyTransactionForSearchUsers() {
-        // Given
         when(userRepository.findAll()).thenReturn(List.of(testUser));
 
-        // When
         userService.searchUsers("John");
 
-        // Then
         verify(userRepository).findAll();
     }
 }

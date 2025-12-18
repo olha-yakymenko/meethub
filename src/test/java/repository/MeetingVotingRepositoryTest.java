@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.Mockito.when;
 
 @DataJpaTest
@@ -31,70 +32,32 @@ class MeetingVotingRepositoryTest {
 
     @Test
     void testFindByMeetingId() {
-        Long meetingId = 1L; // Zakładamy, że Test Meeting ma ID=1 w data.sql
+        Long meetingId = 1L;
         List<MeetingVoting> votings = meetingVotingRepository.findByMeetingId(meetingId);
-        assertThat(votings).hasSize(2); // Test Voting 1 + Test Voting 2 Expired
+
+        assertAll("Votings by meeting ID",
+                () -> assertThat(votings).hasSize(2)
+        );
     }
 
     @Test
     void testFindExpiredVotings() {
         List<MeetingVoting> expired = meetingVotingRepository.findExpiredVotings(LocalDateTime.now());
-        assertThat(expired).hasSize(1); // Tylko Test Voting 2 Expired
-        assertThat(expired.get(0).getTitle()).isEqualTo("Test Voting 2 Expired");
+
+        assertAll("Expired votings",
+                () -> assertThat(expired).hasSize(1),
+                () -> assertThat(expired.get(0).getTitle()).isEqualTo("Test Voting 2 Expired")
+        );
     }
 
     @Test
     void testHasActiveVoting() {
-        Long meetingId = 1L; // Test Meeting
+        Long meetingId = 1L;
         boolean hasActive = meetingVotingRepository.hasActiveVoting(meetingId);
-        assertThat(hasActive).isTrue(); // Test Voting 1 jest aktywne
+
+        assertAll("Check if meeting has active voting",
+                () -> assertThat(hasActive).isTrue()
+        );
     }
 
-    @Disabled
-    @SpringBootTest
-    //@ActiveProfiles("test")
-    @Transactional
-    static
-    class AuthServiceIntegrationTest {
-
-        @Autowired
-        private AuthServiceImpl authService;
-
-        @Autowired
-        private UserRepository userRepository;
-
-        @MockBean
-        private PasswordEncoder passwordEncoder;
-
-        @MockBean
-        private CustomUserDetailsService userDetailsService;
-
-        @Test
-        void register_ShouldSaveUserToDatabase() {
-            // Given
-            UserRegistrationRequest request = UserRegistrationRequest.builder()
-                    .email("integration@test.com")
-                    .password("password123")
-                    .confirmPassword("password123")
-                    .firstName("Integration")
-                    .lastName("Test")
-                    .phoneNumber("987654321")
-                    .build();
-
-            when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
-
-            // When
-            var result = authService.register(request);
-
-            // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getEmail()).isEqualTo("integration@test.com");
-
-            // Verify in database
-            User savedUser = userRepository.findByEmail("integration@test.com").orElse(null);
-            assertThat(savedUser).isNotNull();
-            assertThat(savedUser.getFirstName()).isEqualTo("Integration");
-            assertThat(savedUser.getRole()).isEqualTo(UserRole.PARTICIPANT);
-        }
-    }
 }

@@ -36,13 +36,13 @@ import java.util.Set;
 @Data
 public class NotificationPreferencesRequest {
 
-    @NotNull(message = "Email notifications preference is required")
+    @NotNull(message = "Email notifications.html preference is required")
     private Boolean emailNotificationsEnabled;
 
-    @NotNull(message = "Push notifications preference is required")
+    @NotNull(message = "Push notifications.html preference is required")
     private Boolean pushNotificationsEnabled;
 
-    @NotNull(message = "SMS notifications preference is required")
+    @NotNull(message = "SMS notifications.html preference is required")
     private Boolean smsNotificationsEnabled;
 
     @NotNull(message = "Digest preference is required")

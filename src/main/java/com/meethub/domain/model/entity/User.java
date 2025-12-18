@@ -111,7 +111,7 @@
 //
 //    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 //    @Builder.Default
-//    private List<Notification> notifications = new ArrayList<>();
+//    private List<Notification> notifications.html = new ArrayList<>();
 //
 //    @CreationTimestamp
 //    @Column(name = "created_at", nullable = false, updatable = false)
@@ -440,7 +440,6 @@ public class User {
         return enabled;
     }
 
-    // Metoda pomocnicza do znajdowania uczestnictwa w spotkaniu
     public MeetingParticipant getMeetingParticipant(Meeting meeting) {
         if (meeting == null) return null;
 
@@ -450,7 +449,6 @@ public class User {
                 .orElse(null);
     }
 
-    // ========== METODY DLA ŁATWEGO SPRAWDZANIA RÓL SYSTEMOWYCH ==========
 
     public boolean isAdmin() {
         return UserRole.ADMIN.equals(role);

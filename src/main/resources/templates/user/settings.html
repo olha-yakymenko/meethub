@@ -67,19 +67,7 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox"
-                                               id="smsNotifications" name="smsNotificationsEnabled"
-                                               th:checked="${user?.smsNotificationsEnabled}">
-                                        <label class="form-check-label" for="smsNotifications">
-                                            <i class="bi bi-chat-dots me-2"></i>Powiadomienia SMS
-                                        </label>
-                                        <small class="form-text text-muted d-block">
-                                            Wymaga podania numeru telefonu
-                                        </small>
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
@@ -128,33 +116,6 @@
                             </div>
                         </div>
 
-                        <!-- Digest i harmonogram -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">
-                                <i class="bi bi-collection me-2"></i>Podsumowania
-                            </h5>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox"
-                                               id="digestEnabled" name="digestEnabled"
-                                               th:checked="${user?.digestEnabled}">
-                                        <label class="form-check-label" for="digestEnabled">
-                                            Wysyłaj podsumowania
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="digestFrequency" class="form-label">Częstotliwość podsumowań</label>
-                                        <select class="form-select" id="digestFrequency" name="digestFrequency">
-                                            <option value="DAILY" th:selected="${user?.digestFrequency == 'DAILY'}">Codziennie</option>
-                                            <option value="WEEKLY" th:selected="${user?.digestFrequency == 'WEEKLY'}">Tygodniowo</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         <div class="d-flex justify-content-between">
                             <a th:href="@{/profile}" class="btn btn-outline-secondary">

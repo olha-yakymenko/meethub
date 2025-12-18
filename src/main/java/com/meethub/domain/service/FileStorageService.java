@@ -11,9 +11,7 @@ import java.nio.file.Path;
 @Validated
 public interface FileStorageService {
 
-    /**
-     * Zapisuje plik na dysku
-     */
+
     String storeFile(
             @NotNull(message = "Plik nie może być pusty")
             MultipartFile file,
@@ -27,9 +25,7 @@ public interface FileStorageService {
             String filename
     );
 
-    /**
-     * Ładuje plik jako Resource
-     */
+
     Resource loadFileAsResource(
             @NotBlank(message = "Nazwa pliku nie może być pusta")
             @Pattern(
@@ -40,17 +36,13 @@ public interface FileStorageService {
             String filename
     );
 
-    /**
-     * Usuwa plik z dysku
-     */
+
     void deleteFile(
             @NotBlank(message = "Ścieżka pliku nie może być pusta")
             String filePath
     );
 
-    /**
-     * Sprawdza czy plik istnieje
-     */
+
     boolean fileExists(
             @NotBlank(message = "Nazwa pliku nie może być pusta")
             @Pattern(
@@ -61,9 +53,7 @@ public interface FileStorageService {
             String filename
     );
 
-    /**
-     * Pobiera ścieżkę do pliku
-     */
+
     Path getFilePath(
             @NotBlank(message = "Nazwa pliku nie może być pusta")
             @Pattern(
@@ -74,52 +64,8 @@ public interface FileStorageService {
             String filename
     );
 
-    /**
-     * Czyści stare/porzucone pliki
-     */
+
     void cleanupOrphanedFiles();
 }
 
 
-
-
-//// FileStorageService.java
-//package com.meethub.domain.service;
-//
-//import org.springframework.core.io.Resource;
-//import org.springframework.web.multipart.MultipartFile;
-//
-//import java.nio.file.Path;
-//
-//public interface FileStorageService {
-//
-//    /**
-//     * Zapisuje plik na dysku
-//     */
-//    String storeFile(MultipartFile file, String filename);
-//
-//    /**
-//     * Ładuje plik jako Resource
-//     */
-//    Resource loadFileAsResource(String filename);
-//
-//    /**
-//     * Usuwa plik z dysku
-//     */
-//    void deleteFile(String filePath);
-//
-//    /**
-//     * Sprawdza czy plik istnieje
-//     */
-//    boolean fileExists(String filename);
-//
-//    /**
-//     * Pobiera ścieżkę do pliku
-//     */
-//    Path getFilePath(String filename);
-//
-//    /**
-//     * Czyści stare/porzucone pliki
-//     */
-//    void cleanupOrphanedFiles();
-//}

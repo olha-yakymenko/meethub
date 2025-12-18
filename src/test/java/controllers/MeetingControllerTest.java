@@ -1,6 +1,8 @@
 package com.meethub.controller.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meethub.domain.model.entity.User;
+import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.response.MeetingResponse;
 import com.meethub.domain.service.MeetingService;
 import com.meethub.security.CustomUserDetailsService;
@@ -15,9 +17,13 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import security.WithCustomUser;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -53,9 +59,8 @@ class MeetingControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com", roles = {"USER"})
+    @WithMockUser(username = "test@example.com")
     void getMeeting_ShouldReturnMeetingDetails() throws Exception {
-        // Given
         when(meetingService.getMeetingById(1L)).thenReturn(mockMeeting);
 
         // When & Then
@@ -68,89 +73,14 @@ class MeetingControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com", roles = {"USER"})
+    @WithMockUser(username = "test@example.com")
     void getMeeting_ShouldReturnBadRequest_WhenInvalidMeetingId() throws Exception {
-        // Given - nieprawidłowe ID spotkania (0)
-        // When & Then - powinno zwrócić błąd walidacji @Min(1)
         mockMvc.perform(get("/api/v1/meetings/0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"));
     }
-//
-//    @Test
-//    @WithMockUser(username = "test@example.com", roles = {"USER"})
-//    void createMeeting_ShouldReturnCreated_WhenValidRequest() throws Exception {
-//        // Given
-//        CreateMeetingRequest request = new CreateMeetingRequest();
-//        request.setTitle("New Meeting");
-//        request.setDescription("Meeting Description");
-//
-//        when(meetingService.createMeeting(any(CreateMeetingRequest.class), eq(1L)))
-//                .thenReturn(mockMeeting);
-//
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/meetings")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isCreated())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.message").value("Spotkanie utworzone pomyślnie"))
-//                .andExpect(jsonPath("$.data.title").value("Test Meeting"));
-//    }
-//
-//    @Test
-//    void createMeeting_ShouldReturnUnauthorized_WhenUserNotLoggedIn() throws Exception {
-//        // Given
-//        CreateMeetingRequest request = new CreateMeetingRequest();
-//        request.setTitle("New Meeting");
-//        request.setDescription("Meeting Description");
-//
-//        // When & Then - brak autoryzacji
-//        mockMvc.perform(post("/api/v1/meetings")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isUnauthorized()); // 401 zamiast 400
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "test@example.com", roles = {"USER"})
-//    void createMeeting_ShouldValidateRequiredFields() throws Exception {
-//        // Given - brak tytułu
-//        CreateMeetingRequest request = new CreateMeetingRequest();
-//        request.setDescription("Only description");
-//
-//        // When & Then - walidacja @NotNull na polu title
-//        mockMvc.perform(post("/api/v1/meetings")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isBadRequest())
-//                .andExpect(jsonPath("$.status").value(400))
-//                .andExpect(jsonPath("$.error").value("Bad Request"));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "test@example.com", roles = {"USER"})
-//    void getUserMeetings_ShouldReturnPaginatedResults() throws Exception {
-//        // Given
-//        Page<MeetingResponse> page = new PageImpl<>(
-//                Arrays.asList(mockMeeting),
-//                PageRequest.of(0, 10),
-//                1
-//        );
-//
-//        when(meetingService.getUserMeetings(eq(1L), any(PageRequest.class)))
-//                .thenReturn(page);
-//
-//        // When & Then
-//        mockMvc.perform(get("/api/v1/meetings/my-meetings")
-//                        .param("page", "0")
-//                        .param("size", "10"))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data.content").isArray())
-//                .andExpect(jsonPath("$.data.content[0].title").value("Test Meeting"));
-//    }
+
 
     @Test
     void getUserMeetings_ShouldReturnUnauthorized_WhenUserNotLoggedIn() throws Exception {
@@ -270,68 +200,6 @@ class MeetingControllerTest {
                 .andExpect(jsonPath("$.message").value("Nadchodzące spotkania publiczne pobrane pomyślnie"))
                 .andExpect(jsonPath("$.data").isArray());
     }
-//
-//    @Test
-//    void getUpcomingPublicMeetings_ShouldWorkWithoutAuthentication() throws Exception {
-//        // Given
-//        List<MeetingResponse> meetings = Arrays.asList(mockMeeting);
-//        when(meetingService.getUpcomingPublicMeetings()).thenReturn(meetings);
-//
-//        // When & Then - endpoint publiczny powinien działać bez autoryzacji
-//        mockMvc.perform(get("/api/v1/meetings/public/upcoming"))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data").isArray());
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "test@example.com", roles = {"USER"})
-//    void changeMeetingStatus_ShouldReturnSuccess() throws Exception {
-//        // When & Then
-//        mockMvc.perform(patch("/api/v1/meetings/1/status")
-//                        .param("status", "PLANOWANE"))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.message").value("Status spotkania zmieniony pomyślnie"));
-//
-//        verify(meetingService).changeMeetingStatus(eq(1L), any(), eq(1L));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "test@example.com", roles = {"USER"})
-//    void duplicateMeeting_ShouldReturnSuccess() throws Exception {
-//        // Given
-//        when(meetingService.duplicateMeeting(eq(1L), eq(1L)))
-//                .thenReturn(mockMeeting);
-//
-//        // When & Then
-//        mockMvc.perform(post("/api/v1/meetings/1/duplicate"))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.message").value("Spotanie zduplikowane pomyślnie"))
-//                .andExpect(jsonPath("$.data.title").value("Test Meeting"));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "test@example.com", roles = {"USER"})
-//    void findConflictingMeetings_ShouldReturnConflicts() throws Exception {
-//        // Given
-//        LocalDateTime startDate = LocalDateTime.now().plusDays(1);
-//        LocalDateTime endDate = LocalDateTime.now().plusDays(2);
-//
-//        List<MeetingResponse> conflicts = Arrays.asList(mockMeeting);
-//        when(meetingService.findConflictingMeetings(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
-//                .thenReturn(conflicts);
-//
-//        // When & Then
-//        mockMvc.perform(get("/api/v1/meetings/conflicts")
-//                        .param("startDate", startDate.toString())
-//                        .param("endDate", endDate.toString()))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.message").value("Konflikty terminów sprawdzone pomyślnie"))
-//                .andExpect(jsonPath("$.data[0].title").value("Test Meeting"));
-//    }
 
     @Test
     @WithMockUser(username = "test@example.com", roles = {"USER"})
@@ -354,6 +222,5 @@ class MeetingControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Wyniki wyszukiwania pobrane pomyślnie"));
-//                .andExpect(jsonPath("$.data.content[0].title").value("Test Meeting"));
     }
 }

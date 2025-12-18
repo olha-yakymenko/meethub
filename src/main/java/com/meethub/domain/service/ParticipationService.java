@@ -12,7 +12,6 @@ import java.util.Map;
 @Validated
 public interface ParticipationService {
 
-    // Status uczestnictwa
     MeetingParticipant confirmParticipation(
             @NotNull @Positive Long meetingId,
             @NotNull @Positive Long userId
@@ -23,14 +22,12 @@ public interface ParticipationService {
             @NotNull @Positive Long userId
     );
 
-    // Obecność
     MeetingParticipant markAsAttended(
             @NotNull @Positive Long meetingId,
             @NotNull @Positive Long userId
     );
 
-    // Statystyki
-    Map<ParticipationStatus, Long> getResponseStatistics(
+     Map<ParticipationStatus, Long> getResponseStatistics(
             @NotNull @Positive Long meetingId
     );
 
@@ -38,8 +35,7 @@ public interface ParticipationService {
             @NotNull @Positive Long meetingId
     );
 
-    // Sprawdzanie
-    boolean isUserParticipant(
+     boolean isUserParticipant(
             @NotNull @Positive Long meetingId,
             @NotNull @Positive Long userId
     );
@@ -49,8 +45,7 @@ public interface ParticipationService {
             @NotNull @Positive Long userId
     );
 
-    // Operacje dla organizatora
-    MeetingParticipant updateUserStatus(
+     MeetingParticipant updateUserStatus(
             @NotNull @Positive Long meetingId,
             @NotNull @Positive Long userId,
             @NotNull ParticipationStatus status
@@ -64,8 +59,7 @@ public interface ParticipationService {
             @NotNull @Positive Long meetingId
     );
 
-    // Lista rezerwowa
-    MeetingParticipant addToWaitingList(
+     MeetingParticipant addToWaitingList(
             @NotNull @Positive Long meetingId,
             @NotNull @Positive Long userId
     );

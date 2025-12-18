@@ -11,6 +11,7 @@ import java.util.List;
 
 import static com.meethub.domain.model.enums.ResourceType.PRESENTATION;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -24,9 +25,11 @@ class MeetingResourceRepositoryTest {
         List<MeetingResource> resources = meetingResourceRepository
                 .findByMeetingIdAndIsCurrentTrueOrderByUploadedAtDesc(1L);
 
-        assertThat(resources).hasSize(3);
-        assertThat(resources.get(0).getFilename()).isEqualTo("presentation1.pptx"); // najnowszy upload
-        assertThat(resources.get(1).getFilename()).isEqualTo("file1.pdf");
+        assertAll("Current meeting resources ordered by uploadedAt desc",
+                () -> assertThat(resources).hasSize(3),
+                () -> assertThat(resources.get(0).getFilename()).isEqualTo("presentation1.pptx"),
+                () -> assertThat(resources.get(1).getFilename()).isEqualTo("file1.pdf")
+        );
     }
 
     @Test
@@ -34,70 +37,53 @@ class MeetingResourceRepositoryTest {
         List<MeetingResource> documentResources = meetingResourceRepository
                 .findByMeetingIdAndResourceTypeOrderByUploadedAtDesc(1L, ResourceType.DOCUMENT);
 
-        assertThat(documentResources).hasSize(2);
-        assertThat(documentResources.get(0).getFilename()).isEqualTo("file1.pdf");
-        assertThat(documentResources.get(1).getFilename()).isEqualTo("file2.docx");
+        assertAll("Document resources ordered by uploadedAt desc",
+                () -> assertThat(documentResources).hasSize(2),
+                () -> assertThat(documentResources.get(0).getFilename()).isEqualTo("file1.pdf"),
+                () -> assertThat(documentResources.get(1).getFilename()).isEqualTo("file2.docx")
+        );
     }
 
     @Test
     void testFindByMeetingIdAndTagsContainingOrderByUploadedAtDesc() {
-        // Given: Dane z data.sql
-        // W data.sql spotkanie ma ID=1, a w zasobach są takie tagi:
-        // - resource_id=1: tagi "pdf", "important" (dla file1.pdf)
-        // - resource_id=2: tag "docx" (dla file2.docx)
-        // - resource_id=3: tag "presentation" (dla presentation1.pptx)
-        Long meetingId = 1L; // ID spotkania z data.sql
+        Long meetingId = 1L;
 
-        // When: Szukamy zasobów z tagiem zawierającym "pdf"
         List<MeetingResource> pdfResources = meetingResourceRepository
                 .findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(meetingId, "pdf");
 
-        // Then: Powinien znaleźć file1.pdf
-        assertThat(pdfResources)
-                .hasSize(1)
-                .first()
-                .satisfies(resource -> {
-                    assertThat(resource.getFilename()).isEqualTo("file1.pdf");
-                    assertThat(resource.getOriginalFilename()).isEqualTo("file1.pdf");
-                });
-
-        // When: Szukamy zasobów z tagiem zawierającym "presentation"
         List<MeetingResource> presentationResources = meetingResourceRepository
                 .findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(meetingId, "presentation");
 
-        // Then: Powinien znaleźć presentation1.pptx
-        assertThat(presentationResources)
-                .hasSize(1)
-                .first()
-                .satisfies(resource -> {
-                    assertThat(resource.getFilename()).isEqualTo("presentation1.pptx");
-                    assertThat(resource.getResourceType()).isEqualTo(PRESENTATION);
-                });
-
-        // When: Szukamy zasobów z tagiem zawierającym "important"
         List<MeetingResource> importantResources = meetingResourceRepository
                 .findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(meetingId, "important");
 
-        // Then: Powinien znaleźć file1.pdf (który ma tag "important")
-        assertThat(importantResources)
-                .hasSize(1)
-                .first()
-                .extracting(MeetingResource::getFilename)
-                .isEqualTo("file1.pdf");
-
-        // Dodatkowe asercje na kolejność sortowania
-        // file1.pdf ma uploaded_at = DATEADD('DAY', -2, CURRENT_TIMESTAMP)
-        // presentation1.pptx ma uploaded_at = DATEADD('DAY', -1, CURRENT_TIMESTAMP) - czyli nowszy
         List<MeetingResource> allResources = meetingResourceRepository
                 .findByMeetingIdAndTagsContainingOrderByUploadedAtDesc(meetingId, "");
 
-        // Puste tag zwróci wszystkie zasoby (LIKE '%%')
-        assertThat(allResources).hasSize(3);
-
-        // Sprawdzenie kolejności - najnowsze pierwsze
-        if (allResources.size() >= 2) {
-            assertThat(allResources.get(0).getUploadedAt())
-                    .isAfterOrEqualTo(allResources.get(1).getUploadedAt());
-        }
-}
+        assertAll("Meeting resources by tags",
+                () -> assertAll("PDF resources",
+                        () -> assertThat(pdfResources).hasSize(1),
+                        () -> assertThat(pdfResources.get(0).getFilename()).isEqualTo("file1.pdf"),
+                        () -> assertThat(pdfResources.get(0).getOriginalFilename()).isEqualTo("file1.pdf")
+                ),
+                () -> assertAll("Presentation resources",
+                        () -> assertThat(presentationResources).hasSize(1),
+                        () -> assertThat(presentationResources.get(0).getFilename()).isEqualTo("presentation1.pptx"),
+                        () -> assertThat(presentationResources.get(0).getResourceType()).isEqualTo(PRESENTATION)
+                ),
+                () -> assertAll("Important resources",
+                        () -> assertThat(importantResources).hasSize(1),
+                        () -> assertThat(importantResources.get(0).getFilename()).isEqualTo("file1.pdf")
+                ),
+                () -> assertAll("All resources ordering",
+                        () -> assertThat(allResources).hasSize(3),
+                        () -> {
+                            if (allResources.size() >= 2) {
+                                assertThat(allResources.get(0).getUploadedAt())
+                                        .isAfterOrEqualTo(allResources.get(1).getUploadedAt());
+                            }
+                        }
+                )
+        );
+    }
 }

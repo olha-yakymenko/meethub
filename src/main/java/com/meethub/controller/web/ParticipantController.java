@@ -37,7 +37,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Arrays;
 import java.util.List;
 
-@Validated // DODANE - walidacja dla kontrolera webowego
+@Validated
 @Slf4j
 @Controller
 @RequestMapping("/meetings/{meetingId}/participants")

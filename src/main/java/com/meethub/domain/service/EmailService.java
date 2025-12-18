@@ -81,9 +81,6 @@ public class EmailService {
     private final JavaMailSender javaMailSender;
     private final TemplateEngine templateEngine;
 
-    /**
-     * NOWA METODA: Wyślij email z szablonem HTML z bazy danych
-     */
     public void sendHtmlEmail(String to, String subject, String htmlContent) {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
@@ -91,22 +88,20 @@ public class EmailService {
 
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(htmlContent, true); // true = HTML
+            helper.setText(htmlContent, true);
             helper.setFrom("olayakym0@gmail.com");
 
             javaMailSender.send(message);
 
-            log.info("✅ HTML email wysłany do: {}", to);
+            log.info(" HTML email wysłany do: {}", to);
 
         } catch (Exception e) {
-            log.error("❌ Błąd podczas wysyłki HTML email do {}: {}", to, e.getMessage(), e);
+            log.error(" Błąd podczas wysyłki HTML email do {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
 
-    /**
-     * Ulepszona wersja z opcjonalnymi załącznikami
-     */
+
     public void sendHtmlEmail(String to, String subject, String htmlContent,
                               String replyTo, List<String> cc, List<String> bcc) {
         try {
@@ -132,18 +127,15 @@ public class EmailService {
 
             javaMailSender.send(message);
 
-            log.info("✅ HTML email wysłany do: {} (CC: {}, BCC: {})",
+            log.info(" HTML email wysłany do: {} (CC: {}, BCC: {})",
                     to, cc != null ? cc.size() : 0, bcc != null ? bcc.size() : 0);
 
         } catch (Exception e) {
-            log.error("❌ Błąd podczas wysyłki HTML email do {}: {}", to, e.getMessage(), e);
+            log.error(" Błąd podczas wysyłki HTML email do {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
 
-    /**
-     * Wyślij email z szablonu Thymeleaf (z pliku)
-     */
     public void sendTemplateEmail(String to, String subject, String templateName,
                                   Map<String, Object> variables) {
         try {
@@ -162,17 +154,14 @@ public class EmailService {
 
             javaMailSender.send(message);
 
-            log.info("✅ Template email wysłany do: {}", to);
+            log.info(" Template email wysłany do: {}", to);
 
         } catch (Exception e) {
-            log.error("❌ Błąd podczas wysyłki template email do {}: {}", to, e.getMessage(), e);
+            log.error(" Błąd podczas wysyłki template email do {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
 
-    /**
-     * Wyślij prosty tekstowy email
-     */
     public void sendSimpleEmail(String to, String subject, String text) {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
@@ -185,80 +174,12 @@ public class EmailService {
 
             javaMailSender.send(message);
 
-            log.info("✅ Text email wysłany do: {}", to);
+            log.info(" Text email wysłany do: {}", to);
 
         } catch (Exception e) {
-            log.error("❌ Błąd podczas wysyłki text email do {}: {}", to, e.getMessage(), e);
+            log.error(" Błąd podczas wysyłki text email do {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
 }
 
-
-
-//
-//@Slf4j
-//@Service
-//@RequiredArgsConstructor
-//@Transactional
-//public class EmailService {
-//
-//    private final JavaMailSender javaMailSender;
-//    private final TemplateEngine templateEngine;
-//
-//    /**
-//     * Wyślij email z szablonu Thymeleaf
-//     */
-//    public void sendTemplateEmail(String to, String subject, String templateName,
-//                                  Map<String, Object> variables) {
-//        try {
-//            MimeMessage message = javaMailSender.createMimeMessage();
-//            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-//
-//            // Przygotuj kontekst dla Thymeleaf
-//            Context context = new Context();
-//            context.setVariables(variables);
-//
-//            // Renderuj HTML z szablonu
-//            String htmlContent = templateEngine.process("email/" + templateName, context);
-//
-//            // Skonfiguruj wiadomość
-//            helper.setTo(to);
-//            helper.setSubject(subject);
-//            helper.setText(htmlContent, true); // true = HTML
-//            helper.setFrom("noreply@meethub.com");
-//
-//            // Wyślij
-//            javaMailSender.send(message);
-//
-//            log.info("✅ Email wysłany do: {}", to);
-//
-//        } catch (Exception e) {
-//            log.error("❌ Błąd podczas wysyłki email do {}: {}", to, e.getMessage(), e);
-//            throw new RuntimeException("Failed to send email", e);
-//        }
-//    }
-//
-//    /**
-//     * Wyślij prosty tekstowy email
-//     */
-//    public void sendSimpleEmail(String to, String subject, String text) {
-//        try {
-//            MimeMessage message = javaMailSender.createMimeMessage();
-//            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-//
-//            helper.setTo(to);
-//            helper.setSubject(subject);
-//            helper.setText(text, false); // false = plain text
-//            helper.setFrom("noreply@meethub.com");
-//
-//            javaMailSender.send(message);
-//
-//            log.info("✅ Email tekstowy wysłany do: {}", to);
-//
-//        } catch (Exception e) {
-//            log.error("❌ Błąd podczas wysyłki email do {}: {}", to, e.getMessage(), e);
-//            throw new RuntimeException("Failed to send email", e);
-//        }
-//    }
-//}
