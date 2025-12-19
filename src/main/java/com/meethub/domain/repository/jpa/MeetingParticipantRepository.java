@@ -58,17 +58,6 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 
     boolean existsByMeetingIdAndUserIdAndStatusIn(Long meetingId, Long userId, List<ParticipationStatus> statuses);
 
-    @Query("""
-        SELECT COUNT(p) 
-        FROM MeetingParticipant p 
-        WHERE p.meeting.id = :meetingId 
-        AND p.status IN ('CONFIRMED', 'ATTENDED')
-    """)
-    long countActiveParticipants(@Param("meetingId") Long meetingId);
-
-    @Query("SELECT COUNT(p) FROM MeetingParticipant p WHERE p.meeting.id = :meetingId AND p.status = 'ATTENDED'")
-    long countAttendedParticipants(@Param("meetingId") Long meetingId);
-
 
     @Query("""
     SELECT
@@ -84,22 +73,6 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 """)
     List<ParticipantProjection> findParticipantsProjection(@Param("meetingId") Long meetingId);
 
-
-    @Query("""
-        SELECT
-            p.id as id,
-            u.id as userId,
-            u.firstName as firstName,
-            u.lastName as lastName,
-            u.email as email,
-            p.status as status
-        FROM MeetingParticipant p
-        JOIN p.user u
-        WHERE p.meeting.id = :meetingId
-        AND p.status IN ('CONFIRMED', 'ATTENDED')
-        ORDER BY u.lastName, u.firstName
-    """)
-    List<ParticipantProjection> findActiveParticipantsProjection(@Param("meetingId") Long meetingId);
 
     @Query("""
     SELECT
@@ -125,20 +98,6 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 """)
     List<ParticipantProjection> findAllParticipantsByMeetingId(@Param("meetingId") Long meetingId);
 
-    @Query("""
-        SELECT 
-            COUNT(p) as total,
-            COUNT(CASE WHEN p.status IN ('CONFIRMED', 'ATTENDED') THEN 1 END) as confirmed,
-            COUNT(CASE WHEN p.status = 'ATTENDED' THEN 1 END) as attended,
-            COUNT(CASE WHEN p.status = 'DECLINED' THEN 1 END) as declined,
-            COUNT(CASE WHEN p.status = 'CANCELLED' THEN 1 END) as cancelled,
-            COUNT(CASE WHEN p.status = 'INVITED' THEN 1 END) as invited,
-            COUNT(CASE WHEN p.status = 'PENDING' THEN 1 END) as pending
-        FROM MeetingParticipant p
-        WHERE p.meeting.id = :meetingId
-    """)
-    Map<String, Long> countParticipantsByStatus(@Param("meetingId") Long meetingId);
-
 
     @Query("""
         SELECT new com.meethub.domain.model.dto.ParticipantCountDto(
@@ -157,33 +116,4 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 
     Optional<MeetingParticipant> findByIdAndInvitationToken(Long participantId, String invitationToken);
 
-    @Query("SELECT p.user FROM MeetingParticipant p WHERE p.meeting.id = :meetingId AND p.status = 'CONFIRMED'")
-    List<User> findConfirmedUsersByMeetingId(@Param("meetingId") Long meetingId);
-
-
-    @Query("""
-    SELECT mp.user
-    FROM MeetingParticipant mp
-    WHERE mp.meeting.id = :meetingId
-      AND mp.status = 'CONFIRMED'
-      AND mp.user.id NOT IN (
-          SELECT ta.user.id
-          FROM TaskAssignment ta
-          WHERE ta.task.id = :taskId
-      )
-    ORDER BY mp.user.lastName, mp.user.firstName
-""")
-    List<User> findAvailableUsersForTask(@Param("meetingId") Long meetingId,
-                                         @Param("taskId") Long taskId);
-
-
-
-
-//    @Query("""
-//        SELECT AVG(EXTRACT(EPOCH FROM (p.respondedAt - p.invitedAt)) / 60)
-//        FROM MeetingParticipant p
-//        WHERE p.meeting.id = :meetingId
-//        AND p.respondedAt IS NOT NULL
-//    """)
-//    Double getAverageResponseTimeMinutes(@Param("meetingId") Long meetingId);
 }

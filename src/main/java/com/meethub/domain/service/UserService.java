@@ -2,6 +2,7 @@ package com.meethub.domain.service;
 
 import com.meethub.domain.model.request.UpdateUserRequest;
 import com.meethub.domain.model.response.UserResponse;
+import com.meethub.validation.MeethubEmail;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,7 +19,7 @@ public interface UserService {
     );
 
     UserResponse getUserByEmail(
-            @NotBlank @Email String email
+            @NotBlank @Email @MeethubEmail(message = "Email musi być w domenie .com") String email
     );
 
     UserResponse updateUser(
@@ -39,7 +40,7 @@ public interface UserService {
     );
 
     Long getUserIdByEmail(
-            @NotBlank @Email String email
+            @NotBlank @Email @MeethubEmail(message = "Email musi być w domenie .com") String email
     );
 }
 

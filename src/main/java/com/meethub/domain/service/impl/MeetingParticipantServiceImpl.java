@@ -30,6 +30,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 @Slf4j
+@Validated
 public class MeetingParticipantServiceImpl implements MeetingParticipantService {
 
     private final MeetingParticipantRepository participantRepository;
@@ -543,13 +545,9 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         MeetingParticipant participant = participantRepository.findByMeetingIdAndUserId(meetingId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Participant not found"));
 
-        boolean wasConfirmed = participant.getStatus() == ParticipationStatus.CONFIRMED;
 
         participantRepository.delete(participant);
 
-        if (wasConfirmed) {
-            promoteNextFromWaitlist(meetingId);
-        }
     }
 
     @Override
@@ -564,7 +562,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     }
 
 
-    private ParticipantResponse mapToResponse(MeetingParticipant participant) {
+    ParticipantResponse mapToResponse(MeetingParticipant participant) {
         ParticipantResponse response = new ParticipantResponse();
         response.setId(participant.getId());
         response.setStatus(participant.getStatus());
@@ -656,29 +654,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return UUID.randomUUID().toString() + "-" + System.currentTimeMillis();
     }
 
-    private void sendInvitationEmail(MeetingParticipant participant) {
-        try {
-            String confirmationLink = "http://yourapp.com/meetings/" +
-                    participant.getMeeting().getId() +
-                    "/participants/confirm/" +
-                    participant.getInvitationToken();
-
-            emailService.sendTemplateEmail(
-                    participant.getUser().getEmail(),
-                    "Zaproszenie do spotkania: " + participant.getMeeting().getTitle(),
-                    "meeting-invitation",
-                    Map.of(
-                            "meetingTitle", participant.getMeeting().getTitle(),
-                            "organizerName", participant.getMeeting().getOrganizer().getFullName(),
-                            "confirmationLink", confirmationLink,
-                            "meetingDate", participant.getMeeting().getStartDate()
-                    )
-            );
-        } catch (Exception e) {
-            log.error("Failed to send invitation email to {}",
-                    participant.getUser().getEmail(), e);
-        }
-    }
 
     boolean isOnWaitlist(Long meetingId, Long userId) {
         if (meetingId == null || userId == null) {
@@ -739,51 +714,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                 userParticipant.get().getPermissionLevel() == PermissionLevel.MODERATOR;
     }
 
-    private void promoteNextFromWaitlist(Long meetingId) {
-        if (isMeetingFull(meetingId)) {
-            return;
-        }
-
-        Optional<WaitlistEntry> nextEntry = waitlistEntryRepository
-                .findFirstByMeetingIdOrderByPositionAsc(meetingId);
-
-        if (nextEntry.isPresent()) {
-            WaitlistEntry entry = nextEntry.get();
-            Optional<MeetingParticipant> participantOpt = participantRepository
-                    .findByMeetingIdAndUserId(meetingId, entry.getUser().getId());
-
-            MeetingParticipant participant;
-            if (participantOpt.isPresent()) {
-                participant = participantOpt.get();
-                participant.setStatus(ParticipationStatus.CONFIRMED);
-            } else {
-                participant = MeetingParticipant.builder()
-                        .meeting(entry.getMeeting())
-                        .user(entry.getUser())
-                        .status(ParticipationStatus.CONFIRMED)
-                        .permissionLevel(PermissionLevel.PARTICIPANT)
-                        .build();
-            }
-
-            participantRepository.save(participant);
-            removeFromWaitlist(meetingId, entry.getUser().getId());
-
-            try {
-                emailService.sendTemplateEmail(
-                        entry.getUser().getEmail(),
-                        "Miejsce zwolniło się w spotkaniu: " + entry.getMeeting().getTitle(),
-                        "waitlist-promotion",
-                        Map.of(
-                                "meetingTitle", entry.getMeeting().getTitle(),
-                                "organizerName", entry.getMeeting().getOrganizer().getFullName()
-                        )
-                );
-            } catch (Exception e) {
-                log.warn("Failed to send promotion notification to {}", entry.getUser().getEmail(), e);
-            }
-        }
-    }
-
     @Override
     @Transactional(readOnly = true)
     public PermissionLevel getParticipantPermissionLevel(Long meetingId, Long userId) {
@@ -795,7 +725,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         }
 
         try {
-            // ✅ SPRAWDŹ CZY UŻYTKOWNIK JEST ORGANIZATOREM
             Meeting meeting = meetingRepository.findById(meetingId)
                     .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with id: " + meetingId));
 
@@ -804,7 +733,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                 return PermissionLevel.ORGANIZER; // LUB MODERATOR JEŚLI NIE MASZ ORGANIZER W ENUM
             }
 
-            // ✅ SPRAWDŹ UPRAWNIENIA UCZESTNIKA
             Optional<MeetingParticipant> participantOpt = participantRepository.findByMeetingIdAndUserId(meetingId, userId);
 
             if (participantOpt.isPresent()) {
@@ -814,7 +742,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                 return level;
             }
 
-            // ✅ UŻYTKOWNIK NIE JEST UCZESTNIKIEM - ZWRÓĆ DOMYŚLNY POZIOM
             log.debug("User {} is not a participant of meeting {} - returning default PARTICIPANT level", userId, meetingId);
             return PermissionLevel.PARTICIPANT;
 
@@ -849,12 +776,10 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         MeetingParticipant participant = participantRepository.findById(participantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
-        // Sprawdź czy użytkownik jest właścicielem tego zaproszenia
         if (!participant.getUser().getId().equals(userId)) {
             throw new SecurityException("No permission to respond to this invitation");
         }
 
-        // Sprawdź czy status to nadal INVITED
         if (participant.getStatus() != ParticipationStatus.INVITED) {
             throw new IllegalArgumentException("Invitation has already been responded to");
         }
@@ -870,48 +795,8 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         saveStatusHistory(participant, oldStatus, response,
                 "User responded: " + comment, userId);
 
-        // Wyślij powiadomienie do organizatora
-//        if (response == ParticipationStatus.CONFIRMED) {
-//            notificationService.sendInvitationAcceptedNotification(
-//                    participant.getMeeting().getOrganizer(),
-//                    participant.getUser(),
-//                    participant.getMeeting()
-//            );
-//        } else if (response == ParticipationStatus.DECLINED) {
-//            notificationService.sendInvitationDeclinedNotification(
-//                    participant.getMeeting().getOrganizer(),
-//                    participant.getUser(),
-//                    participant.getMeeting()
-//            );
-//        }
-
         log.info("User {} responded to invitation {} with status: {}", userId, participantId, response);
     }
-
-
-//    @Override
-//    @Transactional(readOnly = true)
-//    public List<ParticipantResponse> getConfirmedParticipants(Long meetingId) {
-//        log.info("Getting confirmed participants for meeting: {}", meetingId);
-//
-//        try {
-//            // ✅ Opcja B: Filtrowanie w bazie danych - LEPSZE WYDAJNOŚCIOWO
-//            List<MeetingParticipant> confirmedParticipants = participantRepository
-//                    .findByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
-//
-//            List<ParticipantResponse> result = confirmedParticipants.stream()
-//                    .map(this::mapToResponse)
-//                    .collect(Collectors.toList());
-//
-//            log.info("Found {} confirmed participants for meeting {}", result.size(), meetingId);
-//            return result;
-//
-//        } catch (Exception e) {
-//            log.error("Error getting confirmed participants for meeting {}: {}", meetingId, e.getMessage(), e);
-//            return Collections.emptyList();
-//        }
-//    }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -962,36 +847,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
                 .build();
     }
 
-
-
-//    @Override
-//    @Transactional(readOnly = true)
-//    public Map<String, Long> getParticipantStatistics(Long meetingId) {
-//        log.info("Getting participant statistics for meeting: {}", meetingId);
-//
-//        Map<String, Long> stats = new HashMap<>();
-//
-//        try {
-//            // ✅ Opcja A: Użyj metod repozytorium (najszybsze)
-//            stats.put("total", participantRepository.countByMeetingId(meetingId));
-//            stats.put("confirmed", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED));
-//            stats.put("pending", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
-//            stats.put("invited", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.INVITED));
-//            stats.put("waiting", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
-//            stats.put("declined", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.DECLINED));
-//
-//            log.info("Participant stats for meeting {}: {}", meetingId, stats);
-//
-//        } catch (Exception e) {
-//            log.error("Error getting participant statistics for meeting {}: {}", meetingId, e.getMessage(), e);
-//            // ✅ Zwróć bezpieczne domyślne wartości
-//            return getDefaultStats();
-//        }
-//
-//        return stats;
-//    }
-
-
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getParticipantStatistics(Long meetingId) {
@@ -1000,25 +855,24 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         Map<String, Long> stats = new HashMap<>();
 
         try {
-            // ✅ Pobierz spotkanie
+            //  Pobierz spotkanie
             Meeting meeting = meetingRepository.findById(meetingId)
                     .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
 
-            // ✅ Podstawowe statystyki z bazy
+            //  Podstawowe statystyki z bazy
             long totalFromDb = participantRepository.countByMeetingId(meetingId);
-//            long confirmedFromDb = participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.CONFIRMED);
 
             long confirmedFromDb = participantRepository.countByMeetingIdAndStatusIn(
                     meetingId,
                     Arrays.asList(ParticipationStatus.CONFIRMED, ParticipationStatus.ATTENDED)
             );
 
-            // ✅ Sprawdź czy organizator jest już w uczestnikach
+            //  Sprawdź czy organizator jest już w uczestnikach
             boolean organizerIsParticipant = participantRepository
                     .findByMeetingIdAndUserId(meetingId, meeting.getOrganizer().getId())
                     .isPresent();
 
-            // ✅ DOSTOSUJ STATYSTYKI - uwzględnij organizatora
+            //  DOSTOSUJ STATYSTYKI - uwzględnij organizatora
             stats.put("total", organizerIsParticipant ? totalFromDb : totalFromDb + 1);
             stats.put("confirmed", organizerIsParticipant ? confirmedFromDb : confirmedFromDb + 1);
             stats.put("pending", participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.PENDING));
@@ -1059,34 +913,18 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
         return isUserParticipant(meetingId, userId);
     }
 
-//    @Override
-//    public boolean isOrganizer(Long meetingId, Long userId) {
-//        try {
-//            Meeting meeting = meetingRepository.findById(meetingId)
-//                    .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
-//            return meeting.getOrganizer().getId().equals(userId);
-//        } catch (Exception e) {
-//            log.error("Error checking if user {} is organizer of meeting {}", userId, meetingId, e);
-//            return false;
-//        }
-//    }
-
-
-
     @Override
     public boolean isOrganizer(Long meetingId, Long userId) {
         try {
-            // UŻYJ ifPresent LUB isPresent ZAMIAST orElseThrow
             Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
 
             if (meetingOpt.isEmpty()) {
                 log.debug("Meeting {} not found, user {} is not organizer", meetingId, userId);
-                return false;  // ← ZWRÓĆ false ZAMIAST RZUCANIA WYJĄTKU
+                return false;
             }
 
             Meeting meeting = meetingOpt.get();
 
-            // Dodatkowe zabezpieczenie przed null organizatorem
             if (meeting.getOrganizer() == null) {
                 log.warn("Meeting {} has no organizer set", meetingId);
                 return false;
@@ -1250,16 +1088,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
             public long getTotalConfirmed() {
                 return stats.getOrDefault("confirmed", 0L);
             }
-
-            @Override
-            public long getWaitlistCount() {
-                return stats.getOrDefault("waiting", 0L);
-            }
-
-            @Override
-            public long getPendingCount() {
-                return stats.getOrDefault("pending", 0L);
-            }
         };
     }
 
@@ -1300,7 +1128,7 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     }
 
 
-    private Long getCurrentUserId() {
+    Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
             return ((CustomUserDetailsService.CustomUserDetails) authentication.getPrincipal()).getId();
@@ -1502,17 +1330,6 @@ public class MeetingParticipantServiceImpl implements MeetingParticipantService 
     }
 
 
-
-    private ParticipantResponse createOrganizerParticipantResponse(Meeting meeting) {
-        return ParticipantResponse.builder()
-                .id(-1L) // specjalne ID dla organizatora
-                .user(mapToUserResponse(meeting.getOrganizer()))
-                .status(ParticipationStatus.CONFIRMED)
-                .permissionLevel(PermissionLevel.ORGANIZER)
-                .createdAt(meeting.getCreatedAt())
-                .updatedAt(meeting.getUpdatedAt())
-                .build();
-    }
 
     @Override
     public void addOrganizerAsParticipant(Meeting meeting, User organizer) {

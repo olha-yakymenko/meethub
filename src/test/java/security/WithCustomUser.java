@@ -12,4 +12,6 @@ public @interface WithCustomUser {
     long id() default 1L;
 
     String email() default "user@example.com";
+
+    String[] roles() default {"PARTICIPANT"};
 }

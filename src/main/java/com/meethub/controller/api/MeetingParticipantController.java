@@ -96,7 +96,6 @@ public class MeetingParticipantController {
     )
     public ResponseEntity<ApiResponse<Void>> updateParticipantStatus(
             @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
             Long meetingId,
 
             @PathVariable @NotNull(message = "Identyfikator uczestnika nie może być pusty")

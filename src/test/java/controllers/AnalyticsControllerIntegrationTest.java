@@ -9,6 +9,7 @@ import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.response.ApiResponse;
 import com.meethub.domain.repository.jpa.MeetingRepository;
+import com.meethub.domain.repository.jpa.MeetingStatisticsRepository;
 import com.meethub.domain.repository.jpa.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -52,6 +54,9 @@ class AnalyticsControllerIntegrationTest {
 
     private User testUser;
     private Meeting testMeeting;
+
+    @Autowired
+    private MeetingStatisticsRepository statisticsRepository;
 
     @BeforeEach
     void setUp() {
@@ -108,17 +113,33 @@ class AnalyticsControllerIntegrationTest {
                 .andExpect(header().exists("Content-Disposition"));
     }
 
+
     @Test
     @WithMockUser(username = "test@example.com")
-    void getOrganizerReport_shouldReturnReport() throws Exception {
-        mockMvc.perform(get("/api/v1/analytics/organizers/{organizerId}/report", testUser.getId())
-                        .param("dateRange.from", LocalDateTime.now().minusMonths(1).toString())
-                        .param("dateRange.to", LocalDateTime.now().toString()))
+    void statisticsForCompletedMeeting_shouldHaveCorrectStatus() throws Exception {
+        testMeeting.setStatus(MeetingStatus.COMPLETED);
+        meetingRepository.save(testMeeting);
+
+        mockMvc.perform(post("/api/v1/analytics/meetings/{meetingId}/statistics", testMeeting.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.organizerId", is(testUser.getId().intValue())));
+                .andExpect(jsonPath("$.data.status", is("FINAL")));
     }
 
+    @Test
+    @WithMockUser(username = "test@example.com")
+    void exportMeetingPdf_shouldReturnPdfFile() throws Exception {
+        // Given
+        mockMvc.perform(post("/api/v1/analytics/meetings/{meetingId}/statistics", testMeeting.getId()));
+
+        // When & Then
+        mockMvc.perform(get("/api/v1/analytics/meetings/{meetingId}/export/pdf", testMeeting.getId()))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string("Content-Disposition", containsString("attachment")))
+                .andExpect(header().string("Content-Disposition", containsString("statystyki_spotkania_" + testMeeting.getId() + "_")))
+                .andExpect(header().string("Content-Disposition", containsString(".pdf")))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+    }
 }
 
 

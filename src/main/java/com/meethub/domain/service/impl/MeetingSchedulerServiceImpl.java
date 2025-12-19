@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Validated
 public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
     private final MeetingRepository meetingRepository;
     private final NotificationService notificationService;
@@ -32,7 +34,6 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
     private final Map<Long, Set<String>> scheduledTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean isSchedulingEnabled = new AtomicBoolean(true);
 
-    // Konfiguracja interwałów przypomnień (w minutach przed rozpoczęciem)
     private static final List<Integer> REMINDER_INTERVALS = Arrays.asList(1440, 720, 360, 60, 30, 15, 5); // 24h, 12h, 6h, 1h, 30min, 15min, 5min
 
     @Scheduled(fixedRate = 60000)
@@ -44,7 +45,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
             return;
         }
 
-        log.debug("🔍 Sprawdzam nadchodzące spotkania do zaplanowania...");
+        log.debug(" Sprawdzam nadchodzące spotkania do zaplanowania...");
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lookAhead = now.plusHours(48); // Sprawdzaj spotkania w ciągu 48h
@@ -104,7 +105,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
             return;
         }
 
-        log.info("📅 Planowanie powiadomień dla spotkania {}: '{}' (za {} minut)",
+        log.info(" Planowanie powiadomień dla spotkania {}: '{}' (za {} minut)",
                 meetingId, meeting.getTitle(), minutesUntilStart);
 
         // Planuj przypomnienia
@@ -124,7 +125,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         // Zaznacz spotkanie jako zaplanowane
         markMeetingAsScheduled(meetingId);
 
-        log.info("✅ Zaplanowano wszystkie powiadomienia dla spotkania {} ({} przypomnień)",
+        log.info(" Zaplanowano wszystkie powiadomienia dla spotkania {} ({} przypomnień)",
                 meetingId, countScheduledReminders(meetingId));
     }
 
@@ -145,13 +146,13 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
                 sendReminderNotification(meeting, minutesBefore);
                 removeTask(meetingId, taskKey);
             } catch (Exception e) {
-                log.error("❌ Błąd podczas wysyłania przypomnienia dla spotkania {}: {}",
+                log.error(" Błąd podczas wysyłania przypomnienia dla spotkania {}: {}",
                         meetingId, e.getMessage(), e);
             }
         }, delayMinutes, TimeUnit.MINUTES);
 
         addTask(meetingId, taskKey, future);
-        log.debug("🔔 Zaplanowano przypomnienie za {}min (wykonanie za {}min) dla spotkania {}",
+        log.debug("Zaplanowano przypomnienie za {}min (wykonanie za {}min) dla spotkania {}",
                 minutesBefore, delayMinutes, meetingId);
     }
 
@@ -171,7 +172,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
                 handleMeetingStart(meeting);
                 removeTask(meetingId, taskKey);
             } catch (Exception e) {
-                log.error("❌ Błąd podczas rozpoczynania spotkania {}: {}",
+                log.error(" Błąd podczas rozpoczynania spotkania {}: {}",
                         meetingId, e.getMessage(), e);
             }
         }, delayMinutes, TimeUnit.MINUTES);
@@ -202,7 +203,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
 
     @Transactional
     protected void sendReminderNotification(Meeting meeting, int minutesBefore) {
-        log.info("🔔 Wysyłam przypomnienie o spotkaniu {}: '{}' (za {} minut)",
+        log.info(" Wysyłam przypomnienie o spotkaniu {}: '{}' (za {} minut)",
                 meeting.getId(), meeting.getTitle(), minutesBefore);
 
         LocalDateTime reminderTime = LocalDateTime.now().plusMinutes(minutesBefore);
@@ -266,7 +267,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
 
     @Transactional
     protected void sendMeetingStartedNotifications(Meeting meeting) {
-        log.info("📨 Wysyłam powiadomienia o rozpoczęciu spotkania {}", meeting.getId());
+        log.info(" Wysyłam powiadomienia o rozpoczęciu spotkania {}", meeting.getId());
 
         int notifiedCount = 0;
 

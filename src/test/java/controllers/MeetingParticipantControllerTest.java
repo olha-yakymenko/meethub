@@ -65,6 +65,7 @@ class MeetingParticipantControllerTest {
     }
 
 
+
     @Test
     void testJoinMeeting_Success() {
         ResponseEntity<ApiResponse<Void>> response =

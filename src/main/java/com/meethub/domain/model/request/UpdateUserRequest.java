@@ -30,12 +30,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateUserRequest {
 
-    @NotBlank(message = "First name is required")
-    @Size(min = 2, max = 50, message = "First name must be 2-50 characters")
+    @NotBlank(message = "Imię jest wymagane")
+    @Size(min = 2, max = 50, message = "Imie ma byc 2-50 znakow")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(min = 2, max = 50, message = "Last name must be 2-50 characters")
+    @NotBlank(message = "Nazwisko jest wymagane")
+    @Size(min = 2, max = 50, message = "Nazwisko ma byc 2-50 znakow")
     private String lastName;
 
     @Pattern(regexp = "^\\+?[0-9\\s\\-()]{7,20}$",

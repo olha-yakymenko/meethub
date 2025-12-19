@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DisplayName("Meeting Entity Tests")
-class MeetingTest {
+class MeetingServiceTest {
 
     private User organizer;
     private LocalDateTime startDate;

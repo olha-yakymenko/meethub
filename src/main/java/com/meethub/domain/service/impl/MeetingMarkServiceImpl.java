@@ -12,11 +12,13 @@ import com.meethub.domain.service.MeetingMarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Validated
 public class MeetingMarkServiceImpl implements MeetingMarkService {
 
     private final MeetingMarkRepository meetingMarkRepository;

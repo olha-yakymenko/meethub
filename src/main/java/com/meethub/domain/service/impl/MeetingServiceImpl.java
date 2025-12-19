@@ -32,6 +32,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class MeetingServiceImpl implements MeetingService {
 
     private final MeetingRepository meetingRepository;
@@ -106,7 +108,7 @@ public class MeetingServiceImpl implements MeetingService {
                     savedMeeting.getId(), savedMeeting.getTitle(), savedMeeting.isRecurring());
 
             if (savedMeeting.isRecurring() && savedMeeting.getRecurrencePattern() != null) {
-                generateNextRecurrence(savedMeeting.getId(), 3); // Generuj 3 następne
+                generateNextRecurrence(savedMeeting.getId(), 3);
             }
 
             meetingSchedulerService.scheduleMeetingNotifications(savedMeeting);

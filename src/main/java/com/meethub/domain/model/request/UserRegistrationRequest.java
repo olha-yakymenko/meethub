@@ -1,5 +1,6 @@
 package com.meethub.domain.model.request;
 
+import com.meethub.validation.MeethubEmail;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -23,6 +24,7 @@ public class UserRegistrationRequest {
     private String lastName;
 
     @Email(message = "Nieprawidłowy format email")
+    @MeethubEmail(message = "Email musi być w domenie .com")
     @NotBlank(message = "Email jest wymagany")
     private String email;
 

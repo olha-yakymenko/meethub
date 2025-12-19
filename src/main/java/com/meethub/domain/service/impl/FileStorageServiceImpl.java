@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
+@Validated
 public class FileStorageServiceImpl implements FileStorageService {
 
     @Value("${file.upload-dir:uploads/resources}")

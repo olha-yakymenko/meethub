@@ -1,74 +1,96 @@
+// SubmitFeedbackRequestTest.java
 package com.meethub.domain.model.request;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubmitFeedbackRequestTest {
+
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
-    void shouldCreateValidRequest() {
-        // Given
-        var request = SubmitFeedbackRequest.builder()
+    void testValidFeedbackRequest() {
+        SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
                 .rating(5)
-                .comment("Great meeting!")
+                .comment("Excellent meeting! Very productive and well-organized.")
                 .build();
 
-        // When
         var violations = validator.validate(request);
 
-        // Then
-        assertAll(
-                () -> assertTrue(violations.isEmpty()),
-                () -> assertEquals(5, request.getRating()),
-                () -> assertEquals("Great meeting!", request.getComment())
+        assertAll("Valid feedback request",
+                () -> assertTrue(violations.isEmpty(),
+                        "Valid request should have no violations"),
+                () -> assertEquals(5, request.getRating(),
+                        "Rating should be 5"),
+                () -> assertEquals("Excellent meeting! Very productive and well-organized.",
+                        request.getComment(),
+                        "Comment should match")
         );
     }
 
     @Test
-    void shouldFailWhenRatingIsNull() {
-        // Given
-        var request = SubmitFeedbackRequest.builder()
-                .rating(null)
-                .comment("Great meeting!")
+    void testValidationConstraints() {
+        SubmitFeedbackRequest nullRating = SubmitFeedbackRequest.builder()
+                .comment("Good meeting")
+                // rating is null
                 .build();
 
-        // When
-        var violations = validator.validate(request);
+        SubmitFeedbackRequest lowRating = SubmitFeedbackRequest.builder()
+                .rating(0) // Below minimum
+                .comment("Test")
+                .build();
 
-        // Then
-        assertAll(
-                () -> assertEquals(1, violations.size()),
-                () -> assertEquals("Rating is required",
-                        violations.iterator().next().getMessage()),
-                () -> assertNull(request.getRating())
+        SubmitFeedbackRequest highRating = SubmitFeedbackRequest.builder()
+                .rating(6) // Above maximum
+                .comment("Test")
+                .build();
+
+        var nullViolations = validator.validate(nullRating);
+        var lowViolations = validator.validate(lowRating);
+        var highViolations = validator.validate(highRating);
+
+        assertAll("Constraint violations",
+                () -> assertEquals(1, nullViolations.size(),
+                        "Null rating should have 1 violation"),
+                () -> assertTrue(nullViolations.stream().anyMatch(v ->
+                                v.getMessage().contains("Rating is required")),
+                        "Violation should mention rating requirement"),
+
+                () -> assertEquals(1, lowViolations.size(),
+                        "Rating below minimum should have 1 violation"),
+                () -> assertTrue(lowViolations.stream().anyMatch(v ->
+                                v.getMessage().contains("Rating must be at least 1")),
+                        "Violation should mention minimum rating"),
+
+                () -> assertEquals(1, highViolations.size(),
+                        "Rating above maximum should have 1 violation"),
+                () -> assertTrue(highViolations.stream().anyMatch(v ->
+                                v.getMessage().contains("Rating cannot exceed 5")),
+                        "Violation should mention maximum rating")
         );
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, 6})
-    void shouldFailWhenRatingIsOutOfRange(int invalidRating) {
-        // Given
-        var request = SubmitFeedbackRequest.builder()
-                .rating(invalidRating)
+    @Test
+    void testBuilderAndConstructor() {
+        SubmitFeedbackRequest builderRequest = SubmitFeedbackRequest.builder()
+                .rating(4)
+                .comment("Good")
                 .build();
 
-        // When
-        var violations = validator.validate(request);
+        SubmitFeedbackRequest constructorRequest = new SubmitFeedbackRequest(3, "Average");
 
-        // Then
-        assertAll(
-                () -> assertEquals(1, violations.size()),
-                () -> assertTrue(violations.iterator().next().getMessage()
-                        .contains("Rating must be at least 1") ||
-                        violations.iterator().next().getMessage()
-                                .contains("Rating cannot exceed 5")),
-                () -> assertEquals(invalidRating, request.getRating())
+        assertAll("Builder and constructor",
+                () -> assertEquals(4, builderRequest.getRating(),
+                        "Builder should set rating correctly"),
+                () -> assertEquals("Good", builderRequest.getComment(),
+                        "Builder should set comment correctly"),
+                () -> assertEquals(3, constructorRequest.getRating(),
+                        "Constructor should set rating correctly"),
+                () -> assertEquals("Average", constructorRequest.getComment(),
+                        "Constructor should set comment correctly")
         );
     }
 }

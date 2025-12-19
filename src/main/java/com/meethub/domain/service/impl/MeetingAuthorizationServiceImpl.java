@@ -18,12 +18,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.meethub.domain.model.enums.ResourceAccessLevel;
+import org.springframework.validation.annotation.Validated;
+
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Validated
 public class MeetingAuthorizationServiceImpl implements MeetingAuthorizationService {
 
     private final MeetingRepository meetingRepository;

@@ -1,16 +1,3 @@
-//
-//package com.meethub.domain.service;
-//
-//import com.meethub.domain.model.request.UserRegistrationRequest;
-//import com.meethub.domain.model.response.AuthResponse;
-//import com.meethub.domain.model.response.UserResponse;
-//
-//public interface AuthService {
-//    UserResponse register(UserRegistrationRequest request);
-//    AuthResponse refreshToken(String refreshToke);
-//}
-
-
 
 
 package com.meethub.domain.service;

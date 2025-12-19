@@ -217,8 +217,6 @@ public interface MeetingParticipantService {
     interface ParticipantStats {
         long getTotalInvited();
         long getTotalConfirmed();
-        long getWaitlistCount();
-        long getPendingCount();
     }
 
     ParticipantResponse getParticipantInfo(

@@ -15,6 +15,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.time.LocalDateTime;
@@ -23,10 +24,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
-@RestControllerAdvice(annotations = RestController.class)
+//@RestControllerAdvice(annotations = RestController.class)
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ✅ DTO dla odpowiedzi błędów
+    // DTO dla odpowiedzi błędów
     @Data
     @Builder
     public static class ErrorResponse {
@@ -238,5 +240,21 @@ public class GlobalExceptionHandler {
                 null
         );
 
+    }
+
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException ex, WebRequest request) {
+
+        log.warn("Type mismatch for parameter '{}': expected {}, got {}",
+                ex.getName(), ex.getRequiredType(), ex.getValue());
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Nieprawidłowy typ parametru: " + ex.getName(),
+                request,
+                null
+        );
     }
 }

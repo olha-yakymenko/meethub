@@ -16,7 +16,7 @@ import java.util.Objects;
 @Table(name = "meeting_participants")
 @Getter
 @Setter
-@NoArgsConstructor // ✅ DODAJ
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class MeetingParticipant {
@@ -82,33 +82,12 @@ public class MeetingParticipant {
         this.permissionLevel = permissionLevel;
     }
 
-    // Metody pomocnicze
-    public void confirmParticipation() {
-        this.status = ParticipationStatus.CONFIRMED;
-        this.responseDate = LocalDateTime.now();
-    }
-
-    public void declineParticipation() {
-        this.status = ParticipationStatus.DECLINED;
-        this.responseDate = LocalDateTime.now();
-    }
-
-
     public boolean isConfirmed() {
         return ParticipationStatus.CONFIRMED.equals(status);
     }
 
     public boolean isInvited() {
         return ParticipationStatus.INVITED.equals(status);
-    }
-
-    public boolean canEditMeeting() {
-        return PermissionLevel.MODERATOR.equals(permissionLevel) ||
-                PermissionLevel.CONTRIBUTOR.equals(permissionLevel);
-    }
-
-    public boolean canViewDetails() {
-        return !ParticipationStatus.DECLINED.equals(status);
     }
 
     @Override
