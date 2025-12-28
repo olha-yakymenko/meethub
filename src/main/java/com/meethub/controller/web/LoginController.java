@@ -4,12 +4,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ModelAttribute;
 
 @Validated
 @Slf4j
@@ -22,55 +24,28 @@ public class LoginController {
             summary = "Strona logowania",
             description = "Wyświetla stronę logowania i obsługuje komunikaty o błędzie, wylogowaniu lub wygaśnięciu sesji."
     )
-    public String loginPage(
-            @Parameter(description = "Błąd logowania - pojawia się, gdy podano nieprawidłowy email lub hasło")
-            @RequestParam(value = "error", required = false)
-            @Size(max = 50, message = "Parametr błędu nie może przekraczać 50 znaków")
-            String error,
+    public String loginPage(@Validated @ModelAttribute LoginRequest request, Model model) {
 
-            @Parameter(description = "Komunikat o wylogowaniu - pojawia się po pomyślnym wylogowaniu")
-            @RequestParam(value = "logout", required = false)
-            @Size(max = 50, message = "Parametr wylogowania nie może przekraczać 50 znaków")
-            String logout,
+        log.info("Wywołanie GET /login z parametrami: error={}, logout={}, expired={}",
+                request.getError(), request.getLogout(), request.getExpired());
 
-            @Parameter(description = "Komunikat o wygasłej sesji - pojawia się, gdy sesja użytkownika wygasła")
-            @RequestParam(value = "expired", required = false)
-            @Size(max = 50, message = "Parametr wygaśnięcia sesji nie może przekraczać 50 znaków")
-            String expired,
-
-            Model model) {
-
-        try {
-            log.info("Wywołanie GET /login z parametrami: error={}, logout={}, expired={}", error, logout, expired);
-
-            if (error != null) {
-                log.warn("Wykryto błąd logowania - wyświetlanie komunikatu błędu");
-                model.addAttribute("error", "Nieprawidłowy email lub hasło");
-            }
-
-            if (logout != null) {
-                log.info("Użytkownik wylogowany - wyświetlanie komunikatu wylogowania");
-                model.addAttribute("message", "Zostałeś wylogowany pomyślnie");
-            }
-
-            if (expired != null) {
-                log.warn("Sesja wygasła - wyświetlanie komunikatu wygaśnięcia");
-                model.addAttribute("error", "Sesja wygasła, zaloguj się ponownie");
-            }
-
-            log.info("Zwracanie szablonu auth/login");
-            return "auth/login";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji parametrów logowania: {}", e.getMessage());
-            // W przypadku błędnej walidacji parametrów, po prostu wyświetlamy czystą stronę logowania
-            return "auth/login";
-
-        } catch (Exception e) {
-            log.error("Nieoczekiwany błąd podczas ładowania strony logowania", e);
-            model.addAttribute("error", "Wystąpił błąd podczas ładowania strony logowania");
-            return "auth/login";
+        if (request.getError() != null) {
+            log.warn("Wykryto błąd logowania - wyświetlanie komunikatu błędu");
+            model.addAttribute("error", "Nieprawidłowy email lub hasło");
         }
+
+        if (request.getLogout() != null) {
+            log.info("Użytkownik wylogowany - wyświetlanie komunikatu wylogowania");
+            model.addAttribute("message", "Zostałeś wylogowany pomyślnie");
+        }
+
+        if (request.getExpired() != null) {
+            log.warn("Sesja wygasła - wyświetlanie komunikatu wygaśnięcia");
+            model.addAttribute("error", "Sesja wygasła, zaloguj się ponownie");
+        }
+
+        log.info("Zwracanie szablonu auth/login");
+        return "auth/login";
     }
 
     @GetMapping("/access-denied")
@@ -78,32 +53,27 @@ public class LoginController {
             summary = "Strona braku dostępu",
             description = "Wyświetla stronę informującą o braku uprawnień do dostępu do żądanego zasobu."
     )
-    public String accessDeniedPage(
-            Model model) {
-
+    public String accessDeniedPage(Model model) {
         log.warn("Wyświetlanie strony braku dostępu");
         model.addAttribute("error", "Nie masz uprawnień do dostępu do tego zasobu");
         return "auth/access-denied";
     }
 
-    @GetMapping("/login?expired=true")
-    @Operation(
-            summary = "Przekierowanie na stronę logowania po wygaśnięciu sesji",
-            description = "Automatyczne przekierowanie na stronę logowania z komunikatem o wygaśnięciu sesji."
-    )
-    public String sessionExpiredRedirect() {
-        log.info("Przekierowanie na stronę logowania po wygaśnięciu sesji");
-        return "redirect:/login?expired=true";
-    }
+    // ===== Request DTO =====
+    @Getter
+    @Setter
+    public static class LoginRequest {
 
-    @GetMapping("/login?logout=true")
-    @Operation(
-            summary = "Przekierowanie na stronę logowania po wylogowaniu",
-            description = "Automatyczne przekierowanie na stronę logowania z komunikatem o pomyślnym wylogowaniu."
-    )
-    public String logoutRedirect() {
-        log.info("Przekierowanie na stronę logowania po wylogowaniu");
-        return "redirect:/login?logout=true";
+        @Parameter(description = "Błąd logowania - pojawia się, gdy podano nieprawidłowy email lub hasło")
+        @Size(max = 50, message = "Parametr błędu nie może przekraczać 50 znaków")
+        private String error;
+
+        @Parameter(description = "Komunikat o wylogowaniu - pojawia się po pomyślnym wylogowaniu")
+        @Size(max = 50, message = "Parametr wylogowania nie może przekraczać 50 znaków")
+        private String logout;
+
+        @Parameter(description = "Komunikat o wygasłej sesji - pojawia się, gdy sesja użytkownika wygasła")
+        @Size(max = 50, message = "Parametr wygaśnięcia sesji nie może przekraczać 50 znaków")
+        private String expired;
     }
 }
-

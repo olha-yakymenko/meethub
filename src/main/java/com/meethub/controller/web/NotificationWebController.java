@@ -37,29 +37,16 @@ public class NotificationWebController {
             CustomUserDetailsService.CustomUserDetails userDetails,
             Model model) {
 
-        try {
-            Long userId = userDetails.getId();
-            log.info("Wyświetlanie strony powiadomień IN_APP dla użytkownika {}", userId);
+        Long userId = userDetails.getId();
+        log.info("Wyświetlanie strony powiadomień IN_APP dla użytkownika {}", userId);
 
-            List<String> messages = notificationService.getInAppMessages(userId);
-            model.addAttribute("messages", messages);
-            model.addAttribute("pageTitle", "Moje powiadomienia");
-            model.addAttribute("totalCount", messages.size());
+        List<String> messages = notificationService.getInAppMessages(userId);
+        model.addAttribute("messages", messages);
+        model.addAttribute("pageTitle", "Moje powiadomienia");
+        model.addAttribute("totalCount", messages.size());
 
-            log.info("Wyświetlono {} powiadomień IN_APP dla użytkownika {}", messages.size(), userId);
-            return "notifications.html/in-app";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji użytkownika na stronie powiadomień: {}", e.getMessage());
-            model.addAttribute("error", "Błąd autentykacji użytkownika");
-            return "redirect:/login";
-
-        } catch (Exception e) {
-            log.error("Błąd pobierania powiadomień dla użytkownika {}: {}",
-                    userDetails != null ? userDetails.getId() : "null", e.getMessage(), e);
-            model.addAttribute("error", "Nie udało się pobrać powiadomień");
-            return "notifications.html/in-app";
-        }
+        log.info("Wyświetlono {} powiadomień IN_APP dla użytkownika {}", messages.size(), userId);
+        return "notifications.html/in-app";
     }
 
     @GetMapping("/in-app/recent")
@@ -76,33 +63,17 @@ public class NotificationWebController {
 
             Model model) {
 
-        try {
-            Long userId = userDetails.getId();
-            log.info("Wyświetlanie ostatnich {} powiadomień dla użytkownika {}", limit, userId);
+        Long userId = userDetails.getId();
+        log.info("Wyświetlanie ostatnich {} powiadomień dla użytkownika {}", limit, userId);
 
-            List<String> messages = notificationService.getRecentInAppMessages(userId, limit);
+        List<String> messages = notificationService.getRecentInAppMessages(userId, limit);
 
-            model.addAttribute("messages", messages);
-            model.addAttribute("pageTitle", "Ostatnie powiadomienia");
-            model.addAttribute("limit", limit);
-            model.addAttribute("totalCount", messages.size());
+        model.addAttribute("messages", messages);
+        model.addAttribute("pageTitle", "Ostatnie powiadomienia");
+        model.addAttribute("limit", limit);
+        model.addAttribute("totalCount", messages.size());
 
-            log.info("Wyświetlono {} ostatnich powiadomień dla użytkownika {}", messages.size(), userId);
-            return "notifications.html/recent";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji parametrów na stronie ostatnich powiadomień: {}", e.getMessage());
-            model.addAttribute("error", "Nieprawidłowe parametry wyświetlania");
-            return "notifications.html/recent";
-
-        } catch (Exception e) {
-            log.error("Błąd pobierania ostatnich powiadomień dla użytkownika {}: {}",
-                    userDetails != null ? userDetails.getId() : "null", e.getMessage(), e);
-            model.addAttribute("error", "Nie udało się pobrać ostatnich powiadomień");
-            return "notifications.html/recent";
-        }
+        log.info("Wyświetlono {} ostatnich powiadomień dla użytkownika {}", messages.size(), userId);
+        return "notifications.html/recent";
     }
 }
-
-
-

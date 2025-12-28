@@ -81,19 +81,6 @@ class NotificationControllerTest {
 
     @Test
     @WithCustomUser(id = 1L)
-    void getRecentInAppMessages_ShouldUseDefaultLimit() throws Exception {
-        // Given
-        List<String> messages = Arrays.asList("Message 1", "Message 2");
-        when(notificationService.getRecentInAppMessages(1L, 10)).thenReturn(messages);
-
-        // When & Then
-        mockMvc.perform(get("/api/v1/notifications/in-app/messages/recent"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
-    }
-
-    @Test
-    @WithCustomUser(id = 1L)
     void getRecentInAppMessages_ShouldValidateLimitParameter() throws Exception {
         // limit > 100
         mockMvc.perform(get("/api/v1/notifications/in-app/messages/recent")

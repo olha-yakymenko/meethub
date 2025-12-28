@@ -1,7 +1,6 @@
 package com.meethub.controller.api;
 
-import com.meethub.domain.model.request.CreateMeetingRequest;
-import com.meethub.domain.model.request.UpdateMeetingRequest;
+import com.meethub.domain.model.request.*;
 import com.meethub.domain.model.response.ApiResponse;
 import com.meethub.domain.model.response.MeetingResponse;
 import com.meethub.domain.service.MeetingService;
@@ -24,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Validated // Dodanie walidacji na poziomie kontrolera
+@Validated
 @RestController
 @RequestMapping("/api/v1/meetings")
 @RequiredArgsConstructor
@@ -120,45 +119,29 @@ public class MeetingController {
         return ResponseEntity.ok(ApiResponse.success("Nadchodzące spotkania publiczne pobrane pomyślnie", meetings));
     }
 
-    @GetMapping("/nearby")
+    @PostMapping("/nearby")
     @Operation(summary = "Znajduje spotkania w pobliżu",
             description = "Zwraca spotkania w określonym promieniu od podanych współrzędnych.")
     public ResponseEntity<ApiResponse<List<MeetingResponse>>> findNearbyMeetings(
-            @RequestParam @NotNull(message = "Szerokość geograficzna nie może być pusta")
-            @DecimalMin(value = "-90.0", message = "Szerokość geograficzna musi być między -90.0 a 90.0")
-            @DecimalMax(value = "90.0", message = "Szerokość geograficzna musi być między -90.0 a 90.0")
-            double latitude,
+            @Valid @RequestBody NearbyMeetingsRequest request) {
 
-            @RequestParam @NotNull(message = "Długość geograficzna nie może być pusta")
-            @DecimalMin(value = "-180.0", message = "Długość geograficzna musi być między -180.0 a 180.0")
-            @DecimalMax(value = "180.0", message = "Długość geograficzna musi być między -180.0 a 180.0")
-            double longitude,
+        List<MeetingResponse> meetings = meetingService.findNearbyMeetings(
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getRadius()
+        );
 
-            @RequestParam(defaultValue = "5000")
-            @Min(value = 100, message = "Promień musi być co najmniej 100 metrów")
-            @Max(value = 100000, message = "Promień nie może przekraczać 100000 metrów")
-            double radius) {
-
-        List<MeetingResponse> meetings = meetingService.findNearbyMeetings(latitude, longitude, radius);
         return ResponseEntity.ok(ApiResponse.success("Spotkania w pobliżu znalezione pomyślnie", meetings));
     }
 
+
     @PatchMapping("/{meetingId}/status")
-    @Operation(summary = "Zmienia status spotkania",
-            description = "Zmienia status spotkania (np. z PLANOWANE na W_TRAKCIE).")
     public ResponseEntity<ApiResponse<Void>> changeMeetingStatus(
-            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-            Long meetingId,
+            @PathVariable Long meetingId,
+            @Valid @RequestBody ChangeMeetingStatusRequest request,
+            @AuthenticationPrincipal Long userId) {
 
-            @RequestParam @NotNull(message = "Status nie może być pusty")
-            MeetingStatus status,
-
-            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
-            @Min(value = 1, message = "Identyfikator użytkownika musi być liczbą dodatnią")
-            Long userId) {
-
-        meetingService.changeMeetingStatus(meetingId, status, userId);
+        meetingService.changeMeetingStatus(meetingId, request.getStatus(), userId);
         return ResponseEntity.ok(ApiResponse.success("Status spotkania zmieniony pomyślnie", null));
     }
 
@@ -179,27 +162,15 @@ public class MeetingController {
     }
 
     @GetMapping("/conflicts")
-    @Operation(summary = "Sprawdza konflikty terminów",
-            description = "Sprawdza, czy użytkownik ma konflikty terminów w podanym zakresie.")
     public ResponseEntity<ApiResponse<List<MeetingResponse>>> findConflictingMeetings(
-            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
-            @Min(value = 1, message = "Identyfikator użytkownika musi być liczbą dodatnią")
-            Long userId,
+            @AuthenticationPrincipal Long userId,
+            @Valid ConflictingMeetingsRequest request) {
 
-            @RequestParam @NotNull(message = "Data rozpoczęcia nie może być pusta")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime startDate,
-
-            @RequestParam @NotNull(message = "Data zakończenia nie może być pusta")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            @Future(message = "Data zakończenia musi być w przyszłości")
-            LocalDateTime endDate) {
-
-        List<MeetingResponse> conflicts = meetingService.findConflictingMeetings(userId, startDate, endDate);
+        List<MeetingResponse> conflicts = meetingService.findConflictingMeetings(
+                userId, request.getStartDate(), request.getEndDate());
         return ResponseEntity.ok(ApiResponse.success("Konflikty terminów sprawdzone pomyślnie", conflicts));
     }
 
-    // Dodatkowe metody z walidacją dla innych endpointów
 
     @GetMapping("/templates/my")
     @Operation(summary = "Pobiera szablony użytkownika",
@@ -214,23 +185,13 @@ public class MeetingController {
     }
 
     @PostMapping("/templates/{templateId}/create")
-    @Operation(summary = "Tworzy spotkanie z szablonu",
-            description = "Tworzy nowe spotkanie na podstawie istniejącego szablonu.")
     public ResponseEntity<ApiResponse<MeetingResponse>> createFromTemplate(
-            @PathVariable @NotNull(message = "Identyfikator szablonu nie może być pusty")
-            @Min(value = 1, message = "Identyfikator szablonu musi być liczbą dodatnią")
-            Long templateId,
+            @PathVariable Long templateId,
+            @Valid @RequestBody CreateFromTemplateRequest request,
+            @AuthenticationPrincipal Long userId) {
 
-            @RequestParam @NotNull(message = "Data rozpoczęcia nie może być pusta")
-            @Future(message = "Data rozpoczęcia musi być w przyszłości")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime newStartDate,
-
-            @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
-            @Min(value = 1, message = "Identyfikator użytkownika musi być liczbą dodatnią")
-            Long userId) {
-
-        MeetingResponse meeting = meetingService.createFromTemplate(templateId, userId, newStartDate);
+        MeetingResponse meeting = meetingService.createFromTemplate(
+                templateId, userId, request.getNewStartDate());
         return ResponseEntity.ok(ApiResponse.success("Spotkanie utworzone z szablonu pomyślnie", meeting));
     }
 

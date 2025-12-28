@@ -6,6 +6,8 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -24,8 +26,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
-//@RestControllerAdvice(annotations = RestController.class)
-@RestControllerAdvice
+@RestControllerAdvice(annotations = RestController.class)
+//@RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     // DTO dla odpowiedzi błędów

@@ -6,8 +6,7 @@ import com.meethub.domain.model.entity.Category;
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.MeetingStatusChange;
 import com.meethub.domain.model.entity.User;
-import com.meethub.domain.model.enums.MeetingType;
-import com.meethub.domain.model.enums.MeetingVisibility;
+
 import com.meethub.domain.model.request.CreateMeetingRequest;
 import com.meethub.domain.model.request.UpdateMeetingRequest;
 import com.meethub.domain.model.response.CategoryResponse;
@@ -56,13 +55,11 @@ public class MeetingMapper {
             meeting.setTags(new HashSet<>(request.getTags()));
         }
 
-        // ✅ NOWE POLA: Powtarzanie
         meeting.setRecurring(request.isRecurring());
         meeting.setRecurrencePattern(request.getRecurrencePattern());
         meeting.setRecurrenceEndDate(request.getRecurrenceEndDate());
         meeting.setRecurrenceExceptionsJson(request.getRecurrenceExceptionsJson());
 
-        // ✅ NOWE POLA: Szablon
         meeting.setTemplate(request.isSaveAsTemplate());
         if (request.isSaveAsTemplate() && request.getTemplateName() != null) {
             meeting.setTitle(request.getTemplateName());
@@ -93,20 +90,16 @@ public class MeetingMapper {
         response.setCreatedAt(meeting.getCreatedAt());
         response.setUpdatedAt(meeting.getUpdatedAt());
 
-        // ✅ NOWE POLA: Powtarzanie
         response.setRecurring(meeting.isRecurring());
         response.setRecurrencePattern(meeting.getRecurrencePattern());
         response.setRecurrenceEndDate(meeting.getRecurrenceEndDate());
         response.setRecurrenceExceptions(parseRecurrenceExceptions(meeting.getRecurrenceExceptionsJson()));
 
-        // ✅ NOWE POLA: Kategorie
         response.setCategories(mapCategories(meeting.getCategories()));
 
-        // ✅ NOWE POLA: Szablon i kopie
         response.setTemplate(meeting.isTemplate());
         response.setOriginalMeetingId(meeting.getOriginalMeetingId());
 
-        // ✅ NOWE POLA: Historia statusów
         response.setStatusHistory(mapStatusChanges(meeting.getStatusChanges()));
 
         if (meeting.getOrganizer() != null) {
@@ -115,72 +108,6 @@ public class MeetingMapper {
 
         return response;
     }
-
-//    public void updateEntityFromRequest(UpdateMeetingRequest request, Meeting meeting) {
-//        if (request == null || meeting == null) {
-//            return;
-//        }
-//
-//        if (request.getTitle() != null) {
-//            meeting.setTitle(request.getTitle());
-//        }
-//        if (request.getDescription() != null) {
-//            meeting.setDescription(request.getDescription());
-//        }
-//        if (request.getAgenda() != null) {
-//            meeting.setAgenda(request.getAgenda());
-//        }
-//        if (request.getType() != null) {
-//            meeting.setType(request.getType());
-//        }
-//        if (request.getVisibility() != null) {
-//            meeting.setVisibility(request.getVisibility());
-//        }
-//        if (request.getStartDate() != null) {
-//            meeting.setStartDate(request.getStartDate());
-//        }
-//        if (request.getEndDate() != null) {
-//            meeting.setEndDate(request.getEndDate());
-//        }
-//        if (request.getMaxParticipants() != null) {
-//            meeting.setMaxParticipants(request.getMaxParticipants());
-//        }
-//        if (request.getTags() != null) {
-//            meeting.setTags(new HashSet<>(request.getTags()));
-//        }
-//
-//        // ✅ NOWE POLA: Powtarzanie
-//        meeting.setRecurring(request.isRecurring());
-//        if (request.getRecurrencePattern() != null) {
-//            meeting.setRecurrencePattern(request.getRecurrencePattern());
-//        }
-//        if (request.getRecurrenceEndDate() != null) {
-//            meeting.setRecurrenceEndDate(request.getRecurrenceEndDate());
-//        }
-//        if (request.getRecurrenceExceptionsJson() != null) {
-//            meeting.setRecurrenceExceptionsJson(request.getRecurrenceExceptionsJson());
-//        }
-//
-//        // ✅ NOWE POLA: Status (z historią zmian)
-//        if (request.getStatus() != null && !request.getStatus().equals(meeting.getStatus())) {
-//            // Zapisz zmianę statusu w historii
-//            MeetingStatusChange statusChange = MeetingStatusChange.builder()
-//                    .meeting(meeting)
-//                    .oldStatus(meeting.getStatus().name())
-//                    .newStatus(request.getStatus().name())
-//                    .reason(request.getStatusChangeReason())
-//                    .changedAt(LocalDateTime.now())
-//                    .build();
-//
-//            if (meeting.getStatusChanges() == null) {
-//                meeting.setStatusChanges(new ArrayList<>());
-//            }
-//            meeting.getStatusChanges().add(statusChange);
-//
-//            meeting.setStatus(request.getStatus());
-//        }
-//    }
-
 
 
     public void updateEntityFromRequest(UpdateMeetingRequest request, Meeting meeting) {
@@ -234,7 +161,6 @@ public class MeetingMapper {
             meeting.setRecurrenceExceptionsJson(request.getRecurrenceExceptionsJson());
         }
 
-        // ✅ NOWE POLA: Status (z historią zmian)
         if (request.getStatus() != null && !request.getStatus().equals(meeting.getStatus())) {
             log.info("Status change in mapper: {} -> {}", meeting.getStatus(), request.getStatus());
             // Zapisz zmianę statusu w historii
@@ -275,7 +201,6 @@ public class MeetingMapper {
         return response;
     }
 
-    // ✅ METODY POMOCNICZE DLA NOWYCH FUNKCJI
 
     public List<String> parseRecurrenceExceptions(String json) {
         if (json == null || json.isEmpty() || json.equals("[]")) {
@@ -337,7 +262,6 @@ public class MeetingMapper {
         }
     }
 
-    // ✅ METODA DLA DUPLIKACJI SPOTKANIA
 
     public Meeting cloneMeeting(Meeting original) {
         if (original == null) {
@@ -346,7 +270,6 @@ public class MeetingMapper {
 
         Meeting clone = new Meeting();
 
-        // Skopiuj podstawowe pola
         clone.setTitle(original.getTitle() + " (Kopia)");
         clone.setDescription(original.getDescription());
         clone.setAgenda(original.getAgenda());
@@ -354,29 +277,23 @@ public class MeetingMapper {
         clone.setStatus(original.getStatus());
         clone.setVisibility(original.getVisibility());
 
-        // Daty będą ustawiane przez użytkownika, więc na razie takie same
         clone.setStartDate(original.getStartDate());
         clone.setEndDate(original.getEndDate());
         clone.setMaxParticipants(original.getMaxParticipants());
 
-        // Skopiuj powtarzanie
         clone.setRecurring(original.isRecurring());
         clone.setRecurrencePattern(original.getRecurrencePattern());
         clone.setRecurrenceEndDate(original.getRecurrenceEndDate());
         clone.setRecurrenceExceptionsJson(original.getRecurrenceExceptionsJson());
 
-        // Skopiuj tagi
         if (original.getTags() != null) {
             clone.setTags(new HashSet<>(original.getTags()));
         }
 
-        // Ustaw referencję do oryginału
         clone.setOriginalMeetingId(original.getId());
 
-        // Nie kopiuj szablonu - kopia nie jest szablonem
         clone.setTemplate(false);
 
-        // Nie kopiuj historii statusów - kopia ma nową historię
         clone.setStatusChanges(new ArrayList<>());
 
         return clone;
@@ -396,25 +313,4 @@ public class MeetingMapper {
         return original;
     }
 
-
-
-//    public Meeting createTemplateFromMeeting(Meeting original, String templateName) {
-//        if (original == null) {
-//            return null;
-//        }
-//
-//        Meeting template = cloneMeeting(original);
-//        template.setTitle(templateName != null ? templateName : original.getTitle() + " (Szablon)");
-//        template.setTemplate(true);
-//
-//        // Wyczyść daty - szablon nie ma konkretnych dat
-////        template.setStartDate(null);
-////        template.setEndDate(null);
-////        template.setRecurrenceEndDate(null);
-//
-//        // Wyczyść powiązania z uczestnikami
-//        template.setParticipants(new HashSet<>());
-//
-//        return template;
-//    }
 }

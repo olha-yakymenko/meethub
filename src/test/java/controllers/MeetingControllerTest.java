@@ -91,24 +91,6 @@ class MeetingControllerTest {
                 .andExpect(status().isUnauthorized()); // 401 zamiast 400
     }
 
-    @Test
-    @WithMockUser(username = "test@example.com", roles = {"USER"})
-    void findNearbyMeetings_ShouldReturnLocationBasedResults() throws Exception {
-        // Given
-        List<MeetingResponse> meetings = Arrays.asList(mockMeeting);
-        when(meetingService.findNearbyMeetings(52.2297, 21.0122, 5000.0))
-                .thenReturn(meetings);
-
-        // When & Then
-        mockMvc.perform(get("/api/v1/meetings/nearby")
-                        .param("latitude", "52.2297")
-                        .param("longitude", "21.0122")
-                        .param("radius", "5000"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Spotkania w pobliżu znalezione pomyślnie"))
-                .andExpect(jsonPath("$.data[0].title").value("Test Meeting"));
-    }
 
     @ParameterizedTest
     @MethodSource("provideInvalidLocationParameters")

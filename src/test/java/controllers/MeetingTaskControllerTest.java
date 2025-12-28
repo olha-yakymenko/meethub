@@ -6,7 +6,6 @@ import com.meethub.domain.model.request.UpdateTaskRequest;
 import com.meethub.domain.model.response.*;
 import com.meethub.domain.service.TaskService;
 import com.meethub.security.CustomUserDetailsService.CustomUserDetails;
-import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -61,7 +61,6 @@ class MeetingTaskControllerTest {
     @BeforeEach
     void setUp() {
         userDetails = mock(CustomUserDetails.class);
-        // Używamy lenient, żeby nie narzekało na nieużywane stuby
         lenient().when(userDetails.getId()).thenReturn(userId);
         lenient().when(userDetails.getUsername()).thenReturn("test@example.com");
 
@@ -178,27 +177,31 @@ class MeetingTaskControllerTest {
     }
 
     @Test
+    void testUpdateTask_ValidationErrors() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        String redirect = controller.updateTask(meetingId, taskId, request, bindingResult, userDetails, redirectAttributes);
+
+        assertEquals("redirect:/meetings/1/tasks/1/edit", redirect);
+    }
+
+    @Test
     void testDeleteTask_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.deleteTask(meetingId, taskId, userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks", redirect);
-        });
+        String redirect = controller.deleteTask(meetingId, taskId, userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks", redirect);
     }
 
     @Test
     void testAssignSelfToTask_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.assignSelfToTask(meetingId, taskId, userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1", redirect);
-        });
+        String redirect = controller.assignSelfToTask(meetingId, taskId, userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1", redirect);
     }
 
     @Test
     void testUpdateAssignmentComment_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.updateAssignmentComment(meetingId, taskId, 1L, "Test comment", userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1", redirect);
-        });
+        String redirect = controller.updateAssignmentComment(meetingId, taskId, 1L, "Test comment", userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1", redirect);
     }
 
     @Test
@@ -220,34 +223,26 @@ class MeetingTaskControllerTest {
 
     @Test
     void testAssignUserToTask_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.assignUserToTask(meetingId, taskId, 2L, userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1/assign", redirect);
-        });
+        String redirect = controller.assignUserToTask(meetingId, taskId, 2L, userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1/assign", redirect);
     }
 
     @Test
     void testRemoveAssignment_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.removeAssignment(meetingId, taskId, 1L, userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1/assign", redirect);
-        });
+        String redirect = controller.removeAssignment(meetingId, taskId, 1L, userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1/assign", redirect);
     }
 
     @Test
     void testUpdateAssignmentStatus_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.updateAssignmentStatus(meetingId, taskId, 1L, "IN_PROGRESS", userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1", redirect);
-        });
+        String redirect = controller.updateAssignmentStatus(meetingId, taskId, 1L, "IN_PROGRESS", userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1", redirect);
     }
 
     @Test
     void testUpdateAssignmentStatus_InvalidStatus() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.updateAssignmentStatus(meetingId, taskId, 1L, "INVALID_STATUS", userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1", redirect);
-        });
+        String redirect = controller.updateAssignmentStatus(meetingId, taskId, 1L, "INVALID_STATUS", userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1", redirect);
     }
 
     @Test
@@ -303,18 +298,14 @@ class MeetingTaskControllerTest {
 
         ResponseEntity<Resource> response = controller.downloadTaskFile(meetingId, taskId, 1L, userDetails);
 
-        assertAll(
-                () -> assertEquals(HttpStatus.OK, response.getStatusCode()),
-                () -> assertNotNull(response.getHeaders().get(HttpHeaders.CONTENT_DISPOSITION))
-        );
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getHeaders().get(HttpHeaders.CONTENT_DISPOSITION));
     }
 
     @Test
     void testDeleteTaskFile_Success() {
-        assertDoesNotThrow(() -> {
-            String redirect = controller.deleteTaskFile(meetingId, taskId, 1L, userDetails, redirectAttributes);
-            assertEquals("redirect:/meetings/1/tasks/1/files", redirect);
-        });
+        String redirect = controller.deleteTaskFile(meetingId, taskId, 1L, userDetails, redirectAttributes);
+        assertEquals("redirect:/meetings/1/tasks/1/files", redirect);
     }
 
     @Test
@@ -348,111 +339,6 @@ class MeetingTaskControllerTest {
         when(taskService.getTaskDetailsForUser(meetingId, taskId, userId)).thenReturn(detailsResponse);
 
         String redirect = controller.getOrganizerTaskView(meetingId, taskId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1/tasks/1", redirect);
-    }
-
-    @Test
-    void testGetOrganizerTaskView_Exception() {
-        when(taskService.getTaskDetailsForUser(meetingId, taskId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.getOrganizerTaskView(meetingId, taskId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1/tasks/1", redirect);
-    }
-
-
-    @Test
-    void testGetMeetingTasks_Exception() {
-        when(taskService.getMeetingTasksForUser(meetingId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.getMeetingTasks(meetingId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1", redirect);
-    }
-
-    @Test
-    void testShowCreateTaskForm_Exception() {
-        when(taskService.getTaskCreationFormData(meetingId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.showCreateTaskForm(meetingId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1/tasks", redirect);
-    }
-
-    @Test
-    void testCreateTask_Exception() {
-        CreateTaskRequest request = new CreateTaskRequest();
-        when(bindingResult.hasErrors()).thenReturn(false);
-        when(taskService.createTask(any(), eq(meetingId), eq(userId)))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.createTask(meetingId, request, bindingResult, userDetails, redirectAttributes);
-
-        assertEquals("redirect:/meetings/1/tasks/create", redirect);
-    }
-
-    @Test
-    void testGetTaskDetails_Exception() {
-        when(taskService.getTaskDetailsForUser(meetingId, taskId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.getTaskDetails(meetingId, taskId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1/tasks", redirect);
-    }
-
-    @Test
-    void testShowEditTaskForm_Exception() {
-        when(taskService.getTaskForEditing(meetingId, taskId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.showEditTaskForm(meetingId, taskId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1/tasks/1", redirect);
-    }
-
-    @Test
-    void testUpdateTask_Exception() {
-        UpdateTaskRequest request = new UpdateTaskRequest();
-        when(bindingResult.hasErrors()).thenReturn(false);
-        when(taskService.updateTaskWithRequest(eq(taskId), any(), eq(userId)))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.updateTask(meetingId, taskId, request, bindingResult, userDetails, redirectAttributes);
-
-        assertEquals("redirect:/meetings/1/tasks/1/edit", redirect);
-    }
-
-    @Test
-    void testGetTaskFiles_Exception() {
-        when(taskService.getTaskDetailsForUser(meetingId, taskId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.getTaskFiles(meetingId, taskId, userDetails, model);
-
-        assertEquals("redirect:/meetings/1/tasks/1", redirect);
-    }
-
-    @Test
-    void testDownloadTaskFile_Exception() {
-        when(taskService.getTaskDetailsForUser(meetingId, taskId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        ResponseEntity<Resource> response = controller.downloadTaskFile(meetingId, taskId, 1L, userDetails);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
-
-    @Test
-    void testShowAssignUsersForm_Exception() {
-        when(taskService.getTaskAssignmentsForUser(meetingId, taskId, userId))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.showAssignUsersForm(meetingId, taskId, userDetails, model);
 
         assertEquals("redirect:/meetings/1/tasks/1", redirect);
     }

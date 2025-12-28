@@ -211,18 +211,6 @@ class SecurityIntegrationTest {
         assertThat(savedUser.get().getEnabled()).isTrue();
     }
 
-    @Test
-    void shouldFailRegistrationWithExistingEmail() throws Exception {
-        mockMvc.perform(post("/register")
-                        .param("firstName", "Duplicate")
-                        .param("lastName", "User")
-                        .param("email", "user@test.com") // Already exists
-                        .param("password", "Password123!")
-                        .param("confirmPassword", "Password123!"))
-                .andExpect(status().isOk()) // Stays on registration page
-                .andExpect(model().attributeExists("error"));
-    }
-
 
     @Test
     @WithMockUser(username = "user@test.com", roles = "USER")

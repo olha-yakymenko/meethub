@@ -60,14 +60,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
             participantCounts = new ParticipantCountDto(0L, 0L, 0L, 0L, 0L, 0L, 0L);
         }
 
-        // 3. Pobierz średni czas odpowiedzi Z BAZY
-//        BigDecimal avgResponseTime = BigDecimal.ZERO;
-//        Double avgResponseTimeDb = meetingParticipantService.getAverageResponseTimeMinutes(meetingId);
-//        if (avgResponseTimeDb != null) {
-//            avgResponseTime = BigDecimal.valueOf(avgResponseTimeDb)
-//                    .setScale(2, RoundingMode.HALF_UP);
-//        }
-
         // 4. Pobierz statystyki FEEDBACK Z BAZY
         BigDecimal averageRating = BigDecimal.ZERO;
         int feedbackCount = 0;
@@ -306,20 +298,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         return csv.toString().getBytes();
     }
 
-//    @Override
-//    @Transactional(readOnly = true)
-//    public byte[] exportReportToPdf(Long organizerId, ReportFilter filter) {
-//        // Prosta implementacja - w prawdziwym projekcie użyj biblioteki PDF
-//        String pdfContent = "Organizer Report PDF\n" +
-//                "===================\n" +
-//                "Organizer ID: " + organizerId + "\n" +
-//                "Generated: " + LocalDateTime.now() + "\n" +
-//                "This is a placeholder PDF export.\n" +
-//                "In production, use a library like iText or Apache PDFBox.";
-//
-//        return pdfContent.getBytes();
-//    }
-
 
 
     @Override
@@ -353,11 +331,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
             // Informacje o spotkaniu
             addMeetingInfo(document, meeting, stats);
-
-//            // Dodaj linię separatora
-//            document.add(new Paragraph(" "));
-//            document.add(createSeparator());
-//            document.add(new Paragraph(" "));
 
             // Sekcja podstawowych statystyk
             addBasicStatistics(document, stats);
@@ -1002,23 +975,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         return csv.toString().getBytes();
     }
 
-//    @Override
-//    @Transactional(readOnly = true)
-//    public byte[] exportMeetingStatisticsToPdf(Long meetingId) {
-//        MeetingStatistics stats = getMeetingStatistics(meetingId)
-//                .orElseThrow(() -> new RuntimeException("No statistics found for meeting: " + meetingId));
-//
-//        String pdfContent = "Meeting Statistics PDF\n" +
-//                "=====================\n" +
-//                "Meeting ID: " + meetingId + "\n" +
-//                "Generated: " + stats.getGeneratedAt() + "\n" +
-//                "Total Participants: " + stats.getTotalParticipants() + "\n" +
-//                "Attended: " + stats.getAttendedParticipants() + "\n" +
-//                "Attendance Rate: " + stats.getAttendanceRate() + "%\n" +
-//                "This is a placeholder PDF export.";
-//
-//        return pdfContent.getBytes();
-//    }
 
     @Override
     @Transactional(readOnly = true)

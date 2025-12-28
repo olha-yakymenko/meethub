@@ -1,9 +1,14 @@
 package com.meethub.controller.api;
 
+import com.meethub.domain.model.request.MeetingMarkRequest;
+import com.meethub.domain.model.response.MeetingMarkResponse;
 import com.meethub.domain.service.MeetingMarkService;
 import com.meethub.security.CustomUserDetailsService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -22,25 +27,42 @@ public class MeetingMarkController {
     private final MeetingMarkService meetingMarkService;
 
     @PostMapping("/{meetingId}/important")
-    @PreAuthorize("isAuthenticated()")
-    public String markAsImportant(
+    public ResponseEntity<MeetingMarkResponse> markAsImportant(
             @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails userDetails,
             @PathVariable Long meetingId,
-            RedirectAttributes redirectAttributes) {
+            @RequestBody(required = false) MeetingMarkRequest request) {
 
         Long currentUserId = userDetails.getId();
         log.info("User {} marking meeting {} as important", currentUserId, meetingId);
 
         try {
             meetingMarkService.markAsImportant(currentUserId, meetingId);
-            redirectAttributes.addFlashAttribute("success", "Spotkanie oznaczone jako ważne");
-        } catch (Exception e) {
-            log.error("Error marking meeting as important", e);
-            redirectAttributes.addFlashAttribute("error", "Nie udało się oznaczyć spotkania jako ważne: " + e.getMessage());
-        }
+            log.info("Spotkanie {} oznaczone jako ważne przez użytkownika {}", meetingId, currentUserId);
 
-        return "redirect:/meetings/" + meetingId;
+            MeetingMarkResponse response = new MeetingMarkResponse(
+                    meetingId,
+                    currentUserId,
+                    true,
+                    "Spotkanie oznaczone jako ważne"
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Nie udało się oznaczyć spotkania jako ważne", e);
+
+            MeetingMarkResponse response = new MeetingMarkResponse(
+                    meetingId,
+                    currentUserId,
+                    false,
+                    "Nie udało się oznaczyć spotkania jako ważne: " + e.getMessage()
+            );
+
+            return ResponseEntity.status(500).body(response);
+        }
     }
+
+
 
     @PostMapping("/{meetingId}/important/toggle")
     @PreAuthorize("isAuthenticated()")

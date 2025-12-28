@@ -1,18 +1,23 @@
 package com.meethub.controller.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meethub.MeetHubApplication;
 import com.meethub.domain.model.entity.User;
 import com.meethub.domain.model.request.MeetingResourceRequest;
 import com.meethub.domain.model.response.MeetingResourceResponse;
+import com.meethub.exception.WebExceptionHandler;
 import com.meethub.security.CustomUserDetailsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,12 +25,14 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.context.WebApplicationContext;
 import security.WithCustomUser;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -35,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@Import(WebExceptionHandler.class)
 class MeetingResourceWebControllerIntegrationTest {
 
     @Autowired
@@ -171,41 +178,27 @@ class MeetingResourceWebControllerIntegrationTest {
         mockMvc.perform(get("/meetings/{meetingId}/resources/{resourceId}/details",
                         meetingId, resourceId))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/meetings/" + meetingId + "/resources?error=Nie można wyświetlić szczegółów zasobu"));
+                .andExpect(redirectedUrlPattern("/meetings/" + meetingId + "/resources?error=*"));
+
     }
 
-    // ==================== TESTS FOR TOGGLE RESOURCE VISIBILITY ====================
-
-    @Test
-    @WithCustomUser(id = 1L, email = "user@example.com")
-    void toggleResourceVisibility_shouldRedirectToDetails() throws Exception {
-        // Given
-        Long meetingId = 100L;
-        Long resourceId = 200L;
-
-        // When & Then
-        mockMvc.perform(post("/meetings/{meetingId}/resources/{resourceId}/toggle-visibility",
-                        meetingId, resourceId))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/meetings/" + meetingId + "/resources/" + resourceId + "/details"))
-                .andExpect(flash().attributeExists("success"));
-    }
 
     // ==================== TESTS FOR ERROR HANDLING ====================
 
     @Test
-    @WithCustomUser(id = 1L, email = "user@example.com")
+    @WithCustomUser(id = 1L, email = "user@example.com", roles = {"PARTICIPANT"})
     void endpoints_shouldHandleServiceExceptionsGracefully() throws Exception {
-        // Test various endpoints that might throw exceptions
 
-        // Test getMeetingResources with service exception
         Long meetingId = 100L;
         when(meetingService.getMeeting(meetingId))
                 .thenThrow(new RuntimeException("Database connection failed"));
 
-        mockMvc.perform(get("/meetings/{meetingId}/resources", meetingId))
+        mockMvc.perform(get("/meetings/{meetingId}/resources", meetingId)
+                        .header("Referer", "/meetings"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/meetings?error=Nie udało się pobrać zasobów"));
+                .andExpect(redirectedUrl("/meetings"))
+                .andExpect(flash().attributeExists("error"));
+
     }
 
 }

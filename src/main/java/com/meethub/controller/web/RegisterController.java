@@ -1,4 +1,3 @@
-
 package com.meethub.controller.web;
 
 import com.meethub.domain.model.request.UserRegistrationRequest;
@@ -59,28 +58,15 @@ public class RegisterController {
             return "auth/register";
         }
 
-        try {
-            log.info("Próba rejestracji użytkownika: {}", request.getEmail());
-            UserResponse user = authService.register(request);
-            log.info("Użytkownik zarejestrowany pomyślnie: {} (ID: {})",
-                    user.getEmail(), user.getId());
+        log.info("Próba rejestracji użytkownika: {}", request.getEmail());
+        UserResponse user = authService.register(request);
+        log.info("Użytkownik zarejestrowany pomyślnie: {} (ID: {})",
+                user.getEmail(), user.getId());
 
-            redirectAttributes.addFlashAttribute("success",
-                    "Rejestracja udana! Możesz się teraz zalogować.");
-            log.info("Przekierowanie do /login po udanej rejestracji");
+        redirectAttributes.addFlashAttribute("success",
+                "Rejestracja udana! Możesz się teraz zalogować.");
+        log.info("Przekierowanie do /login po udanej rejestracji");
 
-            return "redirect:/login";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji podczas rejestracji: {}", e.getMessage());
-            model.addAttribute("error", "Nieprawidłowe dane w formularzu rejestracji");
-            return "auth/register";
-
-        } catch (Exception e) {
-            log.error("Rejestracja nieudana dla: {}", request.getEmail(), e);
-            model.addAttribute("error", e.getMessage());
-            return "auth/register";
-        }
+        return "redirect:/login";
     }
 }
-

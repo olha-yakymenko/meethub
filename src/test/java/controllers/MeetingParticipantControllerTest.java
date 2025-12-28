@@ -95,7 +95,7 @@ class MeetingParticipantControllerTest {
     void testUpdateParticipantPermission_Success() {
         ResponseEntity<ApiResponse<Void>> response =
                 controller.updateParticipantPermission(meetingId, participantId,
-                        PermissionLevel.CONTRIBUTOR, userId);
+                        PermissionLevel.ORGANIZER, userId);
 
         assertAll(
                 () -> assertEquals(200, response.getStatusCodeValue()),

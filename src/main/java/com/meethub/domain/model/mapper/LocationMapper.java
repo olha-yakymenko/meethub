@@ -1,7 +1,5 @@
 package com.meethub.domain.model.mapper;
 
-// LocationMapper.java
-
 import com.meethub.domain.model.entity.Location;
 import com.meethub.domain.model.request.CreateLocationRequest;
 import com.meethub.domain.model.request.UpdateLocationRequest;
@@ -21,19 +19,4 @@ public interface LocationMapper {
 
     LocationResponse toResponse(Location location);
 
-    @AfterMapping
-    default void trimStrings(CreateLocationRequest request, @MappingTarget Location location) {
-        if (location.getName() != null) {
-            location.setName(location.getName().trim());
-        }
-        if (location.getAddress() != null) {
-            location.setAddress(location.getAddress().trim());
-        }
-        if (location.getCity() != null) {
-            location.setCity(location.getCity().trim());
-        }
-        if (location.getCountry() != null) {
-            location.setCountry(location.getCountry().trim());
-        }
-    }
 }

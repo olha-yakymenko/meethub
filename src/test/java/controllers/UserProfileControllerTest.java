@@ -158,17 +158,6 @@ class UserProfileControllerTest {
         assertEquals("redirect:/profile/settings", redirect);
     }
 
-    @Test
-    void testUpdateProfile_Exception() {
-        UpdateProfileRequest request = new UpdateProfileRequest();
-        when(bindingResult.hasErrors()).thenReturn(false);
-        when(userService.getUserIdByEmail(userEmail))
-                .thenThrow(new RuntimeException("Test exception"));
-
-        String redirect = controller.updateProfile(request, bindingResult, principal, redirectAttributes);
-
-        assertEquals("redirect:/profile", redirect);
-    }
 
     @Test
     void testUpdateNotificationPreferences_Success() {
@@ -204,18 +193,7 @@ class UserProfileControllerTest {
         assertEquals("user/settings", viewName);
     }
 
-    @Test
-    void testUpdateNotificationPreferences_Exception() {
-        NotificationPreferencesRequest request = new NotificationPreferencesRequest();
-        when(bindingResult.hasErrors()).thenReturn(false);
-        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
-        doThrow(new RuntimeException("Test exception"))
-                .when(notificationService).updateNotificationPreferences(userId, request);
 
-        String redirect = controller.updateNotificationPreferences(request, bindingResult, principal, model, redirectAttributes);
-
-        assertEquals("redirect:/profile/settings", redirect);
-    }
 
     @Test
     void testMarkAllNotificationsAsRead_Success() {

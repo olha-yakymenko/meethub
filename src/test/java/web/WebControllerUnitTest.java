@@ -146,19 +146,6 @@ class WebControllerUnitTest {
         verify(model).addAttribute("totalMeetings", 2);
     }
 
-    @Test
-    void home_shouldHandleException_whenLoadingPublicMeetingsFails() {
-        // Given
-        when(meetingService.getUpcomingPublicMeetings()).thenThrow(new RuntimeException("Database error"));
-
-        // When
-        String viewName = webController.home(null, model);
-
-        // Then
-        assertEquals("index", viewName);
-        verify(model).addAttribute("upcomingMeetings", Collections.emptyList());
-        verify(model).addAttribute("totalMeetings", 0);
-    }
 
     // ==================== TESTS FOR MEETINGS LIST ENDPOINT ====================
 

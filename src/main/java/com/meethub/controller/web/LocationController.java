@@ -58,48 +58,36 @@ public class LocationController {
             int size,
             Model model) {
 
-        try {
-            log.info("Wyświetlanie listy lokalizacji: query={}, type={}, city={}, page={}, size={}",
-                    query, type, city, page, size);
+        log.info("Wyświetlanie listy lokalizacji: query={}, type={}, city={}, page={}, size={}",
+                query, type, city, page, size);
 
-            LocationSearchRequest searchRequest = new LocationSearchRequest();
-            searchRequest.setQuery(query);
-            if (type != null) {
-                try {
-                    searchRequest.setType(LocationType.valueOf(type));
-                } catch (IllegalArgumentException e) {
-                    log.warn("Nieprawidłowy typ lokalizacji: {}", type);
-                }
+        LocationSearchRequest searchRequest = new LocationSearchRequest();
+        searchRequest.setQuery(query);
+        if (type != null) {
+            try {
+                searchRequest.setType(LocationType.valueOf(type));
+            } catch (IllegalArgumentException e) {
+                log.warn("Nieprawidłowy typ lokalizacji: {}", type);
             }
-            searchRequest.setCity(city);
-            searchRequest.setPage(page);
-            searchRequest.setSize(size);
-
-            LocationListResponse response = locationService.searchLocations(searchRequest);
-
-            model.addAttribute("locations", response.getLocations());
-            model.addAttribute("currentPage", response.getCurrentPage());
-            model.addAttribute("totalPages", response.getTotalPages());
-            model.addAttribute("totalItems", response.getTotalItems());
-            model.addAttribute("hasNext", response.isHasNext());
-            model.addAttribute("hasPrevious", response.isHasPrevious());
-            model.addAttribute("query", query);
-            model.addAttribute("type", type);
-            model.addAttribute("city", city);
-
-            log.info("Wyświetlono {} lokalizacji na stronie {}", response.getLocations().size(), page);
-            return "locations/list";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji parametrów wyszukiwania: {}", e.getMessage());
-            model.addAttribute("error", "Nieprawidłowe parametry wyszukiwania");
-            return "locations/list";
-
-        } catch (Exception e) {
-            log.error("Błąd ładowania listy lokalizacji", e);
-            model.addAttribute("error", "Błąd ładowania listy lokalizacji: " + e.getMessage());
-            return "locations/list";
         }
+        searchRequest.setCity(city);
+        searchRequest.setPage(page);
+        searchRequest.setSize(size);
+
+        LocationListResponse response = locationService.searchLocations(searchRequest);
+
+        model.addAttribute("locations", response.getLocations());
+        model.addAttribute("currentPage", response.getCurrentPage());
+        model.addAttribute("totalPages", response.getTotalPages());
+        model.addAttribute("totalItems", response.getTotalItems());
+        model.addAttribute("hasNext", response.isHasNext());
+        model.addAttribute("hasPrevious", response.isHasPrevious());
+        model.addAttribute("query", query);
+        model.addAttribute("type", type);
+        model.addAttribute("city", city);
+
+        log.info("Wyświetlono {} lokalizacji na stronie {}", response.getLocations().size(), page);
+        return "locations/list";
     }
 
     @GetMapping("/create")
@@ -148,23 +136,11 @@ public class LocationController {
             return "locations/create";
         }
 
-        try {
-            LocationResponse location = locationService.createLocation(request);
-            redirectAttributes.addFlashAttribute("success",
-                    "Lokalizacja '" + location.getName() + "' została utworzona pomyślnie");
-            log.info("Lokalizacja utworzona: ID={}, nazwa={}", location.getId(), location.getName());
-            return "redirect:/locations";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji podczas tworzenia lokalizacji: {}", e.getMessage());
-            model.addAttribute("error", "Nieprawidłowe dane w formularzu");
-            return "locations/create";
-
-        } catch (Exception e) {
-            log.error("Błąd podczas tworzenia lokalizacji", e);
-            model.addAttribute("error", "Błąd podczas tworzenia lokalizacji: " + e.getMessage());
-            return "locations/create";
-        }
+        LocationResponse location = locationService.createLocation(request);
+        redirectAttributes.addFlashAttribute("success",
+                "Lokalizacja '" + location.getName() + "' została utworzona pomyślnie");
+        log.info("Lokalizacja utworzona: ID={}, nazwa={}", location.getId(), location.getName());
+        return "redirect:/locations";
     }
 
     @GetMapping("/{id}")
@@ -176,25 +152,14 @@ public class LocationController {
             Long id,
             Model model) {
 
-        try {
-            log.info("Wyświetlanie szczegółów lokalizacji ID={}", id);
-            LocationResponse location = locationService.getLocation(id);
-            String mapUrl = locationService.generateMapUrl(id);
+        log.info("Wyświetlanie szczegółów lokalizacji ID={}", id);
+        LocationResponse location = locationService.getLocation(id);
+        String mapUrl = locationService.generateMapUrl(id);
 
-            model.addAttribute("location", location);
-            model.addAttribute("mapUrl", mapUrl);
-            log.info("Wyświetlono szczegóły lokalizacji ID={}, nazwa={}", id, location.getName());
-            return "locations/details";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji ID lokalizacji: {}", id);
-            model.addAttribute("error", "Nieprawidłowy identyfikator lokalizacji");
-            return "redirect:/locations";
-
-        } catch (Exception e) {
-            log.error("Błąd pobierania szczegółów lokalizacji ID: {}", id, e);
-            return "redirect:/locations?error=Lokalizacja nie znaleziona";
-        }
+        model.addAttribute("location", location);
+        model.addAttribute("mapUrl", mapUrl);
+        log.info("Wyświetlono szczegóły lokalizacji ID={}, nazwa={}", id, location.getName());
+        return "locations/details";
     }
 
     @GetMapping("/{id}/edit")
@@ -206,35 +171,25 @@ public class LocationController {
             Long id,
             Model model) {
 
-        try {
-            log.info("Ładowanie formularza edycji dla lokalizacji ID={}", id);
-            LocationResponse location = locationService.getLocation(id);
-            UpdateLocationRequest updateRequest = new UpdateLocationRequest();
+        log.info("Ładowanie formularza edycji dla lokalizacji ID={}", id);
+        LocationResponse location = locationService.getLocation(id);
+        UpdateLocationRequest updateRequest = new UpdateLocationRequest();
 
-            updateRequest.setName(location.getName());
-            updateRequest.setType(location.getType());
-            updateRequest.setAddress(location.getAddress());
-            updateRequest.setCity(location.getCity());
-            updateRequest.setCountry(location.getCountry());
-            updateRequest.setLatitude(location.getLatitude());
-            updateRequest.setLongitude(location.getLongitude());
-            updateRequest.setVirtualMeetingUrl(location.getVirtualMeetingUrl());
-            updateRequest.setAccessCode(location.getAccessCode());
-            updateRequest.setDrivingInstructions(location.getDrivingInstructions());
-            updateRequest.setTimezone(location.getTimezone());
+        updateRequest.setName(location.getName());
+        updateRequest.setType(location.getType());
+        updateRequest.setAddress(location.getAddress());
+        updateRequest.setCity(location.getCity());
+        updateRequest.setCountry(location.getCountry());
+        updateRequest.setLatitude(location.getLatitude());
+        updateRequest.setLongitude(location.getLongitude());
+        updateRequest.setVirtualMeetingUrl(location.getVirtualMeetingUrl());
+        updateRequest.setAccessCode(location.getAccessCode());
+        updateRequest.setDrivingInstructions(location.getDrivingInstructions());
+        updateRequest.setTimezone(location.getTimezone());
 
-            model.addAttribute("locationId", id);
-            model.addAttribute("locationRequest", updateRequest);
-            return "locations/edit";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji ID lokalizacji: {}", id);
-            return "redirect:/locations?error=Nieprawidłowy identyfikator lokalizacji";
-
-        } catch (Exception e) {
-            log.error("Błąd ładowania formularza edycji dla ID: {}", id, e);
-            return "redirect:/locations?error=Lokalizacja nie znaleziona";
-        }
+        model.addAttribute("locationId", id);
+        model.addAttribute("locationRequest", updateRequest);
+        return "locations/edit";
     }
 
     @PostMapping("/{id}/edit")
@@ -256,26 +211,12 @@ public class LocationController {
             return "locations/edit";
         }
 
-        try {
-            log.info("Aktualizacja lokalizacji ID={}", id);
-            LocationResponse location = locationService.updateLocation(id, request);
-            redirectAttributes.addFlashAttribute("success",
-                    "Lokalizacja '" + location.getName() + "' została zaktualizowana");
-            log.info("Lokalizacja ID={} zaktualizowana pomyślnie", id);
-            return "redirect:/locations/" + id;
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji podczas aktualizacji lokalizacji ID={}: {}", id, e.getMessage());
-            model.addAttribute("error", "Nieprawidłowe dane w formularzu");
-            model.addAttribute("locationId", id);
-            return "locations/edit";
-
-        } catch (Exception e) {
-            log.error("Błąd aktualizacji lokalizacji ID: {}", id, e);
-            model.addAttribute("error", "Błąd podczas aktualizacji: " + e.getMessage());
-            model.addAttribute("locationId", id);
-            return "locations/edit";
-        }
+        log.info("Aktualizacja lokalizacji ID={}", id);
+        LocationResponse location = locationService.updateLocation(id, request);
+        redirectAttributes.addFlashAttribute("success",
+                "Lokalizacja '" + location.getName() + "' została zaktualizowana");
+        log.info("Lokalizacja ID={} zaktualizowana pomyślnie", id);
+        return "redirect:/locations/" + id;
     }
 
     @PostMapping("/{id}/delete")
@@ -287,20 +228,11 @@ public class LocationController {
             Long id,
             RedirectAttributes redirectAttributes) {
 
-        try {
-            log.info("Usuwanie lokalizacji ID={}", id);
-            locationService.deleteLocation(id);
-            redirectAttributes.addFlashAttribute("success", "Lokalizacja została usunięta");
-            log.info("Lokalizacja ID={} usunięta pomyślnie", id);
+        log.info("Usuwanie lokalizacji ID={}", id);
+        locationService.deleteLocation(id);
+        redirectAttributes.addFlashAttribute("success", "Lokalizacja została usunięta");
+        log.info("Lokalizacja ID={} usunięta pomyślnie", id);
 
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji ID lokalizacji do usunięcia: {}", id);
-            redirectAttributes.addFlashAttribute("error", "Nieprawidłowy identyfikator lokalizacji");
-
-        } catch (Exception e) {
-            log.error("Błąd usuwania lokalizacji ID: {}", id, e);
-            redirectAttributes.addFlashAttribute("error", "Błąd podczas usuwania: " + e.getMessage());
-        }
         return "redirect:/locations";
     }
 
@@ -327,34 +259,14 @@ public class LocationController {
         if (lat == null) lat = new BigDecimal("52.2297");
         if (lng == null) lng = new BigDecimal("21.0122");
 
-        try {
-            log.info("Wyszukiwanie lokalizacji w pobliżu: lat={}, lng={}, radius={}km", lat, lng, radius);
-            List<LocationResponse> locations = locationService.findNearbyLocations(lat, lng, radius);
-            model.addAttribute("locations", locations);
-            model.addAttribute("centerLat", lat);
-            model.addAttribute("centerLng", lng);
-            model.addAttribute("radius", radius);
-            log.info("Znaleziono {} lokalizacji w pobliżu", locations.size());
-            return "locations/nearby";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji parametrów wyszukiwania w pobliżu: {}", e.getMessage());
-            model.addAttribute("error", "Nieprawidłowe parametry wyszukiwania");
-            model.addAttribute("centerLat", lat);
-            model.addAttribute("centerLng", lng);
-            model.addAttribute("radius", radius);
-            model.addAttribute("locations", List.of());
-            return "locations/nearby";
-
-        } catch (Exception e) {
-            log.error("Błąd wyszukiwania lokalizacji w pobliżu", e);
-            model.addAttribute("error", "Błąd wyszukiwania lokalizacji: " + e.getMessage());
-            model.addAttribute("centerLat", lat);
-            model.addAttribute("centerLng", lng);
-            model.addAttribute("radius", radius);
-            model.addAttribute("locations", List.of());
-            return "locations/nearby";
-        }
+        log.info("Wyszukiwanie lokalizacji w pobliżu: lat={}, lng={}, radius={}km", lat, lng, radius);
+        List<LocationResponse> locations = locationService.findNearbyLocations(lat, lng, radius);
+        model.addAttribute("locations", locations);
+        model.addAttribute("centerLat", lat);
+        model.addAttribute("centerLng", lng);
+        model.addAttribute("radius", radius);
+        log.info("Znaleziono {} lokalizacji w pobliżu", locations.size());
+        return "locations/nearby";
     }
 
     @GetMapping("/{id}/map")
@@ -366,25 +278,15 @@ public class LocationController {
             Long id,
             Model model) {
 
-        try {
-            log.info("Wyświetlanie mapy dla lokalizacji ID={}", id);
-            LocationResponse location = locationService.getLocation(id);
-            String mapUrl = locationService.generateMapUrl(id);
-            String directionsUrl = locationService.generateDirectionsUrl(id, "");
+        log.info("Wyświetlanie mapy dla lokalizacji ID={}", id);
+        LocationResponse location = locationService.getLocation(id);
+        String mapUrl = locationService.generateMapUrl(id);
+        String directionsUrl = locationService.generateDirectionsUrl(id, "");
 
-            model.addAttribute("location", location);
-            model.addAttribute("mapUrl", mapUrl);
-            model.addAttribute("directionsUrl", directionsUrl);
-            return "locations/map";
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji ID lokalizacji do mapy: {}", id);
-            return "redirect:/locations?error=Nieprawidłowy identyfikator lokalizacji";
-
-        } catch (Exception e) {
-            log.error("Błąd wyświetlania mapy dla lokalizacji ID: {}", id, e);
-            return "redirect:/locations?error=Błąd ładowania mapy";
-        }
+        model.addAttribute("location", location);
+        model.addAttribute("mapUrl", mapUrl);
+        model.addAttribute("directionsUrl", directionsUrl);
+        return "locations/map";
     }
 
     @GetMapping("/virtual/generate")
@@ -404,25 +306,240 @@ public class LocationController {
             String passcode,
             RedirectAttributes redirectAttributes) {
 
-        try {
-            log.info("Generowanie lokalizacji wirtualnej: platforma={}, meetingId={}", platform, meetingId);
-            LocationResponse location = locationService.generateVirtualLocation(platform, meetingId, passcode);
-            redirectAttributes.addFlashAttribute("success",
-                    "Lokalizacja wirtualna została wygenerowana");
-            log.info("Lokalizacja wirtualna wygenerowana: ID={}", location.getId());
-            return "redirect:/locations/" + location.getId();
-
-        } catch (jakarta.validation.ConstraintViolationException e) {
-            log.warn("Błąd walidacji parametrów generowania lokalizacji wirtualnej: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", "Nieprawidłowe parametry generowania");
-            return "redirect:/locations";
-
-        } catch (Exception e) {
-            log.error("Błąd generowania lokalizacji wirtualnej", e);
-            redirectAttributes.addFlashAttribute("error",
-                    "Błąd generowania lokalizacji: " + e.getMessage());
-            return "redirect:/locations";
-        }
+        log.info("Generowanie lokalizacji wirtualnej: platforma={}, meetingId={}", platform, meetingId);
+        LocationResponse location = locationService.generateVirtualLocation(platform, meetingId, passcode);
+        redirectAttributes.addFlashAttribute("success",
+                "Lokalizacja wirtualna została wygenerowana");
+        log.info("Lokalizacja wirtualna wygenerowana: ID={}", location.getId());
+        return "redirect:/locations/" + location.getId();
     }
 }
 
+
+//package com.meethub.controller.web;
+//
+//import com.meethub.domain.model.request.CreateLocationRequest;
+//import com.meethub.domain.model.request.LocationFilterDTO;
+//import com.meethub.domain.model.request.LocationSearchRequest;
+//import com.meethub.domain.model.request.UpdateLocationRequest;
+//import com.meethub.domain.model.response.LocationListResponse;
+//import com.meethub.domain.model.response.LocationResponse;
+//import com.meethub.domain.service.LocationService;
+//import io.swagger.v3.oas.annotations.Operation;
+//import io.swagger.v3.oas.annotations.tags.Tag;
+//import jakarta.validation.Valid;
+//import lombok.RequiredArgsConstructor;
+//import lombok.extern.slf4j.Slf4j;
+//import org.springframework.stereotype.Controller;
+//import org.springframework.ui.Model;
+//import org.springframework.validation.BindingResult;
+//import org.springframework.web.bind.annotation.*;
+//import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+//
+//import java.math.BigDecimal;
+//import java.util.List;
+//
+//@Slf4j
+//@Controller
+//@RequestMapping("/locations")
+//@RequiredArgsConstructor
+//@Tag(name = "Lokalizacje", description = "Strony web do zarządzania lokalizacjami spotkań")
+//public class LocationController {
+//
+//    private final LocationService locationService;
+//
+//    // ===== LISTA LOKALIZACJI =====
+//    @GetMapping
+//    @Operation(summary = "Lista lokalizacji",
+//            description = "Wyświetla listę lokalizacji z możliwością filtrowania po nazwie, typie i mieście oraz paginacją.")
+//    public String listLocations(@Valid LocationSearchRequest filterDTO, Model model) {
+//
+//        LocationListResponse response = locationService.searchLocations(filterDTO);
+//
+//        model.addAttribute("locations", response.getLocations());
+//        model.addAttribute("currentPage", response.getCurrentPage());
+//        model.addAttribute("totalPages", response.getTotalPages());
+//        model.addAttribute("totalItems", response.getTotalItems());
+//        model.addAttribute("hasNext", response.isHasNext());
+//        model.addAttribute("hasPrevious", response.isHasPrevious());
+//        model.addAttribute("query", filterDTO.getQuery());
+//        model.addAttribute("type", filterDTO.getType() != null ? filterDTO.getType().name() : null);
+//        model.addAttribute("city", filterDTO.getCity());
+//
+//        log.info("Wyświetlono {} lokalizacji na stronie {}", response.getLocations().size(), filterDTO.getPage());
+//        return "locations/list";
+//    }
+//
+//    // ===== CREATE =====
+//    @GetMapping("/create")
+//    public String showCreateForm(Model model) {
+//        model.addAttribute("locationRequest", new CreateLocationRequest());
+//        return "locations/create";
+//    }
+//
+//    @PostMapping("/create")
+//    public String createLocation(
+//            @Valid @ModelAttribute("locationRequest") CreateLocationRequest request,
+//            BindingResult result,
+//            RedirectAttributes redirectAttributes,
+//            Model model) {
+//
+//        log.info("Tworzenie lokalizacji: nazwa={}, typ={}", request.getName(), request.getType());
+//
+//        validateLocationRequest(request, result, model);
+//
+//        if (result.hasErrors()) {
+//            return "locations/create";
+//        }
+//
+//        LocationResponse location = locationService.createLocation(request);
+//        redirectAttributes.addFlashAttribute("success",
+//                "Lokalizacja '" + location.getName() + "' została utworzona pomyślnie");
+//        log.info("Lokalizacja utworzona: ID={}, nazwa={}", location.getId(), location.getName());
+//        return "redirect:/locations";
+//    }
+//
+//    // ===== DETAILS =====
+//    @GetMapping("/{id}")
+//    public String locationDetails(@PathVariable Long id, Model model) {
+//        LocationResponse location = locationService.getLocation(id);
+//        String mapUrl = locationService.generateMapUrl(id);
+//
+//        model.addAttribute("location", location);
+//        model.addAttribute("mapUrl", mapUrl);
+//        return "locations/details";
+//    }
+//
+//    // ===== EDIT =====
+//    @GetMapping("/{id}/edit")
+//    public String showEditForm(@PathVariable Long id, Model model) {
+//        LocationResponse location = locationService.getLocation(id);
+//
+//        UpdateLocationRequest updateRequest = new UpdateLocationRequest();
+//        updateRequest.setName(location.getName());
+//        updateRequest.setType(location.getType());
+//        updateRequest.setAddress(location.getAddress());
+//        updateRequest.setCity(location.getCity());
+//        updateRequest.setCountry(location.getCountry());
+//        updateRequest.setLatitude(location.getLatitude());
+//        updateRequest.setLongitude(location.getLongitude());
+//        updateRequest.setVirtualMeetingUrl(location.getVirtualMeetingUrl());
+//        updateRequest.setAccessCode(location.getAccessCode());
+//        updateRequest.setDrivingInstructions(location.getDrivingInstructions());
+//        updateRequest.setTimezone(location.getTimezone());
+//
+//        model.addAttribute("locationId", id);
+//        model.addAttribute("locationRequest", updateRequest);
+//        return "locations/edit";
+//    }
+//
+//    @PostMapping("/{id}/edit")
+//    public String updateLocation(@PathVariable Long id,
+//                                 @Valid @ModelAttribute("locationRequest") UpdateLocationRequest request,
+//                                 BindingResult result,
+//                                 RedirectAttributes redirectAttributes,
+//                                 Model model) {
+//
+//        validateLocationRequest(request, result, model);
+//
+//        if (result.hasErrors()) {
+//            model.addAttribute("locationId", id);
+//            return "locations/edit";
+//        }
+//
+//        LocationResponse location = locationService.updateLocation(id, request);
+//        redirectAttributes.addFlashAttribute("success",
+//                "Lokalizacja '" + location.getName() + "' została zaktualizowana");
+//        return "redirect:/locations/" + id;
+//    }
+//
+//    // ===== DELETE =====
+//    @PostMapping("/{id}/delete")
+//    public String deleteLocation(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+//        locationService.deleteLocation(id);
+//        redirectAttributes.addFlashAttribute("success", "Lokalizacja została usunięta");
+//        return "redirect:/locations";
+//    }
+//
+//    // ===== NEARBY =====
+//    @GetMapping("/nearby")
+//    public String findNearbyLocations(
+//            @RequestParam(required = false) BigDecimal lat,
+//            @RequestParam(required = false) BigDecimal lng,
+//            @RequestParam(defaultValue = "5.0") Double radius,
+//            Model model) {
+//
+//        if (lat == null) lat = new BigDecimal("52.2297");
+//        if (lng == null) lng = new BigDecimal("21.0122");
+//
+//        List<LocationResponse> locations = locationService.findNearbyLocations(lat, lng, radius);
+//        model.addAttribute("locations", locations);
+//        model.addAttribute("centerLat", lat);
+//        model.addAttribute("centerLng", lng);
+//        model.addAttribute("radius", radius);
+//        return "locations/nearby";
+//    }
+//
+//    // ===== MAP =====
+//    @GetMapping("/{id}/map")
+//    public String showOnMap(@PathVariable Long id, Model model) {
+//        LocationResponse location = locationService.getLocation(id);
+//        String mapUrl = locationService.generateMapUrl(id);
+//        String directionsUrl = locationService.generateDirectionsUrl(id, "");
+//
+//        model.addAttribute("location", location);
+//        model.addAttribute("mapUrl", mapUrl);
+//        model.addAttribute("directionsUrl", directionsUrl);
+//        return "locations/map";
+//    }
+//
+//    // ===== VIRTUAL LOCATION =====
+//    @GetMapping("/virtual/generate")
+//    public String generateVirtualLocation(@RequestParam String platform,
+//                                          @RequestParam String meetingId,
+//                                          @RequestParam(required = false) String passcode,
+//                                          RedirectAttributes redirectAttributes) {
+//
+//        LocationResponse location = locationService.generateVirtualLocation(platform, meetingId, passcode);
+//        redirectAttributes.addFlashAttribute("success", "Lokalizacja wirtualna została wygenerowana");
+//        return "redirect:/locations/" + location.getId();
+//    }
+//
+//    // ===== WALIDACJA DTO =====
+//    private void validateLocationRequest(Object request, BindingResult result, Model model) {
+//        String type = null;
+//        String address = null;
+//        String city = null;
+//        String virtualMeetingUrl = null;
+//
+//        if (request instanceof CreateLocationRequest) {
+//            CreateLocationRequest r = (CreateLocationRequest) request;
+//            type = r.getType() != null ? r.getType().name() : null;
+//            address = r.getAddress();
+//            city = r.getCity();
+//            virtualMeetingUrl = r.getVirtualMeetingUrl();
+//        } else if (request instanceof UpdateLocationRequest) {
+//            UpdateLocationRequest r = (UpdateLocationRequest) request;
+//            type = r.getType() != null ? r.getType().name() : null;
+//            address = r.getAddress();
+//            city = r.getCity();
+//            virtualMeetingUrl = r.getVirtualMeetingUrl();
+//        }
+//
+//        if ("PHYSICAL".equals(type)) {
+//            if (address == null || address.trim().isEmpty()) {
+//                result.rejectValue("address", "NotEmpty", "Adres jest wymagany dla lokalizacji fizycznej");
+//                model.addAttribute("error", "Adres jest wymagany dla lokalizacji fizycznej");
+//            }
+//            if (city == null || city.trim().isEmpty()) {
+//                result.rejectValue("city", "NotEmpty", "Miasto jest wymagane dla lokalizacji fizycznej");
+//                model.addAttribute("error", "Miasto jest wymagane dla lokalizacji fizycznej");
+//            }
+//        } else if ("VIRTUAL".equals(type)) {
+//            if (virtualMeetingUrl == null || virtualMeetingUrl.trim().isEmpty()) {
+//                result.rejectValue("virtualMeetingUrl", "NotEmpty", "URL spotkania jest wymagany dla lokalizacji wirtualnej");
+//                model.addAttribute("error", "URL spotkania jest wymagany dla lokalizacji wirtualnej");
+//            }
+//        }
+//    }
+//}

@@ -1,23 +1,19 @@
 package com.meethub.controller.api;
 
 import com.meethub.domain.model.entity.MeetingStatistics;
-import com.meethub.domain.model.request.ReportFilter;
+import com.meethub.domain.model.request.MeetingIdRequest;
 import com.meethub.domain.model.response.ApiResponse;
 import com.meethub.domain.model.response.MeetingStatisticsResponse;
-import com.meethub.domain.model.response.OrganizerReport;
 import com.meethub.domain.service.MeetingAnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,42 +31,33 @@ public class AnalyticsController {
 
     // ========== STATYSTYKI SPOTKANIA ==========
 
-    @PostMapping("/meetings/{meetingId}/statistics")
+    @PostMapping("/meetings/statistics")
     @Operation(summary = "Generuje statystyki spotkania",
             description = "Generuje i zapisuje statystyki dla spotkania.")
     public ResponseEntity<ApiResponse<MeetingStatisticsResponse>> generateMeetingStatistics(
-            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-            Long meetingId) {
+            @Valid @RequestBody MeetingIdRequest request) {
 
-        var stats = analyticsService.generateMeetingStatistics(meetingId);
-        var response = convertToResponse(stats);
-        return ResponseEntity.ok(ApiResponse.success("Statystyki wygenerowane", response));
+        MeetingStatistics stats = analyticsService.generateMeetingStatistics(request.getMeetingId());
+        return ResponseEntity.ok(ApiResponse.success("Statystyki wygenerowane", convertToResponse(stats)));
     }
 
-    @GetMapping("/meetings/{meetingId}/report")
+    @PostMapping("/meetings/report")
     @Operation(summary = "Pobiera raport spotkania",
             description = "Zwraca wygenerowany raport ze statystykami spotkania.")
     public ResponseEntity<ApiResponse<MeetingStatisticsResponse>> getMeetingReport(
-            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-            Long meetingId) {
+            @Valid @RequestBody MeetingIdRequest request) {
 
-        var stats = analyticsService.generateMeetingStatistics(meetingId);
-        var response = convertToResponse(stats);
-        return ResponseEntity.ok(ApiResponse.success("Raport spotkania wygenerowany", response));
+        MeetingStatistics stats = analyticsService.generateMeetingStatistics(request.getMeetingId());
+        return ResponseEntity.ok(ApiResponse.success("Raport spotkania wygenerowany", convertToResponse(stats)));
     }
 
-    @GetMapping("/meetings/{meetingId}/export/csv")
+    @PostMapping("/meetings/export/csv")
     @Operation(summary = "Eksportuje statystyki do CSV",
             description = "Eksportuje statystyki spotkania do pliku CSV.")
-    public ResponseEntity<Resource> exportMeetingCsv(
-            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-            Long meetingId) {
+    public ResponseEntity<Resource> exportMeetingCsv(@Valid @RequestBody MeetingIdRequest request) {
 
-        byte[] csv = analyticsService.exportMeetingStatisticsToCsv(meetingId);
-        String filename = "statystyki_spotkania_" + meetingId + "_" +
+        byte[] csv = analyticsService.exportMeetingStatisticsToCsv(request.getMeetingId());
+        String filename = "statystyki_spotkania_" + request.getMeetingId() + "_" +
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
 
         return ResponseEntity.ok()
@@ -80,16 +67,13 @@ public class AnalyticsController {
                 .body(new ByteArrayResource(csv));
     }
 
-    @GetMapping("/meetings/{meetingId}/export/pdf")
+    @PostMapping("/meetings/export/pdf")
     @Operation(summary = "Eksportuje statystyki do PDF",
             description = "Eksportuje statystyki spotkania do pliku PDF.")
-    public ResponseEntity<Resource> exportMeetingPdf(
-            @PathVariable @NotNull(message = "Identyfikator spotkania nie może być pusty")
-            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-            Long meetingId) {
+    public ResponseEntity<Resource> exportMeetingPdf(@Valid @RequestBody MeetingIdRequest request) {
 
-        byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(meetingId);
-        String filename = "statystyki_spotkania_" + meetingId + "_" +
+        byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(request.getMeetingId());
+        String filename = "statystyki_spotkania_" + request.getMeetingId() + "_" +
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".pdf";
 
         return ResponseEntity.ok()
@@ -125,5 +109,3 @@ public class AnalyticsController {
                 .build();
     }
 }
-
-

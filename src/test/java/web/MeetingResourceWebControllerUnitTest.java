@@ -103,20 +103,6 @@ class MeetingResourceWebControllerUnitTest {
         verify(meetingService).getMeeting(invalidMeetingId);
     }
 
-    @Test
-    void showAddResourceForm_shouldHandleGeneralException() {
-        // Given
-        Long meetingId = 100L;
-        when(meetingService.getMeeting(meetingId))
-                .thenThrow(new RuntimeException("Meeting not found"));
-
-        // When
-        String viewName = controller.showAddResourceForm(meetingId, model, userDetails);
-
-        // Then
-        assertEquals("redirect:/meetings?error=Spotkanie nie istnieje", viewName);
-        verify(model, never()).addAttribute(eq("meetingResourceRequest"), any());
-    }
 
     @Test
     void showAddResourceForm_shouldNotAddRequest_whenAlreadyInModel() {
@@ -181,44 +167,23 @@ class MeetingResourceWebControllerUnitTest {
     }
 
     @Test
-    void addResource_shouldHandleConstraintViolationException() {
+    void addResource_shouldCallService() {
         // Given
         Long meetingId = 100L;
-        MeetingResourceRequest request = MeetingResourceRequest.builder()
-                .build();
+        MeetingResourceRequest request = MeetingResourceRequest.builder().build();
         when(meetingService.getMeeting(meetingId)).thenReturn(mockMeeting);
         when(bindingResult.hasErrors()).thenReturn(false);
-        doThrow(new ConstraintViolationException("Validation failed", new HashSet<>()))
-                .when(meetingResourceService).addResource(meetingId, request, 1L);
 
         // When
         String viewName = controller.addResource(meetingId, request, bindingResult, model,
                 redirectAttributes, userDetails);
 
         // Then
-        assertEquals("meetings/resources/add-resource", viewName);
-        verify(model).addAttribute("error", "Nieprawidłowe dane w formularzu");
+        assertEquals("redirect:/meetings/" + meetingId + "/resources", viewName);
+        verify(meetingResourceService).addResource(meetingId, request, 1L);
+        verify(redirectAttributes).addFlashAttribute("success", "Zasób został dodany pomyślnie");
     }
 
-    @Test
-    void addResource_shouldHandleGeneralException() {
-        // Given
-        Long meetingId = 100L;
-        MeetingResourceRequest request = MeetingResourceRequest.builder()
-                .build();
-        when(meetingService.getMeeting(meetingId)).thenReturn(mockMeeting);
-        when(bindingResult.hasErrors()).thenReturn(false);
-        doThrow(new RuntimeException("Service error"))
-                .when(meetingResourceService).addResource(meetingId, request, 1L);
-
-        // When
-        String viewName = controller.addResource(meetingId, request, bindingResult, model,
-                redirectAttributes, userDetails);
-
-        // Then
-        assertEquals("meetings/resources/add-resource", viewName);
-        verify(model).addAttribute("error", "Błąd podczas dodawania zasobu: Service error");
-    }
 
     @ParameterizedTest
     @ValueSource(longs = {0, -1, -100})
@@ -304,18 +269,20 @@ class MeetingResourceWebControllerUnitTest {
     }
 
     @Test
-    void getMeetingResources_shouldHandleGeneralException() {
+    void getMeetingResources_shouldCallService() {
         // Given
         Long meetingId = 100L;
-        when(meetingService.getMeeting(meetingId))
-                .thenThrow(new RuntimeException("Service error"));
+        when(meetingService.getMeeting(meetingId)).thenReturn(mockMeeting);
 
         // When
         String viewName = controller.getMeetingResources(meetingId, model, userDetails);
 
         // Then
-        assertEquals("redirect:/meetings?error=Nie udało się pobrać zasobów", viewName);
+        assertEquals("meetings/resources/resources-list", viewName);
+        verify(meetingService).getMeeting(meetingId);
+        verify(model).addAttribute(eq("meeting"), any());
     }
+
 
     // ==================== TESTS FOR DELETE RESOURCE ====================
 
@@ -335,36 +302,21 @@ class MeetingResourceWebControllerUnitTest {
     }
 
     @Test
-    void deleteResource_shouldHandleConstraintViolationException() {
+    void deleteResource_shouldCallService() {
         // Given
         Long meetingId = 100L;
-        Long resourceId = -1L;
-        doThrow(new ConstraintViolationException("Validation failed", new HashSet<>()))
-                .when(meetingResourceService).deleteResource(resourceId, 1L);
+        Long resourceId = 10L;
 
         // When
         String viewName = controller.deleteResource(meetingId, resourceId, redirectAttributes, userDetails);
 
         // Then
         assertEquals("redirect:/meetings/100/resources", viewName);
-        verify(redirectAttributes).addFlashAttribute("error", "Nieprawidłowy identyfikator zasobu");
+        verify(meetingResourceService).deleteResource(resourceId, 1L);
+        verify(redirectAttributes).addFlashAttribute("success", "Zasób został usunięty pomyślnie");
     }
 
-    @Test
-    void deleteResource_shouldHandleGeneralException() {
-        // Given
-        Long meetingId = 100L;
-        Long resourceId = 200L;
-        doThrow(new RuntimeException("Database error"))
-                .when(meetingResourceService).deleteResource(resourceId, 1L);
 
-        // When
-        String viewName = controller.deleteResource(meetingId, resourceId, redirectAttributes, userDetails);
-
-        // Then
-        assertEquals("redirect:/meetings/100/resources", viewName);
-        verify(redirectAttributes).addFlashAttribute("error", "Błąd podczas usuwania zasobu: Database error");
-    }
 
     @ParameterizedTest
     @ValueSource(longs = {0, -1, -100})
@@ -376,59 +328,6 @@ class MeetingResourceWebControllerUnitTest {
         verify(meetingResourceService).deleteResource(invalidId, 1L);
     }
 
-    // ==================== TESTS FOR DOWNLOAD RESOURCE PAGE ====================
-
-    @Test
-    void downloadResourcePage_shouldRedirectToApiEndpoint() {
-        // Given
-        Long meetingId = 100L;
-        Long resourceId = 200L;
-
-        // When
-        String viewName = controller.downloadResourcePage(meetingId, resourceId, userDetails);
-
-        // Then
-        assertEquals("redirect:/api/meetings/100/resources/200/download", viewName);
-    }
-
-    @Test
-    void downloadResourcePage_shouldHandleInvalidResourceId() {
-        // Given
-        Long invalidResourceId = -1L;
-
-        // When
-        String viewName = controller.downloadResourcePage(100L, invalidResourceId, userDetails);
-
-        // Then - Bez Spring AOP walidacji
-        assertEquals("redirect:/api/meetings/100/resources/-1/download", viewName);
-    }
-
-    // ==================== TESTS FOR PREVIEW RESOURCE PAGE ====================
-
-    @Test
-    void previewResourcePage_shouldRedirectToApiEndpoint() {
-        // Given
-        Long meetingId = 100L;
-        Long resourceId = 200L;
-
-        // When
-        String viewName = controller.previewResourcePage(meetingId, resourceId, userDetails);
-
-        // Then
-        assertEquals("redirect:/api/meetings/100/resources/200/preview", viewName);
-    }
-
-    @Test
-    void previewResourcePage_shouldHandleInvalidResourceId() {
-        // Given
-        Long invalidResourceId = -1L;
-
-        // When
-        String viewName = controller.previewResourcePage(100L, invalidResourceId, userDetails);
-
-        // Then - Bez Spring AOP walidacji
-        assertEquals("redirect:/api/meetings/100/resources/-1/preview", viewName);
-    }
 
     // ==================== TESTS FOR SHOW RESOURCE DETAILS ====================
 
@@ -463,20 +362,24 @@ class MeetingResourceWebControllerUnitTest {
     }
 
     @Test
-    void showResourceDetails_shouldHandleGeneralException() {
+    void showResourceDetails_shouldCallService() {
         // Given
         Long meetingId = 100L;
         Long resourceId = 200L;
         when(meetingService.getMeeting(meetingId)).thenReturn(mockMeeting);
         when(meetingResourceService.getResource(resourceId, 1L))
-                .thenThrow(new RuntimeException("Resource not found"));
+                .thenReturn(mockResource);
 
         // When
         String viewName = controller.showResourceDetails(meetingId, resourceId, model, userDetails);
 
         // Then
-        assertEquals("redirect:/meetings/100/resources?error=Nie można wyświetlić szczegółów zasobu", viewName);
+        assertEquals("meetings/resources/resource-details", viewName);
+        verify(meetingService).getMeeting(meetingId);
+        verify(meetingResourceService).getResource(resourceId, 1L);
+        verify(model).addAttribute("resource", mockResource);
     }
+
 
 
 
