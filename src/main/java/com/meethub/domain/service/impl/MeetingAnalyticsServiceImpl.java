@@ -1,11 +1,8 @@
-
-
-
-
 package com.meethub.domain.service.impl;
 
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
+import com.meethub.domain.model.dto.OrganizerReportStats;
 import com.meethub.domain.model.dto.ParticipantCountDto;
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.MeetingParticipant;
@@ -155,9 +152,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                 participantCounts.getDeclined().intValue() : 0);
         statistics.setPendingParticipants(participantCounts.getPending() != null ?
                 participantCounts.getPending().intValue() : 0);
-
-        // Oblicz stawki procentowe (encja ma swoją metodę calculateDerivedMetrics)
-        // ale możemy też ustawić bezpośrednio z DTO
         statistics.setAttendanceRate(participantCounts.getAttendanceRate());
         statistics.setConfirmationRate(participantCounts.getConfirmationRate());
 
@@ -211,48 +205,41 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     @Override
     @Transactional(readOnly = true)
     public OrganizerReport generateOrganizerReport(Long organizerId, ReportFilter filter) {
+
         log.info("Generating organizer report for organizer: {}", organizerId);
 
-        // 1. Pobierz statystyki dla organizatora
-        List<MeetingStatistics> allStats = statisticsRepository.findByOrganizerId(organizerId);
+        OrganizerReportStats stats =
+                statisticsRepository.getOrganizerReportStats(organizerId);
 
-        // 2. Filtruj według daty
-        List<MeetingStatistics> filteredStats = filterStatistics(allStats, filter);
-
-        // 3. Stwórz raport
         OrganizerReport report = new OrganizerReport();
         report.setOrganizerId(organizerId);
         report.setGeneratedAt(LocalDateTime.now());
-        report.setTotalMeetings(filteredStats.size());
 
-        if (!filteredStats.isEmpty()) {
-            // Oblicz średnią frekwencję
-            BigDecimal totalAttendance = filteredStats.stream()
-                    .filter(stats -> stats.getAttendanceRate() != null)
-                    .map(MeetingStatistics::getAttendanceRate)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (stats != null) {
+            report.setTotalMeetings(Math.toIntExact(stats.getTotalMeetings()));
+            report.setAverageAttendanceRate(stats.getAverageAttendanceRate());
 
-            BigDecimal avgAttendance = totalAttendance.divide(
-                    new BigDecimal(filteredStats.size()), 2, RoundingMode.HALF_UP);
-            report.setAverageAttendanceRate(avgAttendance);
+            report.setTotalParticipants(
+                    stats.getTotalParticipants() != null
+                            ? stats.getTotalParticipants().intValue()
+                            : 0
+            );
 
-            // Oblicz całkowitą liczbę uczestników
-            int totalParticipants = filteredStats.stream()
-                    .filter(stats -> stats.getTotalParticipants() != null)
-                    .mapToInt(MeetingStatistics::getTotalParticipants)
-                    .sum();
-            report.setTotalParticipants(totalParticipants);
-
-            // Oblicz liczbę uczestników, którzy przyszli
-            int totalAttended = filteredStats.stream()
-                    .filter(stats -> stats.getAttendedParticipants() != null)
-                    .mapToInt(MeetingStatistics::getAttendedParticipants)
-                    .sum();
-            report.setTotalAttended(totalAttended);
+            report.setTotalAttended(
+                    stats.getTotalAttended() != null
+                            ? stats.getTotalAttended().intValue()
+                            : 0
+            );
+    } else {
+            report.setTotalMeetings(0);
+            report.setAverageAttendanceRate(BigDecimal.ZERO);
+            report.setTotalParticipants(0);
+            report.setTotalAttended(0);
         }
 
         return report;
     }
+
 
     private List<MeetingStatistics> filterStatistics(List<MeetingStatistics> allStats, ReportFilter filter) {
         if (filter == null) {

@@ -8,7 +8,9 @@ import com.meethub.domain.service.MeetingAnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -82,6 +84,45 @@ public class AnalyticsController {
                 .contentLength(pdf.length)
                 .body(new ByteArrayResource(pdf));
     }
+
+    @GetMapping("/meetings/{meetingId}/export/csv")
+    @Operation(summary = "Eksportuje statystyki do CSV",
+            description = "Eksportuje statystyki spotkania do pliku CSV.")
+    public ResponseEntity<Resource> exportMeetingCsv(
+            @PathVariable @NotNull
+            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+            Long meetingId) {
+
+        byte[] csv = analyticsService.exportMeetingStatisticsToCsv(meetingId);
+        String filename = "statystyki_spotkania_" + meetingId + "_" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentLength(csv.length)
+                .body(new ByteArrayResource(csv));
+    }
+
+    @GetMapping("/meetings/{meetingId}/export/pdf")
+    @Operation(summary = "Eksportuje statystyki do PDF",
+            description = "Eksportuje statystyki spotkania do pliku PDF.")
+    public ResponseEntity<Resource> exportMeetingPdf(
+            @PathVariable @NotNull
+            @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
+            Long meetingId) {
+
+        byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(meetingId);
+        String filename = "statystyki_spotkania_" + meetingId + "_" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(pdf.length)
+                .body(new ByteArrayResource(pdf));
+    }
+
 
     private MeetingStatisticsResponse convertToResponse(MeetingStatistics stats) {
         if (stats == null) return null;

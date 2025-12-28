@@ -1,5 +1,6 @@
 package com.meethub.domain.model.entity;
 
+import com.meethub.domain.model.id.MeetingMarkId;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

@@ -27,8 +27,8 @@ public class ReportFilter {
     private BigDecimal minAttendanceRate;
     private BigDecimal maxAttendanceRate;
 
-    private String sortBy; // "date", "attendance", "participants"
-    private String sortOrder; // "asc", "desc"
+    private String sortBy;
+    private String sortOrder;
 
     // Metody pomocnicze
     public boolean hasDateFilter() {

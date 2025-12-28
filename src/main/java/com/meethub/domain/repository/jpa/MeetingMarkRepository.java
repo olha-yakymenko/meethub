@@ -2,7 +2,7 @@ package com.meethub.domain.repository.jpa;
 
 
 import com.meethub.domain.model.entity.MeetingMark;
-import com.meethub.domain.model.entity.MeetingMarkId;
+import com.meethub.domain.model.id.MeetingMarkId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

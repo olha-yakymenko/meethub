@@ -1,4 +1,4 @@
-package com.meethub.domain.model.entity;
+package com.meethub.domain.model.id;
 
 import java.io.Serializable;
 import java.util.Objects;

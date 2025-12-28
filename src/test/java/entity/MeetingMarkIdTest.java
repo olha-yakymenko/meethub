@@ -1,5 +1,6 @@
 package com.meethub.domain.model.entity;
 
+import com.meethub.domain.model.id.MeetingMarkId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
