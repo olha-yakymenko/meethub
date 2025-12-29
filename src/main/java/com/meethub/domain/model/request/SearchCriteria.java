@@ -60,7 +60,6 @@ public class SearchCriteria {
     @Builder.Default
     private boolean includePublic = true;
 
-    // ✅ Metody pomocnicze
 
     public boolean hasKeywords() {
         return keywords != null && !keywords.trim().isEmpty();

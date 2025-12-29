@@ -1,4 +1,3 @@
-// TaskAssignmentRepository.java
 package com.meethub.domain.repository.jpa;
 
 import com.meethub.domain.model.entity.TaskAssignment;
@@ -17,12 +16,9 @@ import java.util.Optional;
 @Repository
 public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, Long> {
 
-    // Podstawowe zapytania
     List<TaskAssignment> findByUserId(Long userId);
     List<TaskAssignment> findByTaskId(Long taskId);
-    Optional<TaskAssignment> findByTaskIdAndUserId(Long taskId, Long userId);
 
-    // Zapytania z paginacją
     Page<TaskAssignment> findByUserId(Long userId, Pageable pageable);
 
     @Query("SELECT ta FROM TaskAssignment ta WHERE ta.task.meeting.id = :meetingId")

@@ -20,8 +20,6 @@ public interface MeetingResourceRepository extends JpaRepository<MeetingResource
 
     List<MeetingResource> findByMeetingIdAndResourceTypeOrderByUploadedAtDesc(Long meetingId, ResourceType resourceType);
 
-
-    // DODAJ DISTINCT żeby uniknąć duplikatów
     @Query(value = "SELECT DISTINCT mr.* FROM meethub_schema.meeting_resources mr " +
             "JOIN meethub_schema.resource_tags rt ON mr.id = rt.resource_id " +
             "WHERE mr.meeting_id = :meetingId AND rt.tag LIKE CONCAT('%', :tag, '%') " +

@@ -22,10 +22,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
 
     Page<Meeting> findAll(Specification<Meeting> spec, Pageable pageable);
 
-    @Query("SELECT m FROM Meeting m WHERE m.originalMeetingId = :originalMeetingId OR m.id = :originalMeetingId")
-    List<Meeting> findByOriginalMeetingIdOrId(
-            @Param("originalMeetingId") Long originalMeetingId);
-
 
     @Query("""
         SELECT DISTINCT m FROM Meeting m 
@@ -83,12 +79,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
     List<Meeting> findByOriginalMeetingId(Long originalMeetingId);
 
     /**
-     * Znajdź spotkania według kategorii
-     */
-    @Query("SELECT m FROM Meeting m JOIN m.categories c WHERE c.id = :categoryId")
-    Page<Meeting> findByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
-
-    /**
      * Znajdź spotkania według tagu
      */
     @Query("SELECT m FROM Meeting m WHERE :tag MEMBER OF m.tags")
@@ -104,21 +94,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpec
             @Param("status") MeetingStatus status,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
-
-    @Query("SELECT m FROM Meeting m " +
-            "WHERE m.status = :status " +
-            "AND m.updatedAt < :cutoff " +
-            "ORDER BY m.updatedAt ASC")
-    List<Meeting> findByStatusAndUpdatedAtBefore(
-            @Param("status") MeetingStatus status,
-            @Param("cutoff") LocalDateTime cutoff);
-
-    // Do statystyk
-    @Query("SELECT COUNT(m) FROM Meeting m " +
-            "WHERE m.organizer.id = :userId " +
-            "AND m.startDate > :now " +
-            "AND m.status = 'PLANNED'")
-    Long countUpcomingMeetingsByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 
     @Query("SELECT m.id FROM Meeting m")
     List<Long> findAllMeetingIds();

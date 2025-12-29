@@ -1,4 +1,3 @@
-// MeetingAuthorizationService.java
 package com.meethub.domain.service;
 
 import com.meethub.domain.model.enums.ResourceAccessLevel;

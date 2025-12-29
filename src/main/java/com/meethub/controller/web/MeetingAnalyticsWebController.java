@@ -2,6 +2,7 @@ package com.meethub.controller.web;
 
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.MeetingStatistics;
+import com.meethub.domain.model.request.MeetingRequest;
 import com.meethub.domain.service.MeetingAnalyticsService;
 import com.meethub.domain.service.MeetingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -104,34 +105,7 @@ public class MeetingAnalyticsWebController {
         return "redirect:/api/v1/analytics/meetings/" + meetingId + "/export/pdf";
     }
 
-    @GetMapping("/compare")
-    @Operation(
-            summary = "Porównaj statystyki",
-            description = "Wyświetla stronę do porównania statystyk bieżącego spotkania z innymi spotkaniami."
-    )
-    public String compareStatistics(@Validated @ModelAttribute MeetingRequest request,
-                                    Model model) {
 
-        Long meetingId = request.getMeetingId();
-        log.info("Wyświetlanie strony porównania statystyk dla spotkania ID={}", meetingId);
-        Meeting meeting = meetingService.getMeeting(meetingId);
-        model.addAttribute("meeting", meeting);
 
-        return "meetings/analytics-compare";
-    }
 
-    // ===== Request DTO =====
-    @Getter
-    public static class MeetingRequest {
-
-        @Parameter(description = "ID spotkania", required = true)
-        @NotNull(message = "Identyfikator spotkania nie może być pusty")
-        @Min(value = 1, message = "Identyfikator spotkania musi być liczbą dodatnią")
-        private Long meetingId;
-
-        // setter wymagany do @ModelAttribute
-        public void setMeetingId(Long meetingId) {
-            this.meetingId = meetingId;
-        }
-    }
 }

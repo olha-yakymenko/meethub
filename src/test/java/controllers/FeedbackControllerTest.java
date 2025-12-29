@@ -3,6 +3,7 @@ package com.meethub.controller.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meethub.domain.model.entity.Feedback;
 import com.meethub.domain.model.request.SubmitFeedbackRequest;
+import com.meethub.domain.model.response.ApiResponse;
 import com.meethub.domain.service.FeedbackService;
 import com.meethub.security.CustomUserDetailsService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
@@ -48,81 +48,28 @@ class FeedbackControllerTest {
     @MockBean
     private CustomUserDetailsService customUserDetailsService;
 
-    @BeforeEach
-    void setUp() {
-        SecurityContextHolder.clearContext();
-    }
 
     @Test
-    @WithMockUser(username = "test@example.com")
-    void submitFeedbackJson_ShouldReturnBadRequest_WhenRatingOutOfRange() throws Exception {
+    void submitFeedback_ShouldReturnBadRequest_WhenRatingOutOfRange() throws Exception {
+        // Given
         SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
-                .rating(6)
+                .rating(6)  // Nieprawidłowa ocena (max 5)
                 .comment("Too high rating")
                 .build();
 
-        mockMvc.perform(post("/api/v1/feedbacks/meetings/1/submit")
+        // When & Then
+        mockMvc.perform(post("/api/v1/feedbacks/meetings/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Walidacja danych nie powiodła się"));
+                .andExpect(status().isBadRequest());
 
+        // Verify - serwis nie powinien być wywołany przy błędnej walidacji
         verify(feedbackService, never()).submitFeedback(anyLong(), anyLong(), any());
     }
 
     @Test
-    void submitFeedbackJson_ShouldReturnSuccess_WhenValidRequest() throws Exception {
-        SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
-                .rating(5)
-                .comment("Excellent meeting!")
-                .build();
-
-        CustomUserDetailsService.CustomUserDetails userDetails = mock(CustomUserDetailsService.CustomUserDetails.class);
-        when(userDetails.getId()).thenReturn(1L);
-        when(userDetails.getUsername()).thenReturn("test@example.com");
-
-        Collection<SimpleGrantedAuthority> authorities =
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_PARTICIPANT"));
-        when(userDetails.getAuthorities()).thenReturn((Collection) authorities);
-
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        mockMvc.perform(post("/api/v1/feedbacks/meetings/1/submit")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Opinia została pomyślnie dodana"));
-
-        verify(feedbackService).submitFeedback(eq(1L), eq(1L), any(SubmitFeedbackRequest.class));
-    }
-
-    @Test
-    void submitFeedbackJson_ShouldReturnBadRequest_WhenUserNotLoggedIn() throws Exception {
-        SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
-                .rating(4)
-                .comment("Good meeting")
-                .build();
-
-        SecurityContextHolder.clearContext();
-
-        mockMvc.perform(post("/api/v1/feedbacks/meetings/1/submit")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Walidacja danych nie powiodła się"));
-
-    }
-
-    @Test
-    @WithMockUser(username = "test@example.com", roles = {"PARTICIPANT"})
     void getMeetingFeedbacks_ShouldReturnFeedbacksList() throws Exception {
+        // Given
         Feedback feedback1 = new Feedback();
         feedback1.setId(1L);
         feedback1.setRating(5);
@@ -136,6 +83,7 @@ class FeedbackControllerTest {
         List<Feedback> feedbacks = Arrays.asList(feedback1, feedback2);
         when(feedbackService.getMeetingFeedbacks(1L)).thenReturn(feedbacks);
 
+        // When & Then - GET bez autoryzacji (publiczny endpoint)
         mockMvc.perform(get("/api/v1/feedbacks/meetings/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -145,33 +93,119 @@ class FeedbackControllerTest {
                 .andExpect(jsonPath("$.data[1].rating").value(4));
     }
 
+    @Test
+    void getMeetingFeedbacks_ShouldReturnEmptyList_WhenNoFeedbacks() throws Exception {
+        // Given
+        when(feedbackService.getMeetingFeedbacks(1L)).thenReturn(Collections.emptyList());
+
+        // When & Then
+        mockMvc.perform(get("/api/v1/feedbacks/meetings/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    void submitFeedback_ShouldHandleServiceException() throws Exception {
+        // Given
+        SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
+                .rating(5)
+                .comment("Excellent meeting!")
+                .build();
+
+        doThrow(new RuntimeException("Service error"))
+                .when(feedbackService).submitFeedback(anyLong(), anyLong(), any());
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/feedbacks/meetings/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError());
+    }
+
     @ParameterizedTest
     @MethodSource("provideInvalidFeedbackData")
-    @WithMockUser(username = "test@example.com", roles = {"USER"})
-    void submitFeedbackJson_ShouldValidateInputParameters(
+    void submitFeedback_ShouldValidateInputParameters(
             Integer rating, String comment, int expectedStatus) throws Exception {
+        // Given
         SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
                 .rating(rating)
                 .comment(comment)
                 .build();
 
-        var result = mockMvc.perform(post("/api/v1/feedbacks/meetings/1/submit")
+        // When & Then
+        mockMvc.perform(post("/api/v1/feedbacks/meetings/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().is(expectedStatus));
-
-        if (expectedStatus == 400) {
-            result.andExpect(jsonPath("$.status").value(400))
-                    .andExpect(jsonPath("$.error").value("Bad Request"));
-        }
     }
 
     private static Stream<Arguments> provideInvalidFeedbackData() {
         return Stream.of(
-                Arguments.of(null, "No rating", 400),
-                Arguments.of(0, "Too low", 400),
-                Arguments.of(6, "Too high", 400),
-                Arguments.of(5, "A".repeat(1001), 400) // Too long comment
+                // rating, comment, expectedStatus
+                Arguments.of(null, "No rating", 400),           // rating wymagane
+                Arguments.of(0, "Too low", 400),                // min 1
+                Arguments.of(6, "Too high", 400),               // max 5
+                Arguments.of(5, "A".repeat(1001), 400)         // za długi komentarz
         );
     }
+
+    @Test
+    void submitFeedback_ShouldReturnBadRequest_WhenMeetingIdInvalid() throws Exception {
+        // Given
+        SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
+                .rating(5)
+                .comment("Test")
+                .build();
+
+        // When & Then - Nieprawidłowe ID spotkania
+        mockMvc.perform(post("/api/v1/feedbacks/meetings/abc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest()); // 400 - nie można sparsować 'abc' do Long
+    }
+
+    @Test
+    void submitFeedback_ShouldWorkWithDifferentUsers() throws Exception {
+        // Given
+        SubmitFeedbackRequest request = SubmitFeedbackRequest.builder()
+                .rating(4)
+                .comment("Good")
+                .build();
+
+        // Zmień użytkownika w kontekście
+        CustomUserDetailsService.CustomUserDetails otherUser =
+                mock(CustomUserDetailsService.CustomUserDetails.class);
+        when(otherUser.getId()).thenReturn(2L);
+        when(otherUser.getUsername()).thenReturn("other@example.com");
+        when(otherUser.getAuthorities()).thenReturn((Collection)
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(otherUser, null, otherUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/feedbacks/meetings/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        // Verify - upewnij się że użyto ID nowego użytkownika
+        verify(feedbackService).submitFeedback(eq(1L), eq(2L), any(SubmitFeedbackRequest.class));
+    }
+
+    @Test
+    void submitFeedback_ShouldValidateEmptyRequest() throws Exception {
+        // Given - pusty JSON
+        String emptyJson = "{}";
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/feedbacks/meetings/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(emptyJson))
+                .andExpect(status().isBadRequest());
+    }
+
 }

@@ -448,7 +448,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         return participantCount > 0;
     }
 
-    private boolean isMeetingAlreadyScheduled(Long meetingId) {
+    boolean isMeetingAlreadyScheduled(Long meetingId) {
         return scheduledTasks.containsKey(meetingId) &&
                 !scheduledTasks.get(meetingId).isEmpty();
     }
@@ -457,7 +457,7 @@ public class MeetingSchedulerServiceImpl implements MeetingSchedulerService {
         scheduledTasks.putIfAbsent(meetingId, ConcurrentHashMap.newKeySet());
     }
 
-    private int countScheduledReminders(Long meetingId) {
+    int countScheduledReminders(Long meetingId) {
         if (!scheduledTasks.containsKey(meetingId)) {
             return 0;
         }

@@ -1,5 +1,3 @@
-
-// EmailTemplateResponse.java
 package com.meethub.domain.model.response;
 
 import lombok.Data;

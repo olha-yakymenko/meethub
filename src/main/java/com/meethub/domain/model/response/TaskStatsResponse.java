@@ -1,4 +1,3 @@
-// TaskStatsResponse.java
 package com.meethub.domain.model.response;
 
 import lombok.AllArgsConstructor;

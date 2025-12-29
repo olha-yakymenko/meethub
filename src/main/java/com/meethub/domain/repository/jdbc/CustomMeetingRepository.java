@@ -48,13 +48,11 @@ public class CustomMeetingRepository {
         public String getSql() { return sql; }
     }
 
-    // ✅ GŁÓWNA METODA WYSZUKIWANIA Z FILTRAMI
     public Page<Meeting> findFilteredMeetings(String search, String type, String status, Pageable pageable) {
         log.info("🔍 JDBC Filtering - search: '{}', type: '{}', status: '{}', page: {}, size: {}",
                 search, type, status, pageable.getPageNumber(), pageable.getPageSize());
 
         try {
-            // ✅ BUDUJ PODSTAWOWE ZAPYTANIE
             StringBuilder sqlBuilder = new StringBuilder("""
                 SELECT m.*,
                        u.id as organizer_id, u.first_name, u.last_name, u.email, u.phone_number,
@@ -66,20 +64,18 @@ public class CustomMeetingRepository {
 
             List<Object> params = new ArrayList<>();
 
-            // ✅ DODAJ FILTRY
             addSearchFilter(sqlBuilder, params, search);
             addTypeFilter(sqlBuilder, params, type);
             addStatusFilter(sqlBuilder, params, status);
 
-            // ✅ POBRZ LICZBĘ REKORDÓW (COUNT) - PRZED DODANIEM PAGINACJI
             String countSql = buildCountSql(sqlBuilder.toString());
-            log.debug("📊 Count SQL: {}", countSql);
+            log.debug(" Count SQL: {}", countSql);
 
             Long total = 0L;
             try {
                 total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
             } catch (Exception e) {
-                log.error("❌ Error executing count query: {}", e.getMessage());
+                log.error(" Error executing count query: {}", e.getMessage());
                 total = 0L;
             }
 
@@ -88,7 +84,6 @@ public class CustomMeetingRepository {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
 
-            // ✅ DODAJ SORTOWANIE I PAGINACJĘ
             sqlBuilder.append(" ORDER BY m.start_date DESC");
             sqlBuilder.append(" LIMIT ? OFFSET ?");
 
@@ -99,37 +94,34 @@ public class CustomMeetingRepository {
             log.debug("📋 Final SQL: {}", finalSql);
             log.debug("📋 SQL params: {}", params);
 
-            // ✅ WYKONAJ ZAPYTANIE
             List<Meeting> meetings = jdbcTemplate.query(
                     finalSql,
                     new MeetingWithOrganizerRowMapper(),
                     params.toArray()
             );
 
-            log.info("✅ Found {} filtered meetings (total: {})", meetings.size(), total);
+            log.info(" Found {} filtered meetings (total: {})", meetings.size(), total);
             return new PageImpl<>(meetings, pageable, total);
 
         } catch (EmptyResultDataAccessException e) {
-            log.info("📭 No meetings found for filters - returning empty page");
+            log.info("No meetings found for filters - returning empty page");
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
 
         } catch (org.springframework.dao.DataAccessException e) {
-            log.error("❌ Database error in findFilteredMeetings: {}", e.getMessage(), e);
+            log.error(" Database error in findFilteredMeetings: {}", e.getMessage(), e);
             throw new BusinessException("Nie można pobrać spotkań. Proszę spróbować później.");
 
         } catch (Exception e) {
-            log.error("💥 Unexpected error in findFilteredMeetings: {}", e.getMessage(), e);
+            log.error(" Unexpected error in findFilteredMeetings: {}", e.getMessage(), e);
             throw new RepositoryException("findFilteredMeetings", "filtered query", e);
         }
     }
 
-    // ✅ METODA WYSZUKIWANIA SPOTKAŃ W POBLIŻU
     public List<Meeting> findNearbyMeetings(double latitude, double longitude, double radius, int limit) {
-        log.info("📍 Finding nearby meetings - lat: {}, lng: {}, radius: {}, limit: {}",
+        log.info(" Finding nearby meetings - lat: {}, lng: {}, radius: {}, limit: {}",
                 latitude, longitude, radius, limit);
 
         try {
-            // ✅ UPROSZCZONE DLA TESTÓW (bez geolokalizacji)
             String sql = """
                 SELECT m.*,
                        u.id as organizer_id, u.first_name, u.last_name, u.email, u.phone_number,
@@ -149,26 +141,25 @@ public class CustomMeetingRepository {
                     limit
             );
 
-            log.info("✅ Found {} nearby meetings", meetings.size());
+            log.info("Found {} nearby meetings", meetings.size());
             return meetings;
 
         } catch (EmptyResultDataAccessException e) {
-            log.info("📭 No nearby meetings found");
+            log.info(" No nearby meetings found");
             return Collections.emptyList();
 
         } catch (org.springframework.dao.DataAccessException e) {
-            log.error("❌ Database error finding nearby meetings: {}", e.getMessage(), e);
+            log.error(" Database error finding nearby meetings: {}", e.getMessage(), e);
             throw new BusinessException("Nie można pobrać spotkań w pobliżu. Proszę spróbować później.");
 
         } catch (Exception e) {
-            log.error("💥 Unexpected error finding nearby meetings: {}", e.getMessage(), e);
+            log.error(" Unexpected error finding nearby meetings: {}", e.getMessage(), e);
             throw new RepositoryException("findNearbyMeetings", "nearby query", e);
         }
     }
 
-    // ✅ METODA POBRANIA STATYSTYK
     public List<StatisticsResponse> getMeetingStatistics(Long organizerId) {
-        log.info("📊 Getting statistics for organizer: {}", organizerId);
+        log.info(" Getting statistics for organizer: {}", organizerId);
 
         try {
             String sql = """
@@ -191,34 +182,32 @@ public class CustomMeetingRepository {
                     organizerId
             );
 
-            log.info("✅ Found {} statistics records", statistics.size());
+            log.info(" Found {} statistics records", statistics.size());
             return statistics;
 
         } catch (EmptyResultDataAccessException e) {
-            log.info("📭 No statistics found for organizer: {}", organizerId);
+            log.info(" No statistics found for organizer: {}", organizerId);
             return Collections.emptyList();
 
         } catch (org.springframework.dao.DataAccessException e) {
-            log.error("❌ Database error getting statistics: {}", e.getMessage(), e);
+            log.error(" Database error getting statistics: {}", e.getMessage(), e);
             throw new BusinessException("Nie można pobrać statystyk. Proszę spróbować później.");
 
         } catch (Exception e) {
-            log.error("💥 Unexpected error getting statistics: {}", e.getMessage(), e);
+            log.error(" Unexpected error getting statistics: {}", e.getMessage(), e);
             throw new RepositoryException("getMeetingStatistics", "statistics query", e);
         }
     }
 
-    // ✅ MASOWA AKTUALIZACJA STATUSU
     public int bulkUpdateMeetingStatus(List<Long> meetingIds, String newStatus) {
-        log.info("🔄 Bulk updating {} meetings to status: {}", meetingIds.size(), newStatus);
+        log.info(" Bulk updating {} meetings to status: {}", meetingIds.size(), newStatus);
 
         if (meetingIds == null || meetingIds.isEmpty()) {
-            log.warn("⚠️ Empty meeting IDs list for bulk update");
+            log.warn(" Empty meeting IDs list for bulk update");
             return 0;
         }
 
         try {
-            // ✅ BEZPIECZNE ZAPYTANIE DLA LISTY ID (PostgreSQL syntax)
             String sql = "UPDATE meetings SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (" +
                     String.join(",", Collections.nCopies(meetingIds.size(), "?")) + ")";
 
@@ -227,11 +216,11 @@ public class CustomMeetingRepository {
             params.addAll(meetingIds);
 
             int updated = jdbcTemplate.update(sql, params.toArray());
-            log.info("✅ Updated {} meetings", updated);
+            log.info(" Updated {} meetings", updated);
             return updated;
 
         } catch (org.springframework.dao.DataAccessException e) {
-            log.error("❌ Database error in bulkUpdateMeetingStatus: {}", e.getMessage(), e);
+            log.error(" Database error in bulkUpdateMeetingStatus: {}", e.getMessage(), e);
             throw new BusinessException("Nie można zaktualizować statusu spotkań. Proszę spróbować później.");
 
         } catch (Exception e) {
@@ -240,89 +229,8 @@ public class CustomMeetingRepository {
         }
     }
 
-    // ✅ USUWANIE STARYCH ANULOWANYCH SPOTKAŃ
-    public int deleteOldCancelledMeetings(LocalDateTime cutoffDate) {
-        log.info("🗑️ Deleting cancelled meetings older than: {}", cutoffDate);
-
-        try {
-            String sql = """
-                DELETE FROM meetings 
-                WHERE status = 'CANCELLED' 
-                AND updated_at < ?
-                AND id NOT IN (
-                    SELECT DISTINCT original_meeting_id 
-                    FROM meetings 
-                    WHERE original_meeting_id IS NOT NULL
-                )
-                """;
-
-            int deleted = jdbcTemplate.update(sql, Timestamp.valueOf(cutoffDate));
-            log.info("✅ Deleted {} old cancelled meetings", deleted);
-            return deleted;
-
-        } catch (org.springframework.dao.DataAccessException e) {
-            log.error("❌ Database error deleting old meetings: {}", e.getMessage(), e);
-            throw new BusinessException("Nie można usunąć starych spotkań. Proszę spróbować później.");
-
-        } catch (Exception e) {
-            log.error("💥 Unexpected error deleting old meetings: {}", e.getMessage(), e);
-            throw new RepositoryException("deleteOldCancelledMeetings", "DELETE FROM meetings", e);
-        }
-    }
-
-    // ✅ MASOWE TWORZENIE Z SZABLONU
-    public int bulkInsertFromTemplate(Long templateId, List<LocalDateTime> dates) {
-        log.info("📄 Creating meetings from template {} for {} dates", templateId, dates.size());
-
-        if (dates == null || dates.isEmpty()) {
-            log.warn("⚠️ No dates provided for template creation");
-            return 0;
-        }
-
-        try {
-            // ✅ Dopasowane do schematu: is_recurring zamiast recurring, is_template
-            String sql = """
-                INSERT INTO meetings (
-                    title, description, agenda, type, visibility, 
-                    organizer_id, start_date, end_date, max_participants,
-                    status, created_at, updated_at, original_meeting_id, is_template, is_recurring
-                )
-                SELECT 
-                    title, description, agenda, type, visibility,
-                    organizer_id, ?, 
-                    ? + (end_date - start_date),
-                    max_participants, 'PLANNED', CURRENT_TIMESTAMP, 
-                    CURRENT_TIMESTAMP, id, false, false
-                FROM meetings 
-                WHERE id = ? AND is_template = true
-                """;
-
-            int totalInserted = 0;
-            for (LocalDateTime date : dates) {
-                int inserted = jdbcTemplate.update(sql,
-                        Timestamp.valueOf(date),
-                        Timestamp.valueOf(date),
-                        templateId
-                );
-                totalInserted += inserted;
-            }
-
-            log.info("✅ Created {} meetings from template", totalInserted);
-            return totalInserted;
-
-        } catch (org.springframework.dao.DataAccessException e) {
-            log.error("❌ Database error creating from template: {}", e.getMessage(), e);
-            throw new BusinessException("Nie można utworzyć spotkań z szablonu. Proszę spróbować później.");
-
-        } catch (Exception e) {
-            log.error("💥 Unexpected error creating from template: {}", e.getMessage(), e);
-            throw new RepositoryException("bulkInsertFromTemplate", "INSERT FROM template", e);
-        }
-    }
-
-    // ✅ METODA POMOCNICZA DO POBRANIA LICZBY UCZESTNIKÓW (bez aktualizacji tabeli meetings)
     public int getMeetingParticipantsCount(Long meetingId) {
-        log.info("👥 Getting participants count for meeting: {}", meetingId);
+        log.info(" Getting participants count for meeting: {}", meetingId);
 
         try {
             String sql = """
@@ -343,7 +251,6 @@ public class CustomMeetingRepository {
         }
     }
 
-    // ✅ METODY POMOCNICZE
 
     private void addSearchFilter(StringBuilder sqlBuilder, List<Object> params, String search) {
         if (StringUtils.hasText(search)) {
@@ -374,14 +281,11 @@ public class CustomMeetingRepository {
             throw new IllegalArgumentException("SQL nie może być pusty");
         }
 
-        // Usuń ORDER BY
         sql = sql.replaceAll("(?i)ORDER BY[\\s\\S]*$", "");
 
-        // Usuń LIMIT i OFFSET
         sql = sql.replaceAll("(?i)LIMIT\\s+\\?", "");
         sql = sql.replaceAll("(?i)OFFSET\\s+\\?", "");
 
-        // Znajdź FROM (bez wrażliwości na białe znaki i nowe linie)
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(?i)FROM\\s+");
         java.util.regex.Matcher matcher = pattern.matcher(sql);
         if (!matcher.find()) {
@@ -389,20 +293,16 @@ public class CustomMeetingRepository {
         }
         String fromClause = sql.substring(matcher.start());
 
-        // Liczymy tylko m.id
         return "SELECT COUNT(m.id) " + fromClause;
     }
 
 
 
-
-    // ✅ ROWMAPPER DLA SPOTKAŃ Z ORGANIZATOREM
     private static class MeetingWithOrganizerRowMapper implements RowMapper<Meeting> {
         @Override
         public Meeting mapRow(ResultSet rs, int rowNum) throws SQLException {
             Meeting meeting = new Meeting();
 
-            // ✅ PODSTAWOWE POLA SPOTKANIA
             meeting.setId(rs.getLong("id"));
             meeting.setTitle(rs.getString("title"));
             meeting.setDescription(rs.getString("description"));
@@ -416,7 +316,6 @@ public class CustomMeetingRepository {
             meeting.setOriginalMeetingId(rs.getObject("original_meeting_id") != null ?
                     rs.getLong("original_meeting_id") : null);
 
-            // ✅ MAPUJ ORGANIZATORA
             User organizer = new User();
             organizer.setId(rs.getLong("organizer_id"));
             organizer.setFirstName(rs.getString("first_name"));
@@ -433,10 +332,8 @@ public class CustomMeetingRepository {
 
             meeting.setOrganizer(organizer);
 
-            // ✅ MAPOWANIE ENUMÓW
             mapEnums(rs, meeting);
 
-            // ✅ DATY
             if (rs.getTimestamp("start_date") != null) {
                 meeting.setStartDate(rs.getTimestamp("start_date").toLocalDateTime());
             }
@@ -454,7 +351,6 @@ public class CustomMeetingRepository {
         }
 
         private void mapEnums(ResultSet rs, Meeting meeting) throws SQLException {
-            // ✅ TYP SPOTKANIA
             String type = rs.getString("type");
             if (type != null) {
                 try {
@@ -465,7 +361,6 @@ public class CustomMeetingRepository {
                 }
             }
 
-            // ✅ STATUS SPOTKANIA
             String status = rs.getString("status");
             if (status != null) {
                 try {
@@ -476,7 +371,6 @@ public class CustomMeetingRepository {
                 }
             }
 
-            // ✅ WIDOCZNOŚĆ
             String visibility = rs.getString("visibility");
             if (visibility != null) {
                 try {

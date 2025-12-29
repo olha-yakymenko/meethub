@@ -575,7 +575,6 @@ public class MeetingTaskController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
-        log.info("=== ORGANIZER VIEW START ===");
 
         MeetingTaskDetailsResponse response = taskService.getTaskDetailsForUser(
                 meetingId, taskId, userDetails.getId());
@@ -602,7 +601,6 @@ public class MeetingTaskController {
                     .filter(file -> file.getUploadedBy() != null)
                     .collect(Collectors.groupingBy(TaskFile::getUploadedBy));
         }
-        log.info("Files by user map size: {}", filesByUser.size());
 
         long totalFiles = allFiles.size();
         long totalSize = allFiles.stream()
@@ -618,7 +616,6 @@ public class MeetingTaskController {
         model.addAttribute("totalFiles", totalFiles);
         model.addAttribute("totalSizeMB", totalSizeMB);
 
-        log.info("=== ORGANIZER VIEW END ===");
         return "meetings/tasks/organizer-view";
     }
 }

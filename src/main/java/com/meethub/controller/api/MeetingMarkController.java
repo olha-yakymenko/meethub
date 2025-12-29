@@ -108,39 +108,6 @@ public class MeetingMarkController {
         return "redirect:/meetings/" + meetingId;
     }
 
-    @GetMapping("/{meetingId}/important/check")
-    @PreAuthorize("isAuthenticated()")
-    public String isMeetingImportant(
-            @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails userDetails,
-            @PathVariable Long meetingId,
-            Model model) {
-
-        Long currentUserId = userDetails.getId();
-        log.debug("Checking if meeting {} is important for user {}", meetingId, currentUserId);
-
-        boolean isImportant = meetingMarkService.isMeetingImportantForUser(currentUserId, meetingId);
-        model.addAttribute("isImportant", isImportant);
-
-        // Możesz tu zwrócić fragment widoku zamiast pełnego przekierowania
-        return "fragments :: important-status"; // przykładowy fragment
-    }
-
-    @GetMapping("/important")
-    @PreAuthorize("isAuthenticated()")
-    public String getImportantMeetings(
-            @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails userDetails,
-            Model model) {
-
-        Long currentUserId = userDetails.getId();
-        log.debug("Fetching important meetings for user {}", currentUserId);
-
-        List<Long> importantMeetingIds = meetingMarkService.getImportantMeetingIdsForUser(currentUserId);
-
-        model.addAttribute("importantMeetingIds", importantMeetingIds);
-        model.addAttribute("count", importantMeetingIds.size());
-
-        return "meetings/important";
-    }
 }
 
 

@@ -437,11 +437,11 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    private Notification createInAppNotificationForUser(User user, String templateKey,
-                                                        Map<String, String> variables,
-                                                        NotificationType type,
-                                                        String title,
-                                                        String message) {
+    Notification createInAppNotificationForUser(User user, String templateKey,
+                                                Map<String, String> variables,
+                                                NotificationType type,
+                                                String title,
+                                                String message) {
         Notification inAppNotification = Notification.builder()
                 .user(user)
                 .title(title)
@@ -457,11 +457,11 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.save(inAppNotification);
     }
 
-    private void sendEmailForNotification(Notification notification,
-                                          User user,
-                                          String subject,
-                                          String htmlContent,
-                                          Map<String, String> templateVariables) {
+    void sendEmailForNotification(Notification notification,
+                                  User user,
+                                  String subject,
+                                  String htmlContent,
+                                  Map<String, String> templateVariables) {
         try {
             // ========== 1. PRZYGOTUJ ZMIENNE ==========
             Map<String, String> emailVariables = new HashMap<>();
@@ -535,7 +535,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    private String generateTokenIfMeetingExists(User user, Map<String, String> variables) {
+    String generateTokenIfMeetingExists(User user, Map<String, String> variables) {
         if (variables == null || user == null) return null;
 
         Long meetingId = extractMeetingIdFromVariables(variables);
@@ -578,7 +578,7 @@ public class NotificationServiceImpl implements NotificationService {
     /**
      * Wyciąga meetingId z zmiennych
      */
-    private Long extractMeetingIdFromVariables(Map<String, String> variables) {
+    Long extractMeetingIdFromVariables(Map<String, String> variables) {
         if (variables == null) return null;
 
         try {
@@ -596,7 +596,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    private String formatTokenForDisplay(String token) {
+    String formatTokenForDisplay(String token) {
         if (token == null || token.length() < 12) return token;
         return token.substring(0, 4) + "-" +
                 token.substring(4, 8) + "-" +
@@ -604,7 +604,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    private String buildConfirmationLink(Long meetingId, String token) {
+    String buildConfirmationLink(Long meetingId, String token) {
         String baseUrl = "http://localhost:8080";
         return baseUrl + "/meetings/" + meetingId + "/attend?token=" + token;
     }
@@ -657,7 +657,7 @@ public class NotificationServiceImpl implements NotificationService {
                 );
     }
 
-    private String personalizeTemplate(String template, Map<String, String> variables) {
+    String personalizeTemplate(String template, Map<String, String> variables) {
         String result = template;
         for (Map.Entry<String, String> entry : variables.entrySet()) {
             result = result.replace("{{" + entry.getKey() + "}}", entry.getValue());
@@ -665,7 +665,7 @@ public class NotificationServiceImpl implements NotificationService {
         return result;
     }
 
-    private void sendEmailNotification(Notification notification) {
+    void sendEmailNotification(Notification notification) {
         try {
             Map<String, Object> variables = new HashMap<>();
             if (notification.getTemplateVariables() != null) {
@@ -694,7 +694,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    private void sendInAppNotification(Notification notification) {
+    void sendInAppNotification(Notification notification) {
         notification.setDeliveredAt(LocalDateTime.now());
         notification.setStatus(NotificationStatus.DELIVERED);
     }

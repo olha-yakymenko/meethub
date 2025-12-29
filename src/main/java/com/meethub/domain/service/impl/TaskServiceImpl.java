@@ -1296,7 +1296,7 @@ public class TaskServiceImpl implements TaskService {
         validateAssignmentAccess(assignment, userId, true);
     }
 
-    private boolean validateAssignmentAccess(TaskAssignment assignment, Long userId, boolean throwException) {
+    boolean validateAssignmentAccess(TaskAssignment assignment, Long userId, boolean throwException) {
         boolean isOwner = assignment.getUser().getId().equals(userId);
 
         // Sprawdź czy użytkownik jest organizatorem
@@ -1328,7 +1328,7 @@ public class TaskServiceImpl implements TaskService {
         validateAssignmentAccess(assignment, userId);
     }
 
-    private String getFileExtension(String filename) {
+    String getFileExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return "";
         }

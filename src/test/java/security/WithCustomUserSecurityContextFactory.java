@@ -124,38 +124,27 @@ public class WithCustomUserSecurityContextFactory
 
     @Override
     public SecurityContext createSecurityContext(WithCustomUser annotation) {
-        // Stwórz pełny obiekt User
+
+        String primaryRole = annotation.roles().length > 0 ? annotation.roles()[0] : "PARTICIPANT";
         User user = User.builder()
                 .id(annotation.id())
                 .email(annotation.email())
-//                .firstName(annotation.firstName())
-//                .lastName(annotation.lastName())
-//                .password(annotation.password())
                 .enabled(true)
-                .role(UserRole.valueOf(annotation.roles()[0])) // Pierwsza rola jako główna
+                .role(UserRole.valueOf(primaryRole))
                 .build();
 
-        // Stwórz CustomUserDetails
         CustomUserDetailsService.CustomUserDetails customUserDetails =
                 new CustomUserDetailsService.CustomUserDetails(user);
 
-        // Utwórz authorities
         List<GrantedAuthority> authorities = Arrays.stream(annotation.roles())
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(Collectors.toList());
 
-        // KLUCZOWE: Zwracamy Authentication z DWIEMA możliwościami:
-        // 1. Principal = customUserDetails (dla kontrolerów używających CustomUserDetails)
-        // 2. Dodatkowo ustawiamy userId jako name w authentication
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                customUserDetails, // principal - dla kontrolerów z @AuthenticationPrincipal CustomUserDetails
-                "password",        // credentials
+                customUserDetails,
+                "password",
                 authorities
         );
-
-//        // DODATKOWO: Ustaw userId jako dodatkową właściwość, żeby można było go wyciągnąć
-//        authentication.setDetails(annotation.id()); // userId w details
-
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         return context;

@@ -44,8 +44,7 @@ package com.meethub.domain.model.entity;
 
 import com.meethub.domain.model.enums.PrivacyLevel;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -54,6 +53,9 @@ import java.time.LocalDateTime;
 @Table(name = "user_preferences")
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserPreference {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -76,6 +78,7 @@ public class UserPreference {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
 
     // Metoda pomocnicza
     public boolean isEnabled() {

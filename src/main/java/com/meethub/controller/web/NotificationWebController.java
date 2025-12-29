@@ -46,7 +46,7 @@ public class NotificationWebController {
         model.addAttribute("totalCount", messages.size());
 
         log.info("Wyświetlono {} powiadomień IN_APP dla użytkownika {}", messages.size(), userId);
-        return "notifications.html/in-app";
+        return "notifications/in-app";
     }
 
     @GetMapping("/in-app/recent")
@@ -74,6 +74,6 @@ public class NotificationWebController {
         model.addAttribute("totalCount", messages.size());
 
         log.info("Wyświetlono {} ostatnich powiadomień dla użytkownika {}", messages.size(), userId);
-        return "notifications.html/recent";
+        return "notifications/recent";
     }
 }

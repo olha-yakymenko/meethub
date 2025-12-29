@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 @Builder
 public class StatusChangeResponse {
 
-
         private String oldStatus;
         private String newStatus;
         private LocalDateTime changedAt;

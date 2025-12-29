@@ -88,9 +88,6 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
                                        @Param("lng") BigDecimal longitude,
                                        @Param("radius") Double radiusKm);
 
-    // ============ PROJECTIONS (dla wybierania określonych pól) ============
-
-    // Podstawowe informacje dla listy
     @Query("""
         SELECT l.id as id, l.name as name, l.city as city, 
                l.address as address, l.type as type 
@@ -99,7 +96,6 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
         """)
     List<LocationBasicInfo> findAllBasicInfo();
 
-    // Minimalne informacje dla selecta w formularzu
     @Query("""
         SELECT l.id as id, l.name as name, l.city as city, l.type as type 
         FROM Location l 

@@ -31,8 +31,6 @@ public class AnalyticsController {
 
     private final MeetingAnalyticsService analyticsService;
 
-    // ========== STATYSTYKI SPOTKANIA ==========
-
     @PostMapping("/meetings/statistics")
     @Operation(summary = "Generuje statystyki spotkania",
             description = "Generuje i zapisuje statystyki dla spotkania.")
@@ -124,7 +122,7 @@ public class AnalyticsController {
     }
 
 
-    private MeetingStatisticsResponse convertToResponse(MeetingStatistics stats) {
+    MeetingStatisticsResponse convertToResponse(MeetingStatistics stats) {
         if (stats == null) return null;
 
         return MeetingStatisticsResponse.builder()

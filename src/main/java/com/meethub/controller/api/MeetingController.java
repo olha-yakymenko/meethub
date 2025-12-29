@@ -98,15 +98,14 @@ public class MeetingController {
     }
 
     @GetMapping("/my-meetings")
-    @Operation(summary = "Pobiera spotkania użytkownika",
-            description = "Zwraca paginowaną listę spotkań zalogowanego użytkownika.")
+    @Operation(summary = "Pobiera spotkania użytkownika")
     public ResponseEntity<ApiResponse<Page<MeetingResponse>>> getUserMeetings(
             @AuthenticationPrincipal @NotNull(message = "Użytkownik musi być zalogowany")
             @Min(value = 1, message = "Identyfikator użytkownika musi być liczbą dodatnią")
             Long userId,
+            @Valid PageableRequest pageableRequest) {
 
-            @Valid Pageable pageable) {
-
+        Pageable pageable = pageableRequest.toPageable();
         Page<MeetingResponse> meetings = meetingService.getUserMeetings(userId, pageable);
         return ResponseEntity.ok(ApiResponse.success("Spotkania użytkownika pobrane pomyślnie", meetings));
     }
@@ -196,16 +195,18 @@ public class MeetingController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Wyszukuje spotkania",
-            description = "Wyszukuje spotkania według różnych kryteriów.")
+    @Operation(summary = "Wyszukuje spotkania")
     public ResponseEntity<ApiResponse<Page<MeetingResponse>>> searchMeetings(
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
+            @Valid SearchMeetingsRequest request,
+            @Valid PageableRequest pageableRequest) {
 
-            @Valid Pageable pageable) {
-
-        Page<MeetingResponse> meetings = meetingService.getFilteredMeetings(query, type, status, pageable);
+        Pageable pageable = pageableRequest.toPageable();
+        Page<MeetingResponse> meetings = meetingService.getFilteredMeetings(
+                request.getQuery(),
+                request.getType(),
+                request.getStatus(),
+                pageable
+        );
         return ResponseEntity.ok(ApiResponse.success("Wyniki wyszukiwania pobrane pomyślnie", meetings));
     }
 }

@@ -25,8 +25,5 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     @Query("SELECT COUNT(f) FROM Feedback f WHERE f.meeting.id = :meetingId")
     Long countByMeetingId(@Param("meetingId") Long meetingId);
 
-//    @Query("SELECT new com.meethub.domain.model.dto.FeedbackStatisticsDto(AVG(f.rating), COUNT(f)) " +
-//            "FROM Feedback f WHERE f.meeting.id = :meetingId")
-//    FeedbackStatisticsDto findStatisticsByMeetingId(@Param("meetingId") Long meetingId);
 
 }

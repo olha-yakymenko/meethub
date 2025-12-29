@@ -1,6 +1,7 @@
 package com.meethub.controller.web;
 
 import com.meethub.domain.model.request.NotificationPreferencesRequest;
+import com.meethub.domain.model.request.NotificationsListRequest;
 import com.meethub.domain.model.request.UpdateProfileRequest;
 import com.meethub.domain.model.response.NotificationResponse;
 import com.meethub.domain.model.response.UserProfileResponse;
@@ -54,10 +55,16 @@ class UserProfileControllerTest {
 
     private final Long userId = 1L;
     private final String userEmail = "test@example.com";
+    private NotificationsListRequest notificationsListRequest;
 
     @BeforeEach
     void setUp() {
         lenient().when(principal.getName()).thenReturn(userEmail);
+
+        // Inicjalizacja DTO dla testów
+        notificationsListRequest = new NotificationsListRequest();
+        notificationsListRequest.setPage(0);
+        notificationsListRequest.setSize(20);
     }
 
     @Test
@@ -77,6 +84,10 @@ class UserProfileControllerTest {
         String viewName = controller.profile(principal, model);
 
         assertEquals("user/profile", viewName);
+
+        verify(model).addAttribute("user", profile);
+        verify(model).addAttribute("recentNotifications", notifications);
+        verify(model).addAttribute("unreadCount", 5L);
     }
 
     @Test
@@ -84,11 +95,13 @@ class UserProfileControllerTest {
         String viewName = controller.profile(null, model);
 
         assertEquals("redirect:/login", viewName);
+        verifyNoInteractions(userService, notificationService);
     }
 
     @Test
     void testNotifications_Success() {
         when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
+        when(bindingResult.hasErrors()).thenReturn(false);
 
         List<NotificationResponse> notifications = Collections.emptyList();
         Page<NotificationResponse> notificationsPage = new PageImpl<>(notifications, PageRequest.of(0, 20), 100);
@@ -97,16 +110,84 @@ class UserProfileControllerTest {
 
         when(notificationService.getUnreadCount(userId)).thenReturn(3L);
 
-        String viewName = controller.notifications(principal, 0, 20, model);
+        String viewName = controller.notifications(notificationsListRequest, bindingResult, principal, model);
 
         assertEquals("user/notifications", viewName);
+
+        verify(model).addAttribute("notifications", notificationsPage);
+        verify(model).addAttribute("currentPage", 0);
+        verify(model).addAttribute("totalPages", notificationsPage.getTotalPages());
+        verify(model).addAttribute("unreadCount", 3L);
     }
 
     @Test
     void testNotifications_PrincipalNull() {
-        String viewName = controller.notifications(null, 0, 20, model);
+        String viewName = controller.notifications(notificationsListRequest, bindingResult, null, model);
 
         assertEquals("redirect:/login", viewName);
+        verifyNoInteractions(userService, notificationService);
+    }
+
+    @Test
+    void testNotifications_ValidationErrors() {
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        String viewName = controller.notifications(notificationsListRequest, bindingResult, principal, model);
+
+        assertEquals("user/notifications", viewName);
+        verify(model).addAttribute("error", "Nieprawidłowe parametry paginacji");
+        verifyNoInteractions(userService, notificationService);
+    }
+
+    @Test
+    void testNotifications_WithDifferentPageAndSize() {
+        // Ustaw inne wartości w DTO
+        notificationsListRequest.setPage(2);
+        notificationsListRequest.setSize(10);
+
+        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        List<NotificationResponse> notifications = List.of(
+                new NotificationResponse(),
+                new NotificationResponse()
+        );
+        Page<NotificationResponse> notificationsPage = new PageImpl<>(notifications, PageRequest.of(2, 10), 50);
+        when(notificationService.getUserNotifications(eq(userId), any(Pageable.class)))
+                .thenReturn(notificationsPage);
+
+        when(notificationService.getUnreadCount(userId)).thenReturn(2L);
+
+        String viewName = controller.notifications(notificationsListRequest, bindingResult, principal, model);
+
+        assertEquals("user/notifications", viewName);
+
+        // Sprawdź czy użyto poprawne parametry paginacji
+        verify(notificationService).getUserNotifications(eq(userId), argThat(pageable ->
+                pageable.getPageNumber() == 2 && pageable.getPageSize() == 10
+        ));
+
+        verify(model).addAttribute("currentPage", 2);
+    }
+
+    @Test
+    void testNotifications_PageOutOfRange() {
+        notificationsListRequest.setPage(10); // Wysoka strona
+
+        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        Page<NotificationResponse> emptyPage = Page.empty();
+        when(notificationService.getUserNotifications(eq(userId), any(Pageable.class)))
+                .thenReturn(emptyPage);
+
+        when(notificationService.getUnreadCount(userId)).thenReturn(0L);
+
+        String viewName = controller.notifications(notificationsListRequest, bindingResult, principal, model);
+
+        assertEquals("user/notifications", viewName);
+        verify(model).addAttribute("notifications", emptyPage);
+        verify(model).addAttribute("currentPage", 10);
     }
 
     @Test
@@ -119,6 +200,10 @@ class UserProfileControllerTest {
         String viewName = controller.settings(principal, model);
 
         assertEquals("user/settings", viewName);
+
+        verify(model).addAttribute("user", profile);
+        verify(model).addAttribute(eq("preferencesRequest"), any(NotificationPreferencesRequest.class));
+        verify(model).addAttribute(eq("updateProfileRequest"), any(UpdateProfileRequest.class));
     }
 
     @Test
@@ -126,6 +211,7 @@ class UserProfileControllerTest {
         String viewName = controller.settings(null, model);
 
         assertEquals("redirect:/login", viewName);
+        verifyNoInteractions(userService, notificationService);
     }
 
     @Test
@@ -137,6 +223,7 @@ class UserProfileControllerTest {
         String redirect = controller.updateProfile(request, bindingResult, principal, redirectAttributes);
 
         assertEquals("redirect:/profile", redirect);
+        verify(redirectAttributes).addFlashAttribute("success", "Profil został zaktualizowany");
     }
 
     @Test
@@ -146,6 +233,7 @@ class UserProfileControllerTest {
         String redirect = controller.updateProfile(request, bindingResult, null, redirectAttributes);
 
         assertEquals("redirect:/login", redirect);
+        verifyNoInteractions(userService);
     }
 
     @Test
@@ -156,6 +244,8 @@ class UserProfileControllerTest {
         String redirect = controller.updateProfile(request, bindingResult, principal, redirectAttributes);
 
         assertEquals("redirect:/profile/settings", redirect);
+        verify(redirectAttributes).addFlashAttribute("error", "Proszę poprawić błędy w formularzu");
+        verifyNoInteractions(userService);
     }
 
 
@@ -168,6 +258,8 @@ class UserProfileControllerTest {
         String redirect = controller.updateNotificationPreferences(request, bindingResult, principal, model, redirectAttributes);
 
         assertEquals("redirect:/profile/settings", redirect);
+        verify(notificationService).updateNotificationPreferences(userId, request);
+        verify(redirectAttributes).addFlashAttribute("success", "Preferencje powiadomień zostały zaktualizowane");
     }
 
     @Test
@@ -177,6 +269,7 @@ class UserProfileControllerTest {
         String redirect = controller.updateNotificationPreferences(request, bindingResult, null, model, redirectAttributes);
 
         assertEquals("redirect:/login", redirect);
+        verifyNoInteractions(userService, notificationService);
     }
 
     @Test
@@ -191,9 +284,27 @@ class UserProfileControllerTest {
         String viewName = controller.updateNotificationPreferences(request, bindingResult, principal, model, redirectAttributes);
 
         assertEquals("user/settings", viewName);
+
+        verify(model).addAttribute("user", profile);
+        verify(model).addAttribute(eq("updateProfileRequest"), any(UpdateProfileRequest.class));
+        verify(model).addAttribute("error", "Proszę poprawić błędy w preferencjach powiadomień");
+        verifyNoInteractions(redirectAttributes);
     }
 
+    @Test
+    void testUpdateNotificationPreferences_ServiceException() {
+        NotificationPreferencesRequest request = new NotificationPreferencesRequest();
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
 
+        doThrow(new RuntimeException("Service error")).when(notificationService)
+                .updateNotificationPreferences(anyLong(), any());
+
+        String redirect = controller.updateNotificationPreferences(request, bindingResult, principal, model, redirectAttributes);
+
+        assertEquals("redirect:/profile/settings", redirect);
+        verify(redirectAttributes).addFlashAttribute("error", "Błąd podczas aktualizacji preferencji: Service error");
+    }
 
     @Test
     void testMarkAllNotificationsAsRead_Success() {
@@ -202,6 +313,8 @@ class UserProfileControllerTest {
         String redirect = controller.markAllNotificationsAsRead(principal, redirectAttributes);
 
         assertEquals("redirect:/profile/notifications", redirect);
+        verify(notificationService).markAllAsRead(userId);
+        verify(redirectAttributes).addFlashAttribute("success", "Wszystkie powiadomienia oznaczone jako przeczytane");
     }
 
     @Test
@@ -209,6 +322,7 @@ class UserProfileControllerTest {
         String redirect = controller.markAllNotificationsAsRead(null, redirectAttributes);
 
         assertEquals("redirect:/login", redirect);
+        verifyNoInteractions(userService, notificationService);
     }
 
     @Test
@@ -219,6 +333,8 @@ class UserProfileControllerTest {
         String redirect = controller.markNotificationAsRead(notificationId, principal, redirectAttributes);
 
         assertEquals("redirect:/profile/notifications", redirect);
+        verify(notificationService).markAsRead(notificationId, userId);
+        verify(redirectAttributes).addFlashAttribute("success", "Powiadomienie oznaczone jako przeczytane");
     }
 
     @Test
@@ -228,44 +344,34 @@ class UserProfileControllerTest {
         String redirect = controller.markNotificationAsRead(notificationId, null, redirectAttributes);
 
         assertEquals("redirect:/login", redirect);
+        verifyNoInteractions(userService, notificationService);
     }
 
 
-
     @Test
-    void testNotificationsWithCustomPagination() {
-        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
+    void testNotifications_EdgeCases() {
+        // Test dla minimalnych wartości
+        notificationsListRequest.setPage(0);
+        notificationsListRequest.setSize(1);
 
-        List<NotificationResponse> notifications = List.of(
-                new NotificationResponse(),
-                new NotificationResponse()
-        );
-        Page<NotificationResponse> notificationsPage = new PageImpl<>(notifications, PageRequest.of(2, 10), 50);
+        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        List<NotificationResponse> singleNotification = List.of(new NotificationResponse());
+        Page<NotificationResponse> notificationsPage = new PageImpl<>(singleNotification, PageRequest.of(0, 1), 1);
         when(notificationService.getUserNotifications(eq(userId), any(Pageable.class)))
                 .thenReturn(notificationsPage);
 
-        when(notificationService.getUnreadCount(userId)).thenReturn(2L);
+        when(notificationService.getUnreadCount(userId)).thenReturn(1L);
 
-        String viewName = controller.notifications(principal, 2, 10, model);
+        String viewName = controller.notifications(notificationsListRequest, bindingResult, principal, model);
 
         assertEquals("user/notifications", viewName);
-    }
 
-    @Test
-    void testUpdateNotificationPreferences_ValidationErrorsWithProfile() {
-        NotificationPreferencesRequest request = new NotificationPreferencesRequest();
-        when(bindingResult.hasErrors()).thenReturn(true);
-        when(userService.getUserIdByEmail(userEmail)).thenReturn(userId);
-
-        UserProfileResponse profile = new UserProfileResponse();
-        when(notificationService.getUserProfileWithPreferences(userId)).thenReturn(profile);
-
-        String viewName = controller.updateNotificationPreferences(request, bindingResult, principal, model, redirectAttributes);
-
-        assertAll(
-                () -> assertEquals("user/settings", viewName),
-                () -> verify(model).addAttribute(eq("user"), eq(profile))
-        );
+        // Test sprawdza czy działa z size=1
+        verify(notificationService).getUserNotifications(eq(userId), argThat(pageable ->
+                pageable.getPageSize() == 1
+        ));
     }
 
 }

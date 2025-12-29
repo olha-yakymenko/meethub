@@ -59,14 +59,11 @@ class ParticipationControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // 1. Sprawdź czy użytkownik z data.sql już istnieje
         Optional<User> existingUser = userRepository.findByEmail("test.user@example.com");
 
         if (existingUser.isPresent()) {
-            // Użyj istniejącego użytkownika z data.sql
             testUser = existingUser.get();
         } else {
-            // Jeśli nie istnieje (np. w testach bez data.sql), utwórz nowego z unikalnym emailem
             String uniqueEmail = "test.user." + UUID.randomUUID() + "@example.com";
             testUser = User.builder()
                     .firstName("Test")
@@ -77,7 +74,6 @@ class ParticipationControllerIntegrationTest {
             testUser = userRepository.save(testUser);
         }
 
-        // Debug: sprawdź ID użytkownika
         System.out.println("Test User ID: " + testUser.getId());
         System.out.println("Test User Email: " + testUser.getEmail());
 

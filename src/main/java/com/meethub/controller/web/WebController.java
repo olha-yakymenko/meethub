@@ -5,16 +5,9 @@ import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.enums.MeetingType;
 import com.meethub.domain.model.enums.MeetingVisibility;
 import com.meethub.domain.model.projection.LocationBasicInfo;
-import com.meethub.domain.model.request.CreateMeetingRequest;
-import com.meethub.domain.model.request.SearchCriteria;
-import com.meethub.domain.model.request.UpdateMeetingRequest;
-import com.meethub.domain.model.request.UserRegistrationRequest;
+import com.meethub.domain.model.request.*;
 import com.meethub.domain.model.response.*;
-import com.meethub.domain.repository.jpa.CategoryRepository;
-import com.meethub.domain.repository.jpa.LocationRepository;
-import com.meethub.domain.repository.jpa.MeetingRepository;
-import com.meethub.domain.repository.jpa.UserRepository;
-import com.meethub.domain.repository.specification.MeetingSpecification;
+
 import com.meethub.domain.service.*;
 import com.meethub.domain.service.impl.AttendanceTokenServiceImpl;
 import com.meethub.exception.BusinessException;
@@ -106,25 +99,27 @@ public class WebController {
     })
     public String meetings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
+            @Valid MeetingsListRequest request,  // <-- DTO zamiast @RequestParam
             Model model) {
 
         log.info("🔍 meetings() called - page: {}, size: {}, search: {}, type: {}, status: {}",
-                page, size, search, type, status);
+                request.getPage(), request.getSize(), request.getSearch(), request.getType(), request.getStatus());
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
+            Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
             Page<MeetingResponse> meetingsPage;
 
             if (userDetails != null) {
-                meetingsPage = meetingService.getFilteredMeetings(search, type, status, pageable);
-                Long userId = userDetails.getId();
+                meetingsPage = meetingService.getFilteredMeetings(
+                        request.getSearch(),
+                        request.getType(),
+                        request.getStatus(),
+                        pageable
+                );
 
+                Long userId = userDetails.getId();
                 List<MeetingResponse> enrichedMeetings = new ArrayList<>();
+
                 for (MeetingResponse meeting : meetingsPage.getContent()) {
                     enrichedMeetings.add(enrichMeetingWithUserInfo(meeting, userId));
                 }
@@ -188,12 +183,17 @@ public class WebController {
             }
 
             model.addAttribute("meetings", meetingsPage.getContent());
-            model.addAttribute("currentPage", page);
+            model.addAttribute("currentPage", request.getPage());
             model.addAttribute("totalPages", meetingsPage.getTotalPages());
             model.addAttribute("totalItems", meetingsPage.getTotalElements());
-            model.addAttribute("searchParam", search);
-            model.addAttribute("typeParam", type);
-            model.addAttribute("statusParam", status);
+
+            // Dodaj parametry dla widoku (dla kompatybilności)
+            model.addAttribute("searchParam", request.getSearch());
+            model.addAttribute("typeParam", request.getType());
+            model.addAttribute("statusParam", request.getStatus());
+
+            // Dodaj cały request do modelu (opcjonalnie)
+            model.addAttribute("searchRequest", request);
 
         } catch (Exception e) {
             log.error("Error loading meetings: {}", e.getMessage(), e);
@@ -472,6 +472,9 @@ public class WebController {
                     Feedback userFeedback = feedbackService.getUserFeedback(id, userId);
                     model.addAttribute("userFeedback", userFeedback);
                     log.info("User feedback: {}", userFeedback);
+                    if (userFeedback == null) {
+                        model.addAttribute("feedbackRequest", new SubmitFeedbackRequest());
+                    }
                 } catch (Exception e) {
                     model.addAttribute("userFeedback", null);
                     log.error("Error fetching user feedback: {}", e.getMessage(), e);
@@ -1208,10 +1211,7 @@ public class WebController {
     })
     public String addRecurrenceException(
             @PathVariable Long id,
-            @RequestParam @NotBlank(message = "Data wyjątku jest wymagana") String exceptionDate,
-            @RequestParam(required = false)
-            @Size(max = 500, message = "Powód nie może przekraczać 500 znaków")
-            String reason,
+            @Valid @ModelAttribute RecurrenceExceptionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             RedirectAttributes redirectAttributes) {
 
@@ -1220,9 +1220,9 @@ public class WebController {
         }
 
         try {
-            meetingService.addRecurrenceException(id, exceptionDate, reason);
+            meetingService.addRecurrenceException(id, request.getExceptionDate(), request.getReason());
             redirectAttributes.addFlashAttribute("message",
-                    "Dodano wyjątek: " + exceptionDate);
+                    "Dodano wyjątek: " + request.getExceptionDate());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
         }
@@ -1275,10 +1275,7 @@ public class WebController {
     })
     public String changeStatus(
             @PathVariable Long id,
-            @RequestParam @NotBlank(message = "Status jest wymagany") String status,
-            @RequestParam(required = false)
-            @Size(max = 500, message = "Powód zmiany statusu nie może przekraczać 500 znaków")
-            String reason,
+            @Valid @ModelAttribute ChangeStatusRequest request,  // <-- DTO zamiast @RequestParam
             @AuthenticationPrincipal CustomUserDetails userDetails,
             RedirectAttributes redirectAttributes) {
 
@@ -1287,15 +1284,15 @@ public class WebController {
         }
 
         try {
-            UpdateMeetingRequest request = UpdateMeetingRequest.builder()
-                    .status(MeetingStatus.valueOf(status))
-                    .statusChangeReason(reason)
+            UpdateMeetingRequest updateRequest = UpdateMeetingRequest.builder()
+                    .status(request.getStatus())
+                    .statusChangeReason(request.getReason())
                     .build();
 
-            meetingService.updateMeeting(id, request, userDetails.getId());
+            meetingService.updateMeeting(id, updateRequest, userDetails.getId());
 
             redirectAttributes.addFlashAttribute("message",
-                    "Status zmieniony na: " + status);
+                    "Status zmieniony na: " + request.getStatus());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
         }
@@ -1373,140 +1370,94 @@ public class WebController {
     })
     public String searchMeetings(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String keywords,
-            @RequestParam(required = false) List<String> tags,
-            @RequestParam(required = false) List<String> searchFields,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) List<String> statuses,
-            @RequestParam(required = false, defaultValue = "0")
-            @Min(value = 0, message = "Minimalna liczba uczestników nie może być ujemna")
-            Integer minParticipants,
-            @RequestParam(required = false, defaultValue = "100")
-            @Min(value = 1, message = "Maksymalna liczba uczestników musi być co najmniej 1")
-            Integer maxParticipants,
-            @RequestParam(required = false) String organizerName,
-            @RequestParam(required = false) String myParticipation,
-            @RequestParam(required = false) String visibility,
-            @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) String sortOrder,
-            @RequestParam(required = false) Boolean recurring,
-            @RequestParam(required = false) Boolean recurringOnly,
-            @RequestParam(required = false) Boolean template,
-            @RequestParam(required = false) Boolean templatesOnly,
-            @RequestParam(required = false) Boolean hasAttachments,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12")
-            @Min(value = 1, message = "Rozmiar strony musi być co najmniej 1")
-            @Max(value = 100, message = "Rozmiar strony nie może przekraczać 100")
-            int size,
+            @Valid AdvancedSearchMeetingsRequest request,
             Model model) {
 
         if (userDetails == null) {
             return "redirect:/login";
         }
 
-        log.info("🔍 ===== SEARCH PARAMETERS START =====");
-        log.info("📥 Raw parameters received:");
-        log.info("  search: {}", search);
-        log.info("  keywords: {}", keywords);
-        log.info("  status: {}", status);
-        log.info("  statuses: {}", statuses);
-        log.info("  type: {}", type);
+        log.info(" ===== SEARCH PARAMETERS START =====");
+        log.info(" DTO parameters received:");
+        log.info("  search: {}", request.getSearch());
+        log.info("  keywords: {}", request.getKeywords());
+        log.info("  status: {}", request.getStatus());
+        log.info("  statuses: {}", request.getStatuses());
+        log.info("  type: {}", request.getType());
         log.info("🔍 ===== SEARCH PARAMETERS END =====");
 
         try {
-            String finalKeywords = search != null ? search : keywords;
-            Boolean finalRecurring = recurring != null ? recurring : recurringOnly;
-            Boolean finalTemplate = template != null ? template : templatesOnly;
-            String finalSortBy = sortBy != null ? sortBy : "startDate";
-            String finalSortOrder = sortOrder != null ? sortOrder : "desc";
-            List<String> finalStatuses = statuses != null ? statuses :
-                    (status != null ? List.of(status) : new ArrayList<>());
-
-            MeetingType meetingType = null;
-            if (type != null && !type.isBlank()) {
-                try {
-                    meetingType = MeetingType.valueOf(type.trim().toUpperCase());
-                    log.info("MEtyp w kontrolerze: {}", meetingType);
-                } catch (IllegalArgumentException e) {
-                    log.warn("Invalid meeting type: {}", type);
-                }
-            }
-
-            MeetingVisibility meetingVisibility = null;
-            if (visibility != null && !visibility.isEmpty()) {
-                try {
-                    meetingVisibility = MeetingVisibility.valueOf(visibility);
-                } catch (IllegalArgumentException e) {
-                    log.warn("Invalid visibility: {}", visibility);
-                }
-            }
+            // Użyj metod pomocniczych z DTO
+            String finalKeywords = request.getFinalKeywords();
+            List<String> finalStatuses = request.getFinalStatuses();
+            List<String> finalSearchFields = request.getFinalSearchFields();
 
             SearchCriteria criteria = SearchCriteria.builder()
                     .keywords(finalKeywords)
-                    .tags(tags != null ? String.join(",", tags) : null)
-                    .searchFields(searchFields != null ? searchFields : List.of("TITLE", "DESCRIPTION"))
-                    .dateFrom(dateFrom)
-                    .dateTo(dateTo)
-                    .type(meetingType)
+                    .tags(request.getTagsAsString())
+                    .searchFields(finalSearchFields)
+                    .dateFrom(request.getDateFrom())
+                    .dateTo(request.getDateTo())
+                    .type(request.getMeetingType())
                     .statuses(finalStatuses)
-                    .minParticipants(minParticipants)
-                    .maxParticipants(maxParticipants)
-                    .organizerName(organizerName)
-                    .myParticipation(myParticipation)
-                    .visibility(meetingVisibility)
-                    .recurringOnly(Boolean.TRUE.equals(finalRecurring))
-                    .templatesOnly(Boolean.TRUE.equals(finalTemplate))
-                    .hasAttachments(Boolean.TRUE.equals(hasAttachments))
+                    .minParticipants(request.getMinParticipants())
+                    .maxParticipants(request.getMaxParticipants())
+                    .organizerName(request.getOrganizerName())
+                    .myParticipation(request.getMyParticipation())
+                    .visibility(request.getMeetingVisibility())
+                    .recurringOnly(Boolean.TRUE.equals(request.getFinalRecurring()))
+                    .templatesOnly(Boolean.TRUE.equals(request.getFinalTemplate()))
+                    .hasAttachments(Boolean.TRUE.equals(request.getHasAttachments()))
                     .currentUserId(userDetails.getId())
                     .userAuthenticated(true)
                     .includePublic(true)
                     .build();
 
             Sort sort = Sort.by(
-                    "asc".equalsIgnoreCase(finalSortOrder) ?
+                    "asc".equalsIgnoreCase(request.getSortOrder()) ?
                             Sort.Direction.ASC : Sort.Direction.DESC,
-                    getSortField(finalSortBy)
+                    getSortField(request.getSortBy())
             );
-            Pageable pageable = PageRequest.of(page, size, sort);
+            Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
 
             Page<MeetingResponse> meetingsPage = meetingService.searchMeetings(criteria, pageable);
 
+            // Dodaj atrybuty do modelu
             model.addAttribute("meetings", meetingsPage.getContent());
-            model.addAttribute("currentPage", page);
+            model.addAttribute("currentPage", request.getPage());
             model.addAttribute("totalPages", meetingsPage.getTotalPages());
             model.addAttribute("totalItems", meetingsPage.getTotalElements());
-            model.addAttribute("pageSize", size);
+            model.addAttribute("pageSize", request.getSize());
             model.addAttribute("user", userDetails);
             model.addAttribute("isSearchResults", true);
             model.addAttribute("resultsCount", meetingsPage.getTotalElements());
 
+            // Dodaj parametry wyszukiwania dla widoku
             model.addAttribute("search", finalKeywords);
             model.addAttribute("keywords", finalKeywords);
-            model.addAttribute("tags", tags);
-            model.addAttribute("dateFrom", dateFrom);
-            model.addAttribute("dateTo", dateTo);
-            model.addAttribute("type", type);
-            model.addAttribute("status", status);
+            model.addAttribute("tags", request.getTags());
+            model.addAttribute("dateFrom", request.getDateFrom());
+            model.addAttribute("dateTo", request.getDateTo());
+            model.addAttribute("type", request.getType());
+            model.addAttribute("status", request.getStatus());
             model.addAttribute("statuses", finalStatuses);
-            model.addAttribute("organizerName", organizerName);
-            model.addAttribute("myParticipation", myParticipation);
-            model.addAttribute("visibility", visibility);
-            model.addAttribute("sortBy", finalSortBy);
-            model.addAttribute("sortOrder", finalSortOrder);
-            model.addAttribute("recurring", finalRecurring);
-            model.addAttribute("template", finalTemplate);
-            model.addAttribute("hasAttachments", hasAttachments);
+            model.addAttribute("organizerName", request.getOrganizerName());
+            model.addAttribute("myParticipation", request.getMyParticipation());
+            model.addAttribute("visibility", request.getVisibility());
+            model.addAttribute("sortBy", request.getSortBy());
+            model.addAttribute("sortOrder", request.getSortOrder());
+            model.addAttribute("recurring", request.getFinalRecurring());
+            model.addAttribute("template", request.getFinalTemplate());
+            model.addAttribute("hasAttachments", request.getHasAttachments());
 
             model.addAttribute("searchParams", buildSearchParams(
-                    finalKeywords, tags, dateFrom, dateTo, type, finalStatuses,
-                    minParticipants, maxParticipants, organizerName, myParticipation,
-                    visibility, finalSortBy, finalSortOrder,
-                    finalRecurring, finalTemplate, hasAttachments
+                    finalKeywords, request.getTags(), request.getDateFrom(), request.getDateTo(),
+                    request.getType(), finalStatuses, request.getMinParticipants(),
+                    request.getMaxParticipants(), request.getOrganizerName(),
+                    request.getMyParticipation(), request.getVisibility(),
+                    request.getSortBy(), request.getSortOrder(),
+                    request.getFinalRecurring(), request.getFinalTemplate(),
+                    request.getHasAttachments()
             ));
 
             return "meetings/advanced-search";

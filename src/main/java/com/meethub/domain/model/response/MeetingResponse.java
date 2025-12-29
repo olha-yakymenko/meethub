@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
-//@SuperBuilder(toBuilder = true)
 public class MeetingResponse {
     private Long id;
     private String title;
@@ -37,18 +36,15 @@ public class MeetingResponse {
     private Integer waitingListCount;
     private Integer availableSpots;
 
-    // ✅ ISTNIEJĄCE POLA TRANSIENT
     private boolean userIsParticipant = false;
     private boolean userIsOrganizer = false;
     private ParticipationStatus userParticipationStatus;
 
-    // ✅ DODATKOWE POLA TRANSIENT DLA UI
     private boolean canJoin = false;
     private boolean canLeave = false;
     private boolean canEdit = false;
     private boolean canDelete = false;
 
-    // ✅ NOWE POLA DLA PREWZYJNEGO STATUSU UCZESTNICTWA
     private boolean userIsConfirmed = false;
     private boolean userIsPending = false;
     private boolean userIsInvited = false;
@@ -58,7 +54,6 @@ public class MeetingResponse {
     private boolean userIsUnrelated = false;
     private String userRole = "VIEWER";
 
-    // ✅ DODANE POLA DLA NOWYCH FUNKCJI
     private boolean recurring = false;
     private String recurrencePattern;
     private LocalDateTime recurrenceEndDate;
@@ -70,11 +65,9 @@ public class MeetingResponse {
 
     private List<StatusChangeResponse> statusHistory;
 
-    // ✅ Konstruktor bezargumentowy
     public MeetingResponse() {
     }
 
-    // ✅ Konstruktor z wszystkimi polami
     public MeetingResponse(
             Long id, String title, String description, String agenda,
             MeetingType type, MeetingStatus status, MeetingVisibility visibility,
@@ -136,9 +129,6 @@ public class MeetingResponse {
         this.statusHistory = statusHistory;
     }
 
-    // ✅ GETTERY I SETTERY (Lombok powinien wygenerować, ale tu dla pewności)
-
-    // ✅ METODY POMOCNICZE DLA NOWYCH FUNKCJI
     public boolean hasRecurrenceEnded() {
         if (!recurring || recurrenceEndDate == null) return false;
         return recurrenceEndDate.isBefore(LocalDateTime.now());
@@ -148,30 +138,6 @@ public class MeetingResponse {
         return recurring && recurrencePattern != null;
     }
 
-    public String getRecurrenceDisplayName() {
-        if (!recurring || recurrencePattern == null) return "Brak";
-
-        String[] parts = recurrencePattern.split(":");
-        String frequency = parts[0];
-
-        switch (frequency) {
-            case "DAILY": return "Codziennie";
-            case "WEEKLY":
-                int weeks = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
-                return weeks == 1 ? "Co tydzień" : "Co " + weeks + " tygodnie";
-            case "MONTHLY":
-                int months = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
-                if (parts.length > 2) {
-                    int day = Integer.parseInt(parts[2]);
-                    return months == 1 ? "Co miesiąc (dzień " + day + ")" : "Co " + months + " miesięcy (dzień " + day + ")";
-                }
-                return months == 1 ? "Co miesiąc" : "Co " + months + " miesięcy";
-            case "YEARLY":
-                int years = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
-                return years == 1 ? "Co rok" : "Co " + years + " lat";
-            default: return "Niestandardowe";
-        }
-    }
 
     public boolean hasCategories() {
         return categories != null && !categories.isEmpty();
@@ -185,7 +151,6 @@ public class MeetingResponse {
         return statusHistory != null && !statusHistory.isEmpty();
     }
 
-    // ✅ Reszta istniejących metod...
     public boolean hasAvailableSpots() {
         return availableSpots == null || availableSpots > 0;
     }
@@ -229,7 +194,6 @@ public class MeetingResponse {
         return type != null && type.equals(MeetingType.HYBRID);
     }
 
-    // ✅ Metody dla UI
     public String getUserRoleBadgeColor() {
         switch (userRole) {
             case "ORGANIZER": return "danger";
@@ -256,12 +220,10 @@ public class MeetingResponse {
         }
     }
 
-    // ✅ STATYCZNY BUILDER METODA
     public static MeetingResponseBuilder builder() {
         return new MeetingResponseBuilder();
     }
 
-    // ✅ PUBLICZNA KLASA BUILDERA
     public static class MeetingResponseBuilder {
         private Long id;
         private String title;
@@ -592,11 +554,6 @@ public class MeetingResponse {
                         : null)
                 .build();
     }
-
-
-
-
-
 
 }
 

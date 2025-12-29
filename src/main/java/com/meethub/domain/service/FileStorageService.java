@@ -1,4 +1,3 @@
-// FileStorageService.java
 package com.meethub.domain.service;
 
 import jakarta.validation.constraints.*;

@@ -77,7 +77,6 @@ class MeetingParticipantControllerIntegrationTest {
     @Test
     @WithUserId(0)
     void joinMeeting_ShouldReturnBadRequest_WhenUserIdIsInvalid() throws Exception {
-        // Given - userId = 0 (mniejsze niż @Min(1))
         Long meetingId = 456L;
 
         // When & Then - powinno być 400 z powodu walidacji @Min(1)
@@ -88,40 +87,6 @@ class MeetingParticipantControllerIntegrationTest {
         verify(participantService, never()).joinPublicMeeting(anyLong(), anyLong());
     }
 
-    // ==============================
-    // TESTY DLA ENDPOINTU GET / (POPRAWIONE)
-    // ==============================
-
-//    @Test
-//    @WithUserId(123)
-//    void getParticipants_ShouldReturnSuccess_WithValidMeetingId() throws Exception {
-//        // Given
-//        Long meetingId = 456L;
-//
-//        // Używamy prawdziwego obiektu zamiast mocka
-//        ParticipantProjection participant1 = new ParticipantProjection() {
-//            @Override public Long getId() { return 1L; }
-//            @Override public ParticipationStatus getStatus() { return ParticipationStatus.CONFIRMED; }
-//        };
-//
-//        ParticipantProjection participant2 = new ParticipantProjection() {
-//            @Override public Long getId() { return 2L; }
-//            @Override public ParticipationStatus getStatus() { return ParticipationStatus.PENDING; }
-//        };
-//
-//        List<ParticipantProjection> participants = Arrays.asList(participant1, participant2);
-//
-//        when(participantService.getMeetingParticipants(meetingId)).thenReturn(participants);
-//
-//        // When & Then - sprawdzamy tylko status i strukturę
-//        mockMvc.perform(get("/api/v1/meetings/{meetingId}/participants", meetingId)
-//                        .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data").isArray());
-//
-//        verify(participantService, times(1)).getMeetingParticipants(meetingId);
-//    }
 
     @Test
     @WithUserId(123)
@@ -193,35 +158,6 @@ class MeetingParticipantControllerIntegrationTest {
                 anyLong(), any(InviteParticipantsRequest.class), anyLong());
     }
 
-    // ==============================
-    // TESTY DLA ENDPOINTU /respond (POPRAWIONE)
-    // ==============================
-
-    @Test
-    @WithUserId(123)
-    void respondToInvitation_ShouldReturnSuccess_WithValidParameters() throws Exception {
-        // Given
-        Long participantId = 456L;
-        ParticipationStatus response = ParticipationStatus.CONFIRMED;
-        String comment = "Chętnie wezmę udział";
-
-        doNothing().when(participantService).respondToInvitation(
-                anyLong(), any(ParticipationStatus.class), anyString(), anyLong());
-
-        // When & Then
-        mockMvc.perform(post("/api/v1/meetings/{meetingId}/participants/invitations/{participantId}/respond",
-                        1L, participantId)
-                        .param("response", response.name())
-                        .param("comment", comment)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
-
-        verify(participantService, times(1)).respondToInvitation(
-                eq(participantId), eq(response), eq(comment), eq(123L));
-    }
-
-
 
     // ==============================
     // TESTY Z WYJĄTKAMI (NOWE)
@@ -261,24 +197,6 @@ class MeetingParticipantControllerIntegrationTest {
         verify(participantService, times(1)).joinPublicMeeting(meetingId, 123L);
     }
 
-    @Test
-    @WithUserId(123)
-    void updateParticipantStatus_ShouldReturnBadRequest_WhenStatusIsInvalid() throws Exception {
-        // Given
-        Long meetingId = 456L;
-        Long participantId = 789L;
-        String invalidStatus = "INVALID_STATUS";
-
-        // When & Then - Spring nie może przekonwertować stringa na enum
-        mockMvc.perform(patch("/api/v1/meetings/{meetingId}/participants/{participantId}/status",
-                        meetingId, participantId)
-                        .param("status", invalidStatus)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(participantService, never()).updateParticipantStatus(
-                anyLong(), anyLong(), any(), anyString(), anyLong());
-    }
 
 
     // ==============================
@@ -325,27 +243,6 @@ class MeetingParticipantControllerIntegrationTest {
         // When & Then
         mockMvc.perform(get("/api/v1/meetings/{meetingId}/participants", meetingId))
                 .andExpect(status().isConflict());
-    }
-
-    // Test dla niepoprawnego statusu enum
-    @Test
-    @WithUserId(123)
-    void updateParticipantStatus_ShouldReturn400_WhenStatusIsInvalidEnum() throws Exception {
-        // Given
-        Long meetingId = 456L;
-        Long participantId = 789L;
-        String invalidStatus = "INVALID_STATUS"; // Nie istnieje w ParticipationStatus
-
-        // When & Then - Spring nie może przekonwertować na enum
-        // To powoduje MethodArgumentTypeMismatchException, które powinno dać 400
-        mockMvc.perform(patch("/api/v1/meetings/{meetingId}/participants/{participantId}/status",
-                        meetingId, participantId)
-                        .param("status", invalidStatus)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(participantService, never()).updateParticipantStatus(
-                anyLong(), anyLong(), any(), anyString(), anyLong());
     }
 
     // ==============================

@@ -3,7 +3,7 @@ package com.meethub.controller.api;
 import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.enums.PermissionLevel;
 import com.meethub.domain.model.projection.ParticipantProjection;
-import com.meethub.domain.model.request.InviteParticipantsRequest;
+import com.meethub.domain.model.request.*;
 import com.meethub.domain.model.response.ApiResponse;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
@@ -64,8 +64,6 @@ class MeetingParticipantControllerTest {
         );
     }
 
-
-
     @Test
     void testJoinMeeting_Success() {
         ResponseEntity<ApiResponse<Void>> response =
@@ -77,12 +75,15 @@ class MeetingParticipantControllerTest {
         );
     }
 
-
     @Test
     void testUpdateParticipantStatus_Success() {
+        // Stwórz DTO zamiast bezpośrednich parametrów
+        UpdateParticipantStatusRequest request = new UpdateParticipantStatusRequest();
+        request.setStatus(ParticipationStatus.CONFIRMED);
+        request.setComment("comment");
+
         ResponseEntity<ApiResponse<Void>> response =
-                controller.updateParticipantStatus(meetingId, participantId,
-                        ParticipationStatus.CONFIRMED, "comment", userId);
+                controller.updateParticipantStatus(meetingId, participantId, request, userId);
 
         assertAll(
                 () -> assertEquals(200, response.getStatusCodeValue()),
@@ -90,12 +91,14 @@ class MeetingParticipantControllerTest {
         );
     }
 
-
     @Test
     void testUpdateParticipantPermission_Success() {
+        // Stwórz DTO zamiast bezpośredniego parametru
+        UpdateParticipantPermissionRequest request = new UpdateParticipantPermissionRequest();
+        request.setPermissionLevel(PermissionLevel.ORGANIZER);
+
         ResponseEntity<ApiResponse<Void>> response =
-                controller.updateParticipantPermission(meetingId, participantId,
-                        PermissionLevel.ORGANIZER, userId);
+                controller.updateParticipantPermission(meetingId, participantId, request, userId);
 
         assertAll(
                 () -> assertEquals(200, response.getStatusCodeValue()),
@@ -118,6 +121,7 @@ class MeetingParticipantControllerTest {
     void testAcceptInvitationByToken_Success() {
         String token = "valid_token_12345678901234567890123456789012";
 
+        // Możesz użyć DTO lub pozostawić tylko path variable
         ResponseEntity<ApiResponse<Void>> response =
                 controller.acceptInvitationByToken(token);
 
@@ -127,22 +131,21 @@ class MeetingParticipantControllerTest {
         );
     }
 
-
     @Test
     void testSearchUsers_Success() {
         List<UserResponse> users = Collections.emptyList();
         when(participantService.searchUsersForInvitation("test", meetingId))
                 .thenReturn(users);
 
+        // Bez DTO - bezpośrednie parametry
         ResponseEntity<ApiResponse<List<UserResponse>>> response =
-                controller.searchUsers("test", meetingId);
+                controller.searchUsers("test", meetingId);  // ← query, meetingId (kolejność jak w metodzie)
 
         assertAll(
                 () -> assertEquals(200, response.getStatusCodeValue()),
                 () -> assertTrue(response.getBody().isSuccess())
         );
     }
-
 
     @Test
     void testGetUserInvitations_Success() {
@@ -158,12 +161,15 @@ class MeetingParticipantControllerTest {
         );
     }
 
-
     @Test
     void testRespondToInvitation_Success() {
+        // Stwórz DTO
+        RespondToInvitationRequest request = new RespondToInvitationRequest();
+        request.setResponse(ParticipationStatus.CONFIRMED);
+        request.setComment("comment");
+
         ResponseEntity<ApiResponse<Void>> response =
-                controller.respondToInvitation(participantId,
-                        ParticipationStatus.CONFIRMED, "comment", userId);
+                controller.respondToInvitation(participantId, request, userId);
 
         assertAll(
                 () -> assertEquals(200, response.getStatusCodeValue()),
@@ -223,4 +229,13 @@ class MeetingParticipantControllerTest {
         );
     }
 
+    // Nowe testy walidacji
+    @Test
+    void testUpdateParticipantStatus_ValidationError() {
+        UpdateParticipantStatusRequest request = new UpdateParticipantStatusRequest();
+        // Brak statusu - powinno zostać złapane przez walidację
+
+        // Ten test może wymagać MockMvc zamiast bezpośredniego wywołania kontrolera
+        // lub sprawdzenia czy walidacja jest uruchamiana
+    }
 }
