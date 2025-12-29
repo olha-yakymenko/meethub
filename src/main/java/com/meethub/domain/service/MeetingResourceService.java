@@ -1,3 +1,4 @@
+// MeetingResourceService.java
 package com.meethub.domain.service;
 
 import com.meethub.domain.model.enums.ResourceType;
@@ -6,59 +7,41 @@ import com.meethub.domain.model.request.UpdateMeetingResourceRequest;
 import com.meethub.domain.model.response.MeetingResourceResponse;
 import com.meethub.domain.model.response.MeetingResourceStats;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
-@Validated
+
 public interface MeetingResourceService {
 
     MeetingResourceResponse addResource(
-            @NotNull @Positive Long meetingId,
+            @NotNull Long meetingId,
             @Valid MeetingResourceRequest request,
-            @NotNull @Positive Long userId
+            @NotNull Long userId
     );
 
-    List<MeetingResourceResponse> getMeetingResources(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    MeetingResourceResponse getResource(
-            @NotNull @Positive Long resourceId,
-            @NotNull @Positive Long userId
-    );
+    List<MeetingResourceResponse> getMeetingResources(@NotNull Long meetingId, @NotNull Long userId);
+    MeetingResourceResponse getResource(@NotNull Long resourceId, @NotNull Long userId);
 
     MeetingResourceResponse updateResource(
-            @NotNull @Positive Long resourceId,
+            @NotNull Long resourceId,
             @Valid UpdateMeetingResourceRequest request,
-            @NotNull @Positive Long userId
+            @NotNull Long userId
     );
 
-    void deleteResource(
-            @NotNull @Positive Long resourceId,
-            @NotNull @Positive Long userId
-    );
+    void deleteResource(@NotNull Long resourceId, @NotNull Long userId);
 
     List<MeetingResourceResponse> getResourcesByType(
-            @NotNull @Positive Long meetingId,
+            @NotNull Long meetingId,
             @NotNull ResourceType resourceType,
-            @NotNull @Positive Long userId
+            @NotNull Long userId
     );
 
     List<MeetingResourceResponse> getResourcesByTag(
-            @NotNull @Positive Long meetingId,
-            @NotBlank String tag,
-            @NotNull @Positive Long userId
+            @NotNull Long meetingId,
+            String tag,
+            @NotNull Long userId
     );
 
-    MeetingResourceStats getMeetingResourceStats(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
+    MeetingResourceStats getMeetingResourceStats(@NotNull Long meetingId, @NotNull Long userId);
 }
-
-

@@ -1,18 +1,14 @@
-
-
 package com.meethub.domain.service;
 
 import com.meethub.domain.model.entity.AttendanceToken;
 import com.meethub.domain.model.entity.Meeting;
 import com.meethub.domain.model.entity.User;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Optional;
 
-@Validated
 public interface AttendanceTokenService {
 
     AttendanceToken createToken(
@@ -21,13 +17,13 @@ public interface AttendanceTokenService {
     );
 
     boolean validateAndUseToken(
-            @NotBlank String token,
-            @NotNull @Min(1) Long meetingId
+            @NotNull String token,
+            @NotNull Long meetingId
     );
 
     Optional<AttendanceToken> getTokenForUserAndMeeting(
-            @NotNull @Min(1) Long userId,
-            @NotNull @Min(1) Long meetingId
+            @NotNull Long userId,
+            @NotNull Long meetingId
     );
 
     Optional<Long> getUserIdFromToken(String token, Long meetingId);

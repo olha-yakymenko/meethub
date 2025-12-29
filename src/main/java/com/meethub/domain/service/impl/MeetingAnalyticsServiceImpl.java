@@ -5,18 +5,17 @@ import com.itextpdf.text.pdf.*;
 import com.meethub.domain.model.dto.OrganizerReportStats;
 import com.meethub.domain.model.dto.ParticipantCountDto;
 import com.meethub.domain.model.entity.Meeting;
-import com.meethub.domain.model.entity.MeetingParticipant;
 import com.meethub.domain.model.entity.MeetingStatistics;
-import com.meethub.domain.model.enums.ParticipationStatus;
 import com.meethub.domain.model.request.ReportFilter;
 import com.meethub.domain.model.response.OrganizerReport;
 import com.meethub.domain.repository.jpa.FeedbackRepository;
+import com.meethub.domain.repository.jpa.MeetingParticipantRepository;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.repository.jpa.MeetingStatisticsRepository;
 import com.meethub.domain.service.MeetingAnalyticsService;
-import com.meethub.domain.service.MeetingParticipantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -38,8 +37,7 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
     private final MeetingStatisticsRepository statisticsRepository;
     private final MeetingRepository meetingRepository;
-    private final MeetingParticipantService meetingParticipantService;
-
+    private final MeetingParticipantRepository meetingParticipantRepository;
     private final FeedbackRepository feedbackRepository;
 
     @Override
@@ -47,17 +45,13 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     public MeetingStatistics generateMeetingStatistics(Long meetingId) {
         log.info("Generating statistics for meeting: {}", meetingId);
 
-        // 1. Pobierz spotkanie
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new RuntimeException("Meeting not found"));
 
-        ParticipantCountDto participantCounts = meetingParticipantService.getParticipantCounts(meetingId);
+        // Używamy repo zamiast serwisu
+        ParticipantCountDto participantCounts = meetingParticipantRepository.getParticipantCounts(meetingId);
+//                .orElse(new ParticipantCountDto(0L, 0L, 0L, 0L, 0L, 0L, 0L));
 
-        if (participantCounts == null) {
-            participantCounts = new ParticipantCountDto(0L, 0L, 0L, 0L, 0L, 0L, 0L);
-        }
-
-        // 4. Pobierz statystyki FEEDBACK Z BAZY
         BigDecimal averageRating = BigDecimal.ZERO;
         int feedbackCount = 0;
 
@@ -76,38 +70,29 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
             log.warn("Could not calculate feedback statistics: {}", e.getMessage());
         }
 
-        // 5. Sprawdź czy istnieją już statystyki
         Optional<MeetingStatistics> existingStats = statisticsRepository.findByMeetingId(meetingId);
 
         MeetingStatistics statistics;
         if (existingStats.isPresent()) {
             statistics = existingStats.get();
-//            updateStatistics(statistics, participantCounts, avgResponseTime, averageRating, feedbackCount);
             updateStatistics(statistics, participantCounts, averageRating, feedbackCount);
-
             log.debug("Updated existing statistics for meeting: {}", meetingId);
         } else {
-//            statistics = createNewStatistics(meeting, participantCounts, avgResponseTime, averageRating, feedbackCount);
             statistics = createNewStatistics(meeting, participantCounts, averageRating, feedbackCount);
-
             log.debug("Created new statistics for meeting: {}", meetingId);
         }
 
-        // 6. Ustaw status i timestampy
         setStatisticsStatus(statistics, meeting);
         statistics.setGeneratedAt(LocalDateTime.now());
         statistics.setLastCalculatedAt(LocalDateTime.now());
         statistics.setUpdatedAt(LocalDateTime.now());
 
-        // 7. Zapisz do bazy
         return statisticsRepository.save(statistics);
     }
-
 
     private MeetingStatistics createNewStatistics(
             Meeting meeting,
             ParticipantCountDto participantCounts,
-//            BigDecimal avgResponseTime,
             BigDecimal averageRating,
             int feedbackCount) {
 
@@ -125,7 +110,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                         participantCounts.getPending().intValue() : 0)
                 .attendanceRate(participantCounts.getAttendanceRate())
                 .confirmationRate(participantCounts.getConfirmationRate())
-//                .avgResponseTimeMinutes(avgResponseTime)
                 .averageRating(averageRating)
                 .feedbackCount(feedbackCount)
                 .generatedAt(LocalDateTime.now())
@@ -138,7 +122,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     private void updateStatistics(
             MeetingStatistics statistics,
             ParticipantCountDto participantCounts,
-//            BigDecimal avgResponseTime,
             BigDecimal averageRating,
             int feedbackCount) {
 
@@ -154,14 +137,11 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                 participantCounts.getPending().intValue() : 0);
         statistics.setAttendanceRate(participantCounts.getAttendanceRate());
         statistics.setConfirmationRate(participantCounts.getConfirmationRate());
-
-//        statistics.setAvgResponseTimeMinutes(avgResponseTime);
         statistics.setAverageRating(averageRating);
         statistics.setFeedbackCount(feedbackCount);
         statistics.setLastCalculatedAt(LocalDateTime.now());
         statistics.setUpdatedAt(LocalDateTime.now());
 
-        // Wywołaj metodę obliczania pochodnych metryk z encji
         statistics.calculateDerivedMetrics();
     }
 
@@ -205,11 +185,19 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     @Override
     @Transactional(readOnly = true)
     public OrganizerReport generateOrganizerReport(Long organizerId, ReportFilter filter) {
-
         log.info("Generating organizer report for organizer: {}", organizerId);
 
-        OrganizerReportStats stats =
-                statisticsRepository.getOrganizerReportStats(organizerId);
+        OrganizerReportStats stats;
+
+        if (filter != null && (filter.getDateFrom() != null || filter.getDateTo() != null)) {
+            stats = statisticsRepository.getOrganizerReportStatsByDateRange(
+                    organizerId,
+                    filter.getDateFrom() != null ? filter.getDateFrom() : LocalDateTime.MIN,
+                    filter.getDateTo() != null ? filter.getDateTo() : LocalDateTime.MAX
+            );
+        } else {
+            stats = statisticsRepository.getOrganizerReportStats(organizerId);
+        }
 
         OrganizerReport report = new OrganizerReport();
         report.setOrganizerId(organizerId);
@@ -230,7 +218,7 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                             ? stats.getTotalAttended().intValue()
                             : 0
             );
-    } else {
+        } else {
             report.setTotalMeetings(0);
             report.setAverageAttendanceRate(BigDecimal.ZERO);
             report.setTotalParticipants(0);
@@ -238,34 +226,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         }
 
         return report;
-    }
-
-
-    private List<MeetingStatistics> filterStatistics(List<MeetingStatistics> allStats, ReportFilter filter) {
-        if (filter == null) {
-            return allStats;
-        }
-
-        return allStats.stream()
-                .filter(stats -> {
-                    // Filtrowanie po dacie
-                    if (stats.getMeeting() == null || stats.getMeeting().getStartDate() == null) {
-                        return false;
-                    }
-
-                    LocalDateTime meetingDate = stats.getMeeting().getStartDate();
-
-                    if (filter.getDateFrom() != null && meetingDate.isBefore(filter.getDateFrom())) {
-                        return false;
-                    }
-
-                    if (filter.getDateTo() != null && meetingDate.isAfter(filter.getDateTo())) {
-                        return false;
-                    }
-
-                    return true;
-                })
-                .collect(Collectors.toList());
     }
 
     @Override
@@ -285,8 +245,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         return csv.toString().getBytes();
     }
 
-
-
     @Override
     @Transactional(readOnly = true)
     public byte[] exportMeetingStatisticsToPdf(Long meetingId) {
@@ -301,7 +259,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
             Document document = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(document, baos);
 
-            // Dodaj nagłówek i stopkę
             HeaderFooterPageEvent event = new HeaderFooterPageEvent();
             writer.setPageEvent(event);
 
@@ -309,26 +266,16 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
             Meeting meeting = stats.getMeeting();
 
-            // Tytuł dokumentu
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 20, Font.BOLD, BaseColor.DARK_GRAY);
             Paragraph title = new Paragraph("RAPORT STATYSTYK SPOTKANIA", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(20);
             document.add(title);
 
-            // Informacje o spotkaniu
             addMeetingInfo(document, meeting, stats);
-
-            // Sekcja podstawowych statystyk
             addBasicStatistics(document, stats);
-
-            // Wykres słupkowy (prosty)
             addAttendanceChart(document, stats);
-
-            // Tabela z detalami
             addDetailedTable(document, stats);
-
-            // Podsumowanie
             addSummary(document, stats);
 
             document.close();
@@ -349,7 +296,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         infoTable.setSpacingBefore(10);
         infoTable.setSpacingAfter(10);
 
-        // Wiersze z informacjami
         addInfoRow(infoTable, "Tytuł spotkania:", meeting.getTitle(), headerFont, normalFont);
         addInfoRow(infoTable, "Organizator:",
                 meeting.getOrganizer().getFirstName() + " " + meeting.getOrganizer().getLastName(),
@@ -402,11 +348,9 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         statsTable.setWidthPercentage(100);
         statsTable.setSpacingBefore(10);
 
-        // Konfiguracja komórek
         Font statLabelFont = new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD);
         Font statValueFont = new Font(Font.FontFamily.HELVETICA, 10);
 
-        // Wiersze ze statystykami
         addStatRow(statsTable, "Łączna liczba uczestników:",
                 String.valueOf(stats.getTotalParticipants()), statLabelFont, statValueFont);
 
@@ -468,12 +412,10 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         sectionTitle.setSpacingAfter(15);
         document.add(sectionTitle);
 
-        // Prosta wizualizacja przy użyciu tabeli z kolorami
         PdfPTable chartTable = new PdfPTable(1);
         chartTable.setWidthPercentage(100);
         chartTable.setSpacingBefore(10);
 
-        // Oblicz procenty
         int total = stats.getTotalParticipants() != null ? stats.getTotalParticipants() : 0;
         int attended = stats.getAttendedParticipants() != null ? stats.getAttendedParticipants() : 0;
         int confirmed = stats.getConfirmedParticipants() != null ? stats.getConfirmedParticipants() : 0;
@@ -481,10 +423,8 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         int pending = stats.getPendingParticipants() != null ? stats.getPendingParticipants() : 0;
 
         if (total > 0) {
-            // Legenda
             Font legendFont = new Font(Font.FontFamily.HELVETICA, 9);
 
-            // Rząd z legandą
             PdfPCell legendCell = new PdfPCell();
             legendCell.setBorder(Rectangle.NO_BORDER);
             legendCell.setPadding(5);
@@ -502,20 +442,17 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
             legendCell.addElement(legend);
             chartTable.addCell(legendCell);
 
-            // Prosty wykres słupkowy
             PdfPCell chartCell = new PdfPCell();
             chartCell.setBorder(Rectangle.NO_BORDER);
             chartCell.setPadding(5);
 
             Paragraph chart = new Paragraph();
 
-            // Oblicz szerokości dla każdej grupy
             float attendedWidth = (float) attended / total * 100;
             float confirmedWidth = (float) confirmed / total * 100;
             float declinedWidth = (float) declined / total * 100;
             float pendingWidth = (float) pending / total * 100;
 
-            // Dodaj prostokąty reprezentujące
             chart.add(createBarSegment("Obecni: " + attended + " (" + formatDecimal((float) attended/total*100) + "%)",
                     attendedWidth, BaseColor.GREEN));
             chart.add(Chunk.NEWLINE);
@@ -547,10 +484,9 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     private Paragraph createBarSegment(String label, float width, BaseColor color) {
         Paragraph segment = new Paragraph();
 
-        // Dodaj kolorowy prostokąt
         Chunk bar = new Chunk("   ");
         bar.setBackground(color);
-        bar.setHorizontalScaling(width * 3); // Skalowanie dla wizualizacji
+        bar.setHorizontalScaling(width * 3);
 
         segment.add(bar);
         segment.add(new Chunk(" " + label, new Font(Font.FontFamily.HELVETICA, 9)));
@@ -569,7 +505,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         detailedTable.setWidthPercentage(100);
         detailedTable.setSpacingBefore(10);
 
-        // Nagłówki tabeli
         Font headerFont = new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD, BaseColor.WHITE);
 
         PdfPCell header1 = new PdfPCell(new Phrase("KATEGORIA", headerFont));
@@ -591,7 +526,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         detailedTable.addCell(header2);
         detailedTable.addCell(header3);
 
-        // Wiersze z danymi
         Font dataFont = new Font(Font.FontFamily.HELVETICA, 10);
         int total = stats.getTotalParticipants() != null ? stats.getTotalParticipants() : 0;
 
@@ -600,7 +534,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         addDetailRow(detailedTable, "Odmówili", stats.getDeclinedParticipants(), total, dataFont);
         addDetailRow(detailedTable, "Oczekujący", stats.getPendingParticipants(), total, dataFont);
 
-        // Wiersz sumy
         PdfPCell totalLabelCell = new PdfPCell(new Phrase("RAZEM", new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD)));
         totalLabelCell.setBackgroundColor(BaseColor.LIGHT_GRAY);
         totalLabelCell.setPadding(8);
@@ -648,7 +581,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
         List<String> summaryPoints = new ArrayList<>();
 
-        // Dodaj punkty podsumowania na podstawie statystyk
         if (stats.getAttendanceRate() != null) {
             if (stats.getAttendanceRate().compareTo(new BigDecimal("80")) >= 0) {
                 summaryPoints.add("• Wysoka frekwencja (" + formatPercentage(stats.getAttendanceRate()) + ") - bardzo dobry wynik");
@@ -684,18 +616,11 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         summaryPoints.add("• Raport wygenerowano automatycznie " +
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
 
-        // Dodaj punkty do dokumentu
         for (String point : summaryPoints) {
             Paragraph pointParagraph = new Paragraph(point, summaryFont);
             pointParagraph.setSpacingAfter(5);
             document.add(pointParagraph);
         }
-    }
-
-    private Chunk createSeparator() {
-        Chunk separator = new Chunk("________________________________________________________________");
-        separator.setHorizontalScaling(100);
-        return separator;
     }
 
     private String formatPercentage(BigDecimal value) {
@@ -708,7 +633,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         return String.format("%.2f", value);
     }
 
-    // Klasa wewnętrzna dla nagłówka i stopki
     class HeaderFooterPageEvent extends PdfPageEventHelper {
         private PdfTemplate total;
         private BaseFont baseFont;
@@ -735,19 +659,16 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                 footer.getDefaultCell().setFixedHeight(20);
                 footer.getDefaultCell().setBorder(Rectangle.TOP);
 
-                // Lewa strona - data
                 footer.addCell(new Phrase("Wygenerowano: " +
                         new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm").format(printDate),
                         new Font(Font.FontFamily.HELVETICA, 8)));
 
-                // Środek - tytuł
                 footer.getDefaultCell().setHorizontalAlignment(Element.ALIGN_CENTER);
                 footer.addCell(new Phrase("Raport Statystyk Spotkania",
                         new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD)));
 
                 footer.getDefaultCell().setHorizontalAlignment(Element.ALIGN_RIGHT);
 
-// Tworzymy Phrase z odpowiednimi parametrami
                 Phrase pageNumberPhrase = new Phrase(
                         String.format("Strona %d z ", writer.getPageNumber()),
                         new Font(Font.FontFamily.HELVETICA, 8)
@@ -757,7 +678,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
                 pageNumberCell.setBorder(Rectangle.TOP);
                 footer.addCell(pageNumberCell);
 
-                // Pozycjonuj stopkę
                 footer.writeSelectedRows(0, -1, 34, 50, writer.getDirectContent());
 
             } catch (DocumentException de) {
@@ -791,25 +711,14 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
             document.open();
 
-            // Tytuł
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 22, Font.BOLD, BaseColor.DARK_GRAY);
             Paragraph title = new Paragraph("RAPORT ORGANIZATORA SPOTKAŃ", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(30);
             document.add(title);
 
-            // Informacje o raporcie
             addReportInfo(document, report, filter);
-
-            // Statystyki podsumowujące
             addReportSummary(document, report);
-
-            // Tabela ze spotkaniami (jeśli potrzebna)
-            // addMeetingsTable(document, report);
-
-            // Wykresy/trendy
-
-            // Rekomendacje
             addRecommendations(document, report);
 
             document.close();
@@ -828,8 +737,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         PdfPTable infoTable = new PdfPTable(2);
         infoTable.setWidthPercentage(80);
         infoTable.setHorizontalAlignment(Element.ALIGN_CENTER);
-//        infoTable.setSpacingBefore(10);
-//        infoTable.setSpacingAfter(20);
         infoTable.setSpacingBefore(0);
         infoTable.setSpacingAfter(0);
 
@@ -877,7 +784,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         addStatRow(summaryTable, "Średnia frekwencja:",
                 formatDecimal(report.getAverageAttendanceRate()) + "%", labelFont, valueFont);
 
-        // Oblicz efektywność
         if (report.getTotalParticipants() > 0 && report.getTotalAttended() > 0) {
             double efficiency = (double) report.getTotalAttended() / report.getTotalParticipants() * 100;
             String efficiencyText;
@@ -895,7 +801,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         document.add(summaryTable);
     }
 
-
     private void addRecommendations(Document document, OrganizerReport report) throws DocumentException {
         Font sectionFont = new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD, BaseColor.DARK_GRAY);
         Paragraph sectionTitle = new Paragraph("REKOMENDACJE", sectionFont);
@@ -907,7 +812,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
         List<String> recommendations = new ArrayList<>();
 
-        // Dodaj rekomendacje na podstawie statystyk
         if (report.getAverageAttendanceRate() != null) {
             if (report.getAverageAttendanceRate().compareTo(new BigDecimal("85")) < 0) {
                 recommendations.add("• Rozważ wysyłanie przypomnień na 24h przed spotkaniem");
@@ -935,7 +839,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         }
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public List<MeetingStatistics> getMeetingStatisticsByOrganizer(Long organizerId) {
@@ -962,7 +865,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
         return csv.toString().getBytes();
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getAverageResponseTime(Long meetingId) {
@@ -974,12 +876,8 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     @Override
     @Transactional(readOnly = true)
     public List<MeetingStatistics> getRecentStatistics(int limit) {
-        List<MeetingStatistics> allStats = statisticsRepository.findAll();
-
-        return allStats.stream()
-                .sorted((s1, s2) -> s2.getGeneratedAt().compareTo(s1.getGeneratedAt()))
-                .limit(limit)
-                .collect(Collectors.toList());
+        // Używamy metody z repo zamiast streamów
+        return statisticsRepository.findRecentStatistics(PageRequest.of(0, limit));
     }
 
     @Override
@@ -1024,6 +922,4 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
 
         log.info("Refreshed {} statistics", refreshedCount);
     }
-
-
 }

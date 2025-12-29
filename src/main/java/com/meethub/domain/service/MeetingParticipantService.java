@@ -1,3 +1,4 @@
+// MeetingParticipantService.java
 package com.meethub.domain.service;
 
 import com.meethub.domain.model.dto.ParticipantCountDto;
@@ -12,253 +13,118 @@ import com.meethub.domain.model.request.UpdateParticipantRequest;
 import com.meethub.domain.model.response.ParticipantResponse;
 import com.meethub.domain.model.response.UserResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
 
-@Validated
+
 public interface MeetingParticipantService {
 
-    List<ParticipantProjection> getMeetingParticipants(
-            @NotNull(message = "ID spotkania nie może być puste") @Positive Long meetingId
-    );
-
-    ParticipantCountDto getParticipantCounts(
-            @NotNull(message = "ID spotkania nie może być puste") @Positive Long meetingId
-    );
+    List<ParticipantProjection> getMeetingParticipants(@NotNull Long meetingId);
+    ParticipantCountDto getParticipantCounts(@NotNull Long meetingId);
 
     MeetingParticipant inviteParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId,
-            @NotNull @Positive Long organizerId
+            @NotNull Long meetingId,
+            @NotNull Long userId,
+            @NotNull Long organizerId
     );
 
     List<MeetingParticipant> inviteMultipleParticipants(
-            @NotNull @Positive Long meetingId,
+            @NotNull Long meetingId,
             @Valid InviteParticipantsRequest request,
-            @NotNull @Positive Long organizerId
+            @NotNull Long organizerId
     );
 
     MeetingParticipant updateParticipantStatus(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
+            @NotNull Long meetingId,
+            @NotNull Long participantId,
             @NotNull ParticipationStatus status,
             String comment,
-            @NotNull @Positive Long userId
+            @NotNull Long userId
     );
 
     MeetingParticipant updateParticipantPermission(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
+            @NotNull Long meetingId,
+            @NotNull Long participantId,
             @NotNull PermissionLevel permissionLevel,
-            @NotNull @Positive Long organizerId
+            @NotNull Long organizerId
     );
 
     void removeParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
-            @NotNull @Positive Long organizerId
+            @NotNull Long meetingId,
+            @NotNull Long participantId,
+            @NotNull Long organizerId
     );
 
     ParticipantResponse updateParticipant(
-            @NotNull @Positive Long participantId,
+            @NotNull Long participantId,
             @Valid UpdateParticipantRequest request
     );
 
-    MeetingParticipant joinPublicMeeting(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
+    MeetingParticipant joinPublicMeeting(@NotNull Long meetingId, @NotNull Long userId);
+    MeetingParticipant requestToJoinPrivateMeeting(@NotNull Long meetingId, @NotNull Long userId);
 
-    MeetingParticipant requestToJoinPrivateMeeting(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
+    void approveJoinRequest(@NotNull Long meetingId, @NotNull Long participantId, @NotNull Long organizerId);
+    void rejectJoinRequest(@NotNull Long meetingId, @NotNull Long participantId, @NotNull Long organizerId);
 
-    void approveJoinRequest(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
-            @NotNull @Positive Long organizerId
-    );
+    MeetingParticipant acceptInvitationByToken(String token);
+    boolean isUserParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isViewer(@NotNull Long meetingId, @NotNull Long userId);
+    boolean canUserEditMeeting(@NotNull Long meetingId, @NotNull Long userId);
+    MeetingParticipant markAsAttended(@NotNull Long meetingId, @NotNull Long userId);
+    void joinMeeting(@NotNull Long userId, @NotNull Long meetingId);
+    void leaveMeeting(@NotNull Long userId, @NotNull Long meetingId);
 
-    void rejectJoinRequest(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
-            @NotNull @Positive Long organizerId
-    );
-
-    MeetingParticipant acceptInvitationByToken(
-            @NotBlank(message = "Token nie może być pusty") String token
-    );
-
-    boolean isUserParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isViewer(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean canUserEditMeeting(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    MeetingParticipant markAsAttended(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    void joinMeeting(
-            @NotNull @Positive Long userId,
-            @NotNull @Positive Long meetingId
-    );
-
-    void leaveMeeting(
-            @NotNull @Positive Long userId,
-            @NotNull @Positive Long meetingId
-    );
-
-    List<UserResponse> searchUsersForInvitation(
-            @NotBlank String query,
-            @NotNull @Positive Long meetingId
-    );
-
-    boolean hasAvailableSpots(@NotNull @Positive Long meetingId);
-
-    List<ParticipantResponse> getPendingRequests(@NotNull @Positive Long meetingId);
-
-    boolean isUserPendingApproval(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    PermissionLevel getParticipantPermissionLevel(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    List<ParticipantResponse> getUserInvitations(@NotNull @Positive Long userId);
+    List<UserResponse> searchUsersForInvitation(String query, @NotNull Long meetingId);
+    boolean hasAvailableSpots(@NotNull Long meetingId);
+    List<ParticipantResponse> getPendingRequests(@NotNull Long meetingId);
+    boolean isUserPendingApproval(@NotNull Long meetingId, @NotNull Long userId);
+    PermissionLevel getParticipantPermissionLevel(@NotNull Long meetingId, @NotNull Long userId);
+    List<ParticipantResponse> getUserInvitations(@NotNull Long userId);
 
     void respondToInvitation(
-            @NotNull @Positive Long participantId,
+            @NotNull Long participantId,
             @NotNull ParticipationStatus response,
             String comment,
-            @NotNull @Positive Long userId
+            @NotNull Long userId
     );
 
-    List<ParticipantResponse> getConfirmedParticipants(@NotNull @Positive Long meetingId);
-
-    Map<String, Long> getParticipantStatistics(@NotNull @Positive Long meetingId);
-
-    boolean hasAccessToMeeting(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isOrganizer(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean canEditParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean canRemoveParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long participantId,
-            @NotNull @Positive Long userId
-    );
+    List<ParticipantResponse> getConfirmedParticipants(@NotNull Long meetingId);
+    Map<String, Long> getParticipantStatistics(@NotNull Long meetingId);
+    boolean hasAccessToMeeting(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isOrganizer(@NotNull Long meetingId, @NotNull Long userId);
+    boolean canEditParticipant(@NotNull Long meetingId, @NotNull Long participantId, @NotNull Long userId);
+    boolean canRemoveParticipant(@NotNull Long meetingId, @NotNull Long participantId, @NotNull Long userId);
 
     List<ParticipantResponse> inviteParticipants(
-            @NotNull @Positive Long meetingId,
+            @NotNull Long meetingId,
             @Valid InviteParticipantsRequest request
     );
 
-    ParticipantResponse getParticipant(@NotNull @Positive Long participantId);
+    ParticipantResponse getParticipant(@NotNull Long participantId);
+    void removeParticipant(@NotNull Long participantId);
+    ParticipantResponse confirmParticipation(String token, String comment);
+    ParticipantResponse declineParticipation(String token, String comment);
 
-    void removeParticipant(@NotNull @Positive Long participantId);
-
-    ParticipantResponse confirmParticipation(
-            @NotBlank String token,
-            String comment
-    );
-
-    ParticipantResponse declineParticipation(
-            @NotBlank String token,
-            String comment
-    );
-
-    ParticipantStats getMeetingStats(@NotNull @Positive Long meetingId);
-
-    Map<String, Object> getDetailedStats(@NotNull @Positive Long meetingId);
-
-    ByteArrayResource exportParticipantsToCsv(@NotNull @Positive Long meetingId);
-
+    ParticipantStats getMeetingStats(@NotNull Long meetingId);
+    Map<String, Object> getDetailedStats(@NotNull Long meetingId);
+    ByteArrayResource exportParticipantsToCsv(@NotNull Long meetingId);
     void addOrganizerAsParticipant(@NotNull Meeting meeting, @NotNull User organizer);
+    void confirmAttendance(@NotNull Long participantId, String inputToken);
 
-    @Transactional
-    void confirmAttendance(
-            @NotNull @Positive Long participantId,
-            @NotBlank String inputToken
-    );
+    ParticipantResponse getParticipantInfo(@NotNull Long userId, @NotNull Long meetingId);
+    boolean isParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isConfirmedParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isPendingParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isInvitedParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isDeclinedParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isWaitingListParticipant(@NotNull Long meetingId, @NotNull Long userId);
+    boolean isUnrelatedUser(@NotNull Long meetingId, @NotNull Long userId);
 
     interface ParticipantStats {
         long getTotalInvited();
         long getTotalConfirmed();
     }
-
-    ParticipantResponse getParticipantInfo(
-            @NotNull @Positive Long userId,
-            @NotNull @Positive Long meetingId
-    );
-
-    boolean isParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isConfirmedParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isPendingParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isInvitedParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isDeclinedParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isWaitingListParticipant(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
-
-    boolean isUnrelatedUser(
-            @NotNull @Positive Long meetingId,
-            @NotNull @Positive Long userId
-    );
 }
-
-
-

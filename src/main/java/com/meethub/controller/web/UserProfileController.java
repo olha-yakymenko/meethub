@@ -134,7 +134,6 @@ public class UserProfileController {
 
         try {
             Long userId = userService.getUserIdByEmail(principal.getName());
-            // Aktualizacja danych użytkownika w UserService (implementacja wymagana)
             redirectAttributes.addFlashAttribute("success", "Profil został zaktualizowany");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Błąd podczas aktualizacji profilu: " + e.getMessage());
