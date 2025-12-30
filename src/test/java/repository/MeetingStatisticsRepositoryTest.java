@@ -1,11 +1,13 @@
 package com.meethub.domain.repository.jpa;
 
+import com.meethub.domain.model.dto.OrganizerReportStats;
 import com.meethub.domain.model.entity.MeetingStatistics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,7 +33,7 @@ class MeetingStatisticsRepositoryTest {
     @Test
     void findByOrganizerId_shouldReturnEmptyList_whenNoStatisticsExist() {
         List<MeetingStatistics> result =
-                statisticsRepository.findByOrganizerId(2L); // organizer z data.sql
+                statisticsRepository.findByOrganizerId(2L);
 
         assertThat(result).isEmpty();
     }
@@ -47,6 +49,30 @@ class MeetingStatisticsRepositoryTest {
         assertAll(
                 () -> assertThat(result).isNotNull(),
                 () -> assertThat(result).isEmpty()
+        );
+    }
+
+
+    @Test
+    void getOrganizerReportStatsByDateRange_shouldReturnCompleteStats() {
+
+        LocalDateTime dateFrom = LocalDateTime.now().minusDays(30);
+        LocalDateTime dateTo = LocalDateTime.now();
+
+        Long organizerId = 2L;
+
+        // When
+        OrganizerReportStats result = statisticsRepository.getOrganizerReportStatsByDateRange(
+                organizerId, dateFrom, dateTo
+        );
+
+        // Then
+        assertAll(
+                () -> assertThat(result).isNotNull(),
+                () -> assertThat(result.getTotalMeetings()).isEqualTo(0L), // No statistics in test data
+                () -> assertThat(result.getAverageAttendanceRate()).isNotNull(),
+                () -> assertThat(result.getTotalParticipants()).isNotNull(),
+                () -> assertThat(result.getTotalAttended()).isNotNull()
         );
     }
 }

@@ -24,7 +24,7 @@ class UserPreferenceRepositoryTest {
     @Test
     @DisplayName("Should find all preferences by user id")
     void testFindByUserId() {
-        Long userId = 3L; // istniejący użytkownik w data.sql
+        Long userId = 3L;
 
         List<UserPreference> preferences = userPreferenceRepository.findByUserId(userId);
 

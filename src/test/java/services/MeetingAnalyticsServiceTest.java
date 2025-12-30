@@ -1,30 +1,34 @@
 package com.meethub.domain.service.impl;
 
+import com.meethub.domain.model.dto.OrganizerReportStats;
 import com.meethub.domain.model.dto.ParticipantCountDto;
-import com.meethub.domain.model.entity.*;
-import com.meethub.domain.model.enums.*;
+import com.meethub.domain.model.entity.Meeting;
+import com.meethub.domain.model.entity.MeetingStatistics;
+import com.meethub.domain.model.entity.User;
+import com.meethub.domain.model.enums.MeetingStatus;
 import com.meethub.domain.model.request.ReportFilter;
 import com.meethub.domain.model.response.OrganizerReport;
 import com.meethub.domain.repository.jpa.FeedbackRepository;
+import com.meethub.domain.repository.jpa.MeetingParticipantRepository;
 import com.meethub.domain.repository.jpa.MeetingRepository;
 import com.meethub.domain.repository.jpa.MeetingStatisticsRepository;
-import com.meethub.domain.service.MeetingParticipantService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +41,9 @@ class MeetingAnalyticsServiceTest {
     private MeetingRepository meetingRepository;
 
     @Mock
+    private MeetingParticipantRepository meetingParticipantRepository;
+
+    @Mock
     private FeedbackRepository feedbackRepository;
 
     @InjectMocks
@@ -44,14 +51,7 @@ class MeetingAnalyticsServiceTest {
 
     private Meeting meeting;
     private User organizer;
-    private User participant;
-    private MeetingParticipant meetingParticipant;
-
-
     private ParticipantCountDto participantCounts;
-
-    @Mock
-    private MeetingParticipantService meetingParticipantService;
 
     @BeforeEach
     void setUp() {
@@ -60,12 +60,6 @@ class MeetingAnalyticsServiceTest {
         organizer.setId(1L);
         organizer.setFirstName("Organizer");
         organizer.setLastName("Test");
-
-        // Create participant
-        participant = new User();
-        participant.setId(2L);
-        participant.setFirstName("Participant");
-        participant.setLastName("Test");
 
         // Create meeting
         meeting = new Meeting();
@@ -77,20 +71,155 @@ class MeetingAnalyticsServiceTest {
         meeting.setOrganizer(organizer);
         meeting.setStatus(MeetingStatus.COMPLETED);
 
-        // Create meeting participant
-        meetingParticipant = new MeetingParticipant();
-        meetingParticipant.setId(200L);
-        meetingParticipant.setMeeting(meeting);
-        meetingParticipant.setUser(participant);
-        meetingParticipant.setStatus(ParticipationStatus.ATTENDED);
-
-        // Set participants to meeting
-        Set<MeetingParticipant> participants = new HashSet<>();
-        participants.add(meetingParticipant);
-        meeting.setParticipants(participants);
-        participantCounts = new ParticipantCountDto(10L, 8L, 9L, 1L, 0L, (long) 80.0, (long) 90.0);
+        // Create participant counts
+        participantCounts = ParticipantCountDto.builder()
+                .total(10L)
+                .confirmed(8L)
+                .attended(6L)
+                .declined(2L)
+                .cancelled(0L)
+                .invited(0L)
+                .pending(0L)
+                .build();
     }
 
+    // ========== generateMeetingStatistics ==========
+
+    @Test
+    void generateMeetingStatistics_shouldCreateNewStatistics_whenNotExists() {
+        // Given
+        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
+        when(meetingParticipantRepository.getParticipantCounts(100L)).thenReturn(participantCounts);
+        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenReturn(4.5);
+        when(feedbackRepository.countByMeetingId(100L)).thenReturn(5L);
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.empty());
+        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> {
+            MeetingStatistics stats = inv.getArgument(0);
+            stats.setId(1L);
+            return stats;
+        });
+
+        // When
+        MeetingStatistics result = analyticsService.generateMeetingStatistics(100L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(result, "Statistics should not be null"),
+                () -> assertEquals(100L, result.getMeeting().getId(), "Should be for correct meeting"),
+                () -> assertEquals(10, result.getTotalParticipants(), "Total participants should match"),
+                () -> assertEquals(6, result.getAttendedParticipants(), "Attended participants should match"),
+                () -> assertEquals(8, result.getConfirmedParticipants(), "Confirmed participants should match"),
+                () -> assertEquals(2, result.getDeclinedParticipants(), "Declined participants should match"),
+                () -> assertEquals(new BigDecimal("60.00"), result.getAttendanceRate(), "Attendance rate should be 60%"),
+                () -> assertEquals(new BigDecimal("80.00"), result.getConfirmationRate(), "Confirmation rate should be 80%"),
+                () -> assertEquals(new BigDecimal("4.50"), result.getAverageRating(), "Average rating should match"),
+                () -> assertEquals(5, result.getFeedbackCount(), "Feedback count should match"),
+                () -> assertNotNull(result.getGeneratedAt(), "Generated timestamp should be set"),
+                () -> assertEquals(MeetingStatistics.StatisticsStatus.FINAL, result.getStatus(), "Status should be FINAL for completed meeting"),
+                () -> assertTrue(result.getFinalized(), "Should be finalized for completed meeting")
+        );
+
+        verify(statisticsRepository).save(any(MeetingStatistics.class));
+    }
+
+
+    @Test
+    void generateMeetingStatistics_shouldThrowExceptionWhenMeetingNotFound() {
+        // Given
+        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> analyticsService.generateMeetingStatistics(999L));
+        assertEquals("Meeting not found", exception.getMessage());
+    }
+
+    @Test
+    void generateMeetingStatistics_shouldHandleFeedbackException() {
+        // Given
+        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
+        when(meetingParticipantRepository.getParticipantCounts(100L)).thenReturn(participantCounts);
+        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenThrow(new RuntimeException("DB Error"));
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.empty());
+        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> {
+            MeetingStatistics stats = inv.getArgument(0);
+            stats.setId(1L);
+            return stats;
+        });
+
+        // When
+        MeetingStatistics result = analyticsService.generateMeetingStatistics(100L);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(result, "Should handle feedback exception gracefully"),
+                () -> assertEquals(BigDecimal.ZERO, result.getAverageRating(), "Rating should be zero on exception"),
+                () -> assertEquals(0, result.getFeedbackCount(), "Feedback count should be zero on exception"),
+                () -> assertEquals(10, result.getTotalParticipants(), "Should still have participant counts")
+        );
+    }
+
+    @Test
+    void generateMeetingStatistics_shouldSetStatusBasedOnMeetingTime() {
+        // Test for future meeting (DRAFT)
+        Meeting futureMeeting = new Meeting();
+        futureMeeting.setId(200L);
+        futureMeeting.setTitle("Future Meeting");
+        futureMeeting.setStartDate(LocalDateTime.now().plusDays(1));
+        futureMeeting.setEndDate(LocalDateTime.now().plusDays(2));
+        futureMeeting.setOrganizer(organizer);
+        futureMeeting.setStatus(MeetingStatus.PLANNED);
+
+        ParticipantCountDto futureCounts = ParticipantCountDto.builder()
+                .total(5L)
+                .confirmed(5L)
+                .attended(0L)
+                .declined(0L)
+                .cancelled(0L)
+                .invited(0L)
+                .pending(0L)
+                .build();
+
+        when(meetingRepository.findById(200L)).thenReturn(Optional.of(futureMeeting));
+        when(meetingParticipantRepository.getParticipantCounts(200L)).thenReturn(futureCounts);
+        when(statisticsRepository.findByMeetingId(200L)).thenReturn(Optional.empty());
+        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> {
+            MeetingStatistics stats = inv.getArgument(0);
+            stats.setId(200L);
+            return stats;
+        });
+
+        MeetingStatistics futureStats = analyticsService.generateMeetingStatistics(200L);
+        assertEquals(MeetingStatistics.StatisticsStatus.DRAFT, futureStats.getStatus(), "Future meeting should be DRAFT");
+
+        // Test for ongoing meeting (PRELIMINARY)
+        Meeting ongoingMeeting = new Meeting();
+        ongoingMeeting.setId(300L);
+        ongoingMeeting.setTitle("Ongoing Meeting");
+        ongoingMeeting.setStartDate(LocalDateTime.now().minusHours(1));
+        ongoingMeeting.setEndDate(LocalDateTime.now().plusHours(1));
+        ongoingMeeting.setOrganizer(organizer);
+        ongoingMeeting.setStatus(MeetingStatus.COMPLETED);
+
+        ParticipantCountDto ongoingCounts = ParticipantCountDto.builder()
+                .total(5L)
+                .confirmed(5L)
+                .attended(3L)
+                .declined(0L)
+                .cancelled(0L)
+                .invited(0L)
+                .pending(0L)
+                .build();
+
+        when(meetingRepository.findById(300L)).thenReturn(Optional.of(ongoingMeeting));
+        when(meetingParticipantRepository.getParticipantCounts(300L)).thenReturn(ongoingCounts);
+        when(statisticsRepository.findByMeetingId(300L)).thenReturn(Optional.empty());
+
+        MeetingStatistics ongoingStats = analyticsService.generateMeetingStatistics(300L);
+        assertEquals(MeetingStatistics.StatisticsStatus.PRELIMINARY, ongoingStats.getStatus(), "Ongoing meeting should be PRELIMINARY");
+    }
+
+    // ========== getMeetingStatistics ==========
 
     @Test
     void getMeetingStatistics_shouldReturnStatistics_whenExist() {
@@ -109,7 +238,7 @@ class MeetingAnalyticsServiceTest {
         // When
         Optional<MeetingStatistics> result = analyticsService.getMeetingStatistics(100L);
 
-        // Then - single assertion with detailed message
+        // Then
         assertThat(result)
                 .isPresent()
                 .hasValueSatisfying(s ->
@@ -125,95 +254,97 @@ class MeetingAnalyticsServiceTest {
         // When
         Optional<MeetingStatistics> result = analyticsService.getMeetingStatistics(999L);
 
-        // Then - single assertion
+        // Then
         assertThat(result).isEmpty();
     }
+
+    // ========== deleteMeetingStatistics ==========
 
     @Test
     void deleteMeetingStatistics_shouldCallRepository() {
         // When
         analyticsService.deleteMeetingStatistics(100L);
 
-        // Then - verify repository method was called
+        // Then
         verify(statisticsRepository).deleteByMeetingId(100L);
     }
-//
-//    @Test
-//    void generateOrganizerReport_shouldReturnValidReport() {
-//        // Given
-//        MeetingStatistics stats = MeetingStatistics.builder()
-//                .id(1L)
-//                .meeting(meeting)
-//                .totalParticipants(1)
-//                .attendedParticipants(1)
-//                .attendanceRate(BigDecimal.valueOf(100.00).setScale(2, RoundingMode.HALF_UP))
-//                .generatedAt(LocalDateTime.now())
-//                .build();
-//
-//        List<MeetingStatistics> statsList = Collections.singletonList(stats);
-//        when(statisticsRepository.findByOrganizerId(1L)).thenReturn(statsList);
-//
-//        // When
-//        OrganizerReport report = analyticsService.generateOrganizerReport(1L, null);
-//
-//        // Then - assertAll for report validation
-//        assertAll(
-//                () -> assertNotNull(report, "Report should not be null"),
-//                () -> assertEquals(1L, report.getOrganizerId(), "Organizer ID should match"),
-//                () -> assertEquals(1, report.getTotalMeetings(), "Should have 1 meeting"),
-//                () -> assertEquals(1, report.getTotalParticipants(), "Should have 1 participant"),
-//                () -> assertEquals(1, report.getTotalAttended(), "Should have 1 attended"),
-//                () -> assertEquals(new BigDecimal("100.00"), report.getAverageAttendanceRate(),
-//                        "Average attendance should be 100%")
-//        );
-//    }
 
-//    @Test
-//    void generateOrganizerReport_shouldFilterByDate() {
-//        // Given
-//        LocalDateTime now = LocalDateTime.now();
-//
-//        MeetingStatistics stats1 = MeetingStatistics.builder()
-//                .id(1L)
-//                .meeting(createMeetingWithDate(now.minusDays(10)))
-//                .totalParticipants(1)
-//                .attendedParticipants(1)
-//                .attendanceRate(BigDecimal.valueOf(100.0))
-//                .build();
-//
-//        MeetingStatistics stats2 = MeetingStatistics.builder()
-//                .id(2L)
-//                .meeting(createMeetingWithDate(now.minusDays(30))) // Outside date range
-//                .totalParticipants(1)
-//                .attendedParticipants(1)
-//                .attendanceRate(BigDecimal.valueOf(100.0))
-//                .build();
-//
-//        List<MeetingStatistics> allStats = Arrays.asList(stats1, stats2);
-//        when(statisticsRepository.findByOrganizerId(1L)).thenReturn(allStats);
-//
-//        ReportFilter filter = new ReportFilter();
-//        filter.setDateFrom(now.minusDays(20)); // Only include meetings from last 20 days
-//        filter.setDateTo(now);
-//
-//        // When
-//        OrganizerReport report = analyticsService.generateOrganizerReport(1L, filter);
-//
-//        // Then - should only include stats1 (within date range)
-//        assertAll(
-//                () -> assertEquals(1, report.getTotalMeetings(), "Should only include 1 meeting in date range"),
-//                () -> assertEquals(1, report.getTotalParticipants(), "Should have 1 participant")
-//        );
-//    }
+    // ========== generateOrganizerReport ==========
 
-    private Meeting createMeetingWithDate(LocalDateTime date) {
-        Meeting meeting = new Meeting();
-        meeting.setId(1L);
-        meeting.setTitle("Meeting");
-        meeting.setStartDate(date);
-        meeting.setOrganizer(organizer);
-        return meeting;
+    @Test
+    void generateOrganizerReport_shouldReturnValidReport() {
+        // Given
+        OrganizerReportStats stats = new OrganizerReportStats(
+                2L,
+                new BigDecimal("85.50"),
+                30L,
+                25L
+        );
+
+        when(statisticsRepository.getOrganizerReportStats(1L)).thenReturn(stats);
+
+        // When
+        OrganizerReport report = analyticsService.generateOrganizerReport(1L, null);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(report, "Report should not be null"),
+                () -> assertEquals(1L, report.getOrganizerId(), "Organizer ID should match"),
+                () -> assertEquals(2, report.getTotalMeetings(), "Should have 2 meetings"),
+                () -> assertEquals(30, report.getTotalParticipants(), "Should have 30 participants"),
+                () -> assertEquals(25, report.getTotalAttended(), "Should have 25 attended"),
+                () -> assertEquals(new BigDecimal("85.50"), report.getAverageAttendanceRate(),
+                        "Average attendance should be 85.5%")
+        );
     }
+
+    @Test
+    void generateOrganizerReport_shouldFilterByDate() {
+        // Given
+        OrganizerReportStats stats = new OrganizerReportStats(
+                1L,
+                new BigDecimal("90.00"),
+                15L,
+                14L
+        );
+
+        ReportFilter filter = new ReportFilter();
+        filter.setDateFrom(LocalDateTime.now().minusDays(30));
+        filter.setDateTo(LocalDateTime.now());
+
+        when(statisticsRepository.getOrganizerReportStatsByDateRange(
+                eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)
+        )).thenReturn(stats);
+
+        // When
+        OrganizerReport report = analyticsService.generateOrganizerReport(1L, filter);
+
+        // Then
+        assertAll(
+                () -> assertEquals(1, report.getTotalMeetings(), "Should only include 1 meeting in date range"),
+                () -> assertEquals(15, report.getTotalParticipants(), "Should have 15 participants")
+        );
+    }
+
+    @Test
+    void generateOrganizerReport_shouldHandleNullStats() {
+        // Given
+        when(statisticsRepository.getOrganizerReportStats(1L)).thenReturn(null);
+
+        // When
+        OrganizerReport report = analyticsService.generateOrganizerReport(1L, null);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(report),
+                () -> assertEquals(0, report.getTotalMeetings()),
+                () -> assertEquals(0, report.getTotalParticipants()),
+                () -> assertEquals(0, report.getTotalAttended()),
+                () -> assertEquals(BigDecimal.ZERO, report.getAverageAttendanceRate())
+        );
+    }
+
+    // ========== getStatisticsOverview ==========
 
     @Test
     void getStatisticsOverview_shouldReturnCompleteMap() {
@@ -221,11 +352,11 @@ class MeetingAnalyticsServiceTest {
         MeetingStatistics stats = MeetingStatistics.builder()
                 .id(1L)
                 .meeting(meeting)
-                .totalParticipants(1)
-                .attendedParticipants(1)
-                .confirmedParticipants(1)
-                .attendanceRate(BigDecimal.valueOf(100.0))
-                .confirmationRate(BigDecimal.valueOf(100.0))
+                .totalParticipants(10)
+                .attendedParticipants(8)
+                .confirmedParticipants(9)
+                .attendanceRate(BigDecimal.valueOf(80.0))
+                .confirmationRate(BigDecimal.valueOf(90.0))
                 .avgResponseTimeMinutes(BigDecimal.valueOf(30.0))
                 .generatedAt(LocalDateTime.now())
                 .status(MeetingStatistics.StatisticsStatus.FINAL)
@@ -237,68 +368,135 @@ class MeetingAnalyticsServiceTest {
         // When
         Map<String, Object> overview = analyticsService.getStatisticsOverview(100L);
 
-        // Then - single assertion checking all required keys
+        // Then
         assertThat(overview)
                 .containsKeys(
                         "meetingId", "attendanceRate", "totalParticipants",
                         "attendedParticipants", "confirmedParticipants",
                         "avgResponseTime", "generatedAt", "status", "finalized"
                 );
-    }
 
-    @Test
-    void getRecentStatistics_shouldReturnLimitedResults() {
-        // Given
-        List<MeetingStatistics> allStats = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
-            MeetingStatistics stats = MeetingStatistics.builder()
-                    .id((long) i)
-                    .meeting(meeting)
-                    .generatedAt(LocalDateTime.now().minusHours(i))
-                    .build();
-            allStats.add(stats);
-        }
-
-        when(statisticsRepository.findAll()).thenReturn(allStats);
-
-        // When
-        List<MeetingStatistics> recent = analyticsService.getRecentStatistics(5);
-
-        // Then - should return only 5 most recent
         assertAll(
-                () -> assertEquals(5, recent.size(), "Should return only 5 results"),
-                () -> assertTrue(recent.get(0).getGeneratedAt().isAfter(recent.get(4).getGeneratedAt()),
-                        "Should be sorted by date descending")
+                () -> assertEquals(100L, overview.get("meetingId")),
+                () -> assertEquals(new BigDecimal("80.0"), overview.get("attendanceRate")),
+                () -> assertEquals(10, overview.get("totalParticipants")),
+                () -> assertEquals(8, overview.get("attendedParticipants")),
+                () -> assertEquals(9, overview.get("confirmedParticipants")),
+                () -> assertEquals(new BigDecimal("30.0"), overview.get("avgResponseTime")),
+                () -> assertEquals("FINAL", overview.get("status")),
+                () -> assertEquals(true, overview.get("finalized"))
         );
     }
 
+    @Test
+    void getStatisticsOverview_shouldThrowExceptionWhenNoStatistics() {
+        // Given
+        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
 
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> analyticsService.getStatisticsOverview(999L));
+        assertTrue(exception.getMessage().contains("No statistics found"));
+    }
+
+    // ========== getRecentStatistics ==========
 
     @Test
-    void exportMeetingStatisticsToCsv_shouldReturnNonEmptyByteArray() {
+    void getRecentStatistics_shouldReturnLimitedStatistics() {
         // Given
-        MeetingStatistics stats = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(1)
-                .attendedParticipants(1)
-                .attendanceRate(BigDecimal.valueOf(100.0))
-                .confirmationRate(BigDecimal.valueOf(100.0))
-                .avgResponseTimeMinutes(BigDecimal.valueOf(30.0))
-                .generatedAt(LocalDateTime.now())
-                .build();
+        List<MeetingStatistics> recentStats = Arrays.asList(
+                createTestStatistics(6L, 12, 9, new BigDecimal("75.00")),
+                createTestStatistics(5L, 30, 25, new BigDecimal("83.33")),
+                createTestStatistics(4L, 25, 20, new BigDecimal("80.00"))
+        );
 
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(stats));
+        PageRequest pageRequest = PageRequest.of(0, 3);
+        when(statisticsRepository.findRecentStatistics(pageRequest)).thenReturn(recentStats);
 
         // When
-        byte[] csv = analyticsService.exportMeetingStatisticsToCsv(100L);
+        List<MeetingStatistics> result = analyticsService.getRecentStatistics(3);
 
-        // Then - single assertion
+        // Then
         assertAll(
-                () -> assertNotNull(csv, "CSV should not be null"),
-                () -> assertTrue(csv.length > 0, "CSV should not be empty")
+                () -> assertEquals(3, result.size()),
+                () -> assertEquals(6L, result.get(0).getMeeting().getId()),
+                () -> assertEquals(5L, result.get(1).getMeeting().getId()),
+                () -> assertEquals(4L, result.get(2).getMeeting().getId())
         );
     }
+
+    @Test
+    void getRecentStatistics_shouldReturnAll_whenLimitGreaterThanSize() {
+        // Given
+        List<MeetingStatistics> allStats = Arrays.asList(
+                createTestStatistics(1L, 10, 8, new BigDecimal("80.00")),
+                createTestStatistics(2L, 20, 15, new BigDecimal("75.00"))
+        );
+
+        PageRequest pageRequest = PageRequest.of(0, 10);
+        when(statisticsRepository.findRecentStatistics(pageRequest)).thenReturn(allStats);
+
+        // When
+        List<MeetingStatistics> result = analyticsService.getRecentStatistics(10);
+
+        // Then
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void getRecentStatistics_shouldHandleEmptyRepository() {
+        // Given
+        PageRequest pageRequest = PageRequest.of(0, 5);
+        when(statisticsRepository.findRecentStatistics(pageRequest)).thenReturn(Collections.emptyList());
+
+        // When
+        List<MeetingStatistics> result = analyticsService.getRecentStatistics(5);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(result),
+                () -> assertTrue(result.isEmpty())
+        );
+    }
+
+    @Test
+    void getRecentStatistics_shouldReturnLimitedAndSortedResults() {
+        // Given
+        LocalDateTime now = LocalDateTime.now();
+
+        MeetingStatistics stats1 = createTestStatistics(1L, 10, 8, new BigDecimal("80.00"));
+        stats1.setGeneratedAt(now.minusDays(3));
+
+        MeetingStatistics stats2 = createTestStatistics(2L, 20, 15, new BigDecimal("75.00"));
+        stats2.setGeneratedAt(now.minusDays(1));
+
+        MeetingStatistics stats3 = createTestStatistics(3L, 15, 10, new BigDecimal("66.67"));
+        stats3.setGeneratedAt(now.minusDays(2));
+
+        MeetingStatistics stats4 = createTestStatistics(4L, 25, 20, new BigDecimal("80.00"));
+        stats4.setGeneratedAt(now.minusHours(6));
+
+        MeetingStatistics stats5 = createTestStatistics(5L, 30, 25, new BigDecimal("83.33"));
+        stats5.setGeneratedAt(now.minusHours(12));
+
+        List<MeetingStatistics> recentStats = Arrays.asList(stats4, stats5, stats2); // Most recent 3
+
+        PageRequest pageRequest = PageRequest.of(0, 3);
+        when(statisticsRepository.findRecentStatistics(pageRequest)).thenReturn(recentStats);
+
+        // When
+        List<MeetingStatistics> result = analyticsService.getRecentStatistics(3);
+
+        // Then
+        assertAll(
+                () -> assertEquals(3, result.size(), "Should return only 3 results"),
+                () -> assertEquals(4L, result.get(0).getId(), "Most recent should be first"),
+                () -> assertEquals(5L, result.get(1).getId(), "Second most recent should be second"),
+                () -> assertEquals(2L, result.get(2).getId(), "Third most recent should be third")
+        );
+    }
+
+    // ========== getAverageResponseTime ==========
 
     @Test
     void getAverageResponseTime_shouldReturnValue() {
@@ -318,176 +516,37 @@ class MeetingAnalyticsServiceTest {
         assertThat(avgResponseTime).isEqualTo(BigDecimal.valueOf(45.5));
     }
 
-
     @Test
-    void generateMeetingStatistics_shouldCreateNewStatistics_whenNotExists() {
+    void getAverageResponseTime_shouldReturnZeroWhenNoStatistics() {
         // Given
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(participantCounts);
-        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenReturn(4.5);
-        when(feedbackRepository.countByMeetingId(100L)).thenReturn(5L);
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.empty());
-        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
 
         // When
-        MeetingStatistics result = analyticsService.generateMeetingStatistics(100L);
+        BigDecimal result = analyticsService.getAverageResponseTime(999L);
 
         // Then
-        assertAll(
-                () -> assertNotNull(result, "Statistics should not be null"),
-                () -> assertEquals(100L, result.getMeeting().getId(), "Should be for correct meeting"),
-                () -> assertEquals(10, result.getTotalParticipants(), "Total participants should match"),
-                () -> assertEquals(9, result.getAttendedParticipants(), "Attended participants should match"),
-                () -> assertEquals(new BigDecimal("90.00"), result.getAttendanceRate(), "Attendance rate should match"),
-                () -> assertEquals(new BigDecimal("4.50"), result.getAverageRating(), "Average rating should match"),
-                () -> assertEquals(5, result.getFeedbackCount(), "Feedback count should match"),
-                () -> assertNotNull(result.getGeneratedAt(), "Generated timestamp should be set"),
-                () -> assertEquals(MeetingStatistics.StatisticsStatus.FINAL, result.getStatus(), "Status should be FINAL for completed meeting")
-        );
-
-        verify(statisticsRepository).save(any(MeetingStatistics.class));
+        assertEquals(BigDecimal.ZERO, result, "Should return zero when no statistics found");
     }
 
     @Test
-    void generateMeetingStatistics_shouldUpdateExistingStatistics_whenExists() {
+    void getAverageResponseTime_shouldReturnZeroWhenResponseTimeIsNull() {
         // Given
-        MeetingStatistics existingStats = MeetingStatistics.builder()
+        MeetingStatistics stats = MeetingStatistics.builder()
                 .id(1L)
                 .meeting(meeting)
-                .totalParticipants(5)
-                .attendedParticipants(4)
-                .attendanceRate(new BigDecimal("80.00"))
+                .avgResponseTimeMinutes(null)
                 .build();
 
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(participantCounts);
-        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenReturn(4.5);
-        when(feedbackRepository.countByMeetingId(100L)).thenReturn(5L);
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(existingStats));
-        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(stats));
 
         // When
-        MeetingStatistics result = analyticsService.generateMeetingStatistics(100L);
+        BigDecimal result = analyticsService.getAverageResponseTime(100L);
 
         // Then
-        assertAll(
-                () -> assertEquals(1L, result.getId(), "Should update existing statistics"),
-                () -> assertEquals(10, result.getTotalParticipants(), "Total participants should be updated"),
-                () -> assertEquals(9, result.getAttendedParticipants(), "Attended participants should be updated")
-        );
-
-        verify(statisticsRepository).save(existingStats);
+        assertEquals(BigDecimal.ZERO, result);
     }
 
-    @Test
-    void generateMeetingStatistics_shouldHandleNullParticipantCounts() {
-        // Given
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(null);
-        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenReturn(null);
-        when(feedbackRepository.countByMeetingId(100L)).thenReturn(null);
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.empty());
-        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        // When
-        MeetingStatistics result = analyticsService.generateMeetingStatistics(100L);
-
-        // Then
-        assertAll(
-                () -> assertEquals(0, result.getTotalParticipants(), "Should handle null participant counts"),
-                () -> assertEquals(0, result.getAttendedParticipants(), "Should handle null participant counts"),
-                () -> assertEquals(0, result.getFeedbackCount(), "Should handle null feedback count"),
-                () -> assertEquals(BigDecimal.ZERO, result.getAverageRating(), "Should handle null rating")
-        );
-    }
-
-    @Test
-    void generateMeetingStatistics_shouldHandleFeedbackException() {
-        // Given
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(participantCounts);
-        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenThrow(new RuntimeException("DB Error"));
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.empty());
-        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        // When
-        MeetingStatistics result = analyticsService.generateMeetingStatistics(100L);
-
-        // Then
-        assertAll(
-                () -> assertNotNull(result, "Should handle feedback exception gracefully"),
-                () -> assertEquals(BigDecimal.ZERO, result.getAverageRating(), "Rating should be zero on exception"),
-                () -> assertEquals(0, result.getFeedbackCount(), "Feedback count should be zero on exception")
-        );
-    }
-
-    @Test
-    void generateMeetingStatistics_shouldSetStatusBasedOnMeetingTime() {
-        // Test dla spotkania przyszłego (DRAFT)
-        Meeting futureMeeting = new Meeting();
-        futureMeeting.setId(200L);
-        futureMeeting.setTitle("Future Meeting");
-        futureMeeting.setStartDate(LocalDateTime.now().plusDays(1));
-        futureMeeting.setEndDate(LocalDateTime.now().plusDays(2));
-        futureMeeting.setOrganizer(organizer);
-
-        when(meetingRepository.findById(200L)).thenReturn(Optional.of(futureMeeting));
-        when(meetingParticipantService.getParticipantCounts(200L)).thenReturn(new ParticipantCountDto(5L, 0L, 5L, 0L, 0L, (long) 0.0, (long) 100.0));
-        when(statisticsRepository.findByMeetingId(200L)).thenReturn(Optional.empty());
-        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        MeetingStatistics futureStats = analyticsService.generateMeetingStatistics(200L);
-        assertEquals(MeetingStatistics.StatisticsStatus.DRAFT, futureStats.getStatus(), "Future meeting should be DRAFT");
-
-        // Test dla spotkania trwającego (PRELIMINARY)
-        Meeting ongoingMeeting = new Meeting();
-        ongoingMeeting.setId(300L);
-        ongoingMeeting.setTitle("Ongoing Meeting");
-        ongoingMeeting.setStartDate(LocalDateTime.now().minusHours(1));
-        ongoingMeeting.setEndDate(LocalDateTime.now().plusHours(1));
-        ongoingMeeting.setOrganizer(organizer);
-
-        when(meetingRepository.findById(300L)).thenReturn(Optional.of(ongoingMeeting));
-        when(meetingParticipantService.getParticipantCounts(300L)).thenReturn(new ParticipantCountDto(5L, 3L, 5L, 0L, 0L, (long) 60.0, (long) 100.0));
-        when(statisticsRepository.findByMeetingId(300L)).thenReturn(Optional.empty());
-
-        MeetingStatistics ongoingStats = analyticsService.generateMeetingStatistics(300L);
-        assertEquals(MeetingStatistics.StatisticsStatus.PRELIMINARY, ongoingStats.getStatus(), "Ongoing meeting should be PRELIMINARY");
-    }
-//
-//    @Test
-//    void generateOrganizerReport_shouldCalculateCorrectAverage() {
-//        // Given
-//        List<MeetingStatistics> statsList = Arrays.asList(
-//                MeetingStatistics.builder()
-//                        .meeting(meeting)
-//                        .totalParticipants(10)
-//                        .attendedParticipants(8)
-//                        .attendanceRate(new BigDecimal("80.00"))
-//                        .build(),
-//                MeetingStatistics.builder()
-//                        .meeting(createMeeting(LocalDateTime.now().minusDays(3)))
-//                        .totalParticipants(20)
-//                        .attendedParticipants(15)
-//                        .attendanceRate(new BigDecimal("75.00"))
-//                        .build()
-//        );
-//
-//        when(statisticsRepository.findByOrganizerId(1L)).thenReturn(statsList);
-//
-//        // When
-//        OrganizerReport report = analyticsService.generateOrganizerReport(1L, null);
-//
-//        // Then
-//        assertAll(
-//                () -> assertEquals(2, report.getTotalMeetings(), "Should include 2 meetings"),
-//                () -> assertEquals(30, report.getTotalParticipants(), "Total participants should be 30"),
-//                () -> assertEquals(23, report.getTotalAttended(), "Total attended should be 23"),
-//                () -> assertEquals(new BigDecimal("77.50"), report.getAverageAttendanceRate(),
-//                        "Average attendance should be 77.5% (mean of 80% and 75%)")
-//        );
-//    }
-//
+    // ========== getMeetingStatisticsByOrganizer ==========
 
     @Test
     void getMeetingStatisticsByOrganizer_shouldReturnAllStatistics() {
@@ -508,207 +567,47 @@ class MeetingAnalyticsServiceTest {
     }
 
     @Test
-    void getAverageResponseTime_shouldReturnZeroWhenNoStatistics() {
+    void getMeetingStatisticsByOrganizer_shouldReturnEmptyList_whenNoStatistics() {
         // Given
-        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
+        when(statisticsRepository.findByOrganizerId(1L)).thenReturn(Collections.emptyList());
 
         // When
-        BigDecimal result = analyticsService.getAverageResponseTime(999L);
-
-        // Then
-        assertEquals(BigDecimal.ZERO, result, "Should return zero when no statistics found");
-    }
-
-    @Test
-    void getRecentStatistics_shouldReturnLimitedAndSortedResults() {
-        // Given
-        LocalDateTime now = LocalDateTime.now();
-        List<MeetingStatistics> allStats = Arrays.asList(
-                MeetingStatistics.builder().id(1L).generatedAt(now.minusDays(3)).build(),
-                MeetingStatistics.builder().id(2L).generatedAt(now.minusDays(1)).build(),
-                MeetingStatistics.builder().id(3L).generatedAt(now.minusDays(2)).build(),
-                MeetingStatistics.builder().id(4L).generatedAt(now.minusHours(6)).build(),
-                MeetingStatistics.builder().id(5L).generatedAt(now.minusHours(12)).build()
-        );
-
-        when(statisticsRepository.findAll()).thenReturn(allStats);
-
-        // When
-        List<MeetingStatistics> result = analyticsService.getRecentStatistics(3);
+        List<MeetingStatistics> result = analyticsService.getMeetingStatisticsByOrganizer(1L);
 
         // Then
         assertAll(
-                () -> assertEquals(3, result.size(), "Should return only 3 results"),
-                () -> assertEquals(4L, result.get(0).getId(), "Most recent should be first"),
-                () -> assertEquals(5L, result.get(1).getId(), "Second most recent should be second"),
-                () -> assertEquals(2L, result.get(2).getId(), "Third most recent should be third")
+                () -> assertNotNull(result),
+                () -> assertTrue(result.isEmpty())
         );
     }
 
-    @Test
-    void getRecentStatistics_shouldHandleEmptyRepository() {
-        // Given
-        when(statisticsRepository.findAll()).thenReturn(Collections.emptyList());
-
-        // When
-        List<MeetingStatistics> result = analyticsService.getRecentStatistics(5);
-
-        // Then
-        assertTrue(result.isEmpty(), "Should return empty list for empty repository");
-    }
+    // ========== exportMeetingStatisticsToCsv ==========
 
     @Test
-    void refreshAllStatistics_shouldRefreshAllMeetings() {
+    void exportMeetingStatisticsToCsv_shouldReturnNonEmptyByteArray() {
         // Given
-        List<MeetingStatistics> allStats = Arrays.asList(
-                MeetingStatistics.builder().id(1L).meeting(meeting).build(),
-                MeetingStatistics.builder().id(2L).meeting(meeting).build()
-        );
-
-        when(statisticsRepository.findAll()).thenReturn(allStats);
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(participantCounts);
-
-        // When
-        analyticsService.refreshAllStatistics();
-
-        // Then
-        verify(meetingRepository, times(2)).findById(100L);
-        verify(statisticsRepository, times(2)).save(any(MeetingStatistics.class));
-    }
-
-    @Test
-    void refreshAllStatistics_shouldHandleExceptionsGracefully() {
-        // Given
-        MeetingStatistics validStats = MeetingStatistics.builder()
+        MeetingStatistics stats = MeetingStatistics.builder()
                 .id(1L)
                 .meeting(meeting)
+                .totalParticipants(10)
+                .attendedParticipants(8)
+                .attendanceRate(BigDecimal.valueOf(80.0))
+                .confirmationRate(BigDecimal.valueOf(90.0))
+                .avgResponseTimeMinutes(BigDecimal.valueOf(30.0))
+                .generatedAt(LocalDateTime.now())
                 .build();
 
-        MeetingStatistics invalidStats = MeetingStatistics.builder()
-                .id(2L)
-                .meeting(null) // Meeting is null
-                .build();
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(stats));
 
-        List<MeetingStatistics> allStats = Arrays.asList(validStats, invalidStats);
+        // When
+        byte[] csv = analyticsService.exportMeetingStatisticsToCsv(100L);
 
-        when(statisticsRepository.findAll()).thenReturn(allStats);
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(participantCounts);
-
-        // When - should not throw exception
-        assertDoesNotThrow(() -> analyticsService.refreshAllStatistics());
-
-        // Then - should refresh valid stats only
-        verify(meetingRepository).findById(100L);
-        verify(statisticsRepository).save(any(MeetingStatistics.class));
+        // Then
+        assertAll(
+                () -> assertNotNull(csv, "CSV should not be null"),
+                () -> assertTrue(csv.length > 0, "CSV should not be empty")
+        );
     }
-
-    @Test
-    void generateMeetingStatistics_shouldThrowExceptionWhenMeetingNotFound() {
-        // Given
-        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> analyticsService.generateMeetingStatistics(999L));
-        assertEquals("Meeting not found", exception.getMessage());
-    }
-
-//    @Test
-//    void exportMeetingStatisticsToPdf_shouldThrowExceptionWhenNoStatistics() {
-//        // Given
-//        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
-//
-//        // When & Then
-//        RuntimeException exception = assertThrows(RuntimeException.class,
-//                () -> analyticsService.exportMeetingStatisticsToPdf(999L));
-//        assertTrue(exception.getMessage().contains("No statistics found"));
-//    }
-
-    @Test
-    void exportMeetingStatisticsToCsv_shouldThrowExceptionWhenNoStatistics() {
-        // Given
-        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> analyticsService.exportMeetingStatisticsToCsv(999L));
-        assertTrue(exception.getMessage().contains("No statistics found"));
-    }
-
-    @Test
-    void getStatisticsOverview_shouldThrowExceptionWhenNoStatistics() {
-        // Given
-        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> analyticsService.getStatisticsOverview(999L));
-        assertTrue(exception.getMessage().contains("No statistics found"));
-    }
-//
-//    @Test
-//    void testFilterStatistics_withDateFilters() {
-//        // Given
-//        LocalDateTime now = LocalDateTime.now();
-//        MeetingStatistics stats1 = MeetingStatistics.builder()
-//                .meeting(createMeeting(now.minusDays(5)))
-//                .build();
-//        MeetingStatistics stats2 = MeetingStatistics.builder()
-//                .meeting(createMeeting(now.minusDays(15)))
-//                .build();
-//        MeetingStatistics stats3 = MeetingStatistics.builder()
-//                .meeting(createMeeting(now.minusDays(25)))
-//                .build();
-//
-//        List<MeetingStatistics> allStats = Arrays.asList(stats1, stats2, stats3);
-//
-//        ReportFilter filter = new ReportFilter();
-//        filter.setDateFrom(now.minusDays(20));
-//        filter.setDateTo(now.minusDays(10));
-//
-//        // When
-//        Integer filtered = analyticsService.generateOrganizerReport(1L, filter)
-//                .getTotalMeetings(); // Using this to trigger filtering
-//
-//        // Mock setup for the test
-//        when(statisticsRepository.findByOrganizerId(1L)).thenReturn(allStats);
-//
-//        // Get the actual report
-//        OrganizerReport report = analyticsService.generateOrganizerReport(1L, filter);
-//
-//        // Then - should only include stats2 (within date range)
-//        assertEquals(1, report.getTotalMeetings(), "Should only include 1 meeting within date range");
-//    }
-//
-//    @Test
-//    void testFilterStatistics_withNullMeeting() {
-//        // Given
-//        MeetingStatistics statsWithNullMeeting = MeetingStatistics.builder()
-//                .meeting(null) // Meeting is null
-//                .build();
-//
-//        MeetingStatistics statsWithMeeting = MeetingStatistics.builder()
-//                .meeting(createMeeting(LocalDateTime.now()))
-//                .build();
-//
-//        List<MeetingStatistics> allStats = Arrays.asList(statsWithNullMeeting, statsWithMeeting);
-//
-//        ReportFilter filter = new ReportFilter();
-//        filter.setDateFrom(LocalDateTime.now().minusDays(1));
-//
-//        // Mock
-//        when(statisticsRepository.findByOrganizerId(1L)).thenReturn(allStats);
-//
-//        // When
-//        OrganizerReport report = analyticsService.generateOrganizerReport(1L, filter);
-//
-//        // Then - should exclude stats with null meeting
-//        assertEquals(1, report.getTotalMeetings(), "Should exclude statistics with null meeting");
-//    }
-//
-
 
     @Test
     void exportMeetingStatisticsToCsv_shouldReturnValidCsvContent() {
@@ -743,34 +642,42 @@ class MeetingAnalyticsServiceTest {
     }
 
     @Test
-    void testCalculateDerivedMetricsIsCalled() {
+    void exportMeetingStatisticsToCsv_shouldThrowExceptionWhenNoStatistics() {
         // Given
-        MeetingStatistics existingStats = mock(MeetingStatistics.class);
+        when(statisticsRepository.findByMeetingId(999L)).thenReturn(Optional.empty());
 
-        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
-        when(meetingParticipantService.getParticipantCounts(100L)).thenReturn(participantCounts);
-        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenReturn(4.5);
-        when(feedbackRepository.countByMeetingId(100L)).thenReturn(5L);
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(existingStats));
-        when(statisticsRepository.save(any(MeetingStatistics.class))).thenReturn(existingStats);
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> analyticsService.exportMeetingStatisticsToCsv(999L));
+        assertTrue(exception.getMessage().contains("No statistics found"));
+    }
+
+    // ========== exportMeetingStatisticsToPdf ==========
+
+    @Test
+    void exportMeetingStatisticsToPdf_shouldGeneratePdfBytes() {
+        // Given
+        MeetingStatistics stats = MeetingStatistics.builder()
+                .id(1L)
+                .meeting(meeting)
+                .totalParticipants(10)
+                .attendedParticipants(8)
+                .attendanceRate(new BigDecimal("80.00"))
+                .generatedAt(LocalDateTime.now())
+                .status(MeetingStatistics.StatisticsStatus.FINAL)
+                .build();
+
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(stats));
 
         // When
-        analyticsService.generateMeetingStatistics(100L);
+        byte[] pdfBytes = analyticsService.exportMeetingStatisticsToPdf(100L);
 
-        // Then - verify calculateDerivedMetrics was called
-        verify(existingStats).calculateDerivedMetrics();
+        // Then
+        assertAll(
+                () -> assertNotNull(pdfBytes),
+                () -> assertTrue(pdfBytes.length > 0)
+        );
     }
-
-    private Meeting createMeeting(LocalDateTime date) {
-        Meeting m = new Meeting();
-        m.setId(1L);
-        m.setTitle("Meeting");
-        m.setStartDate(date);
-        m.setOrganizer(organizer);
-        return m;
-    }
-
-
 
     @Test
     void exportMeetingStatisticsToPdf_shouldThrowExceptionWhenNoStatistics() {
@@ -783,210 +690,11 @@ class MeetingAnalyticsServiceTest {
         assertTrue(exception.getMessage().contains("No statistics found"));
     }
 
-
-
-    @Test
-    void addAttendanceChart_shouldHandleTotalZero() {
-        // Test the else branch when total = 0
-        MeetingStatistics statsWithZero = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(0)  // Total = 0 triggers else branch
-                .attendedParticipants(0)
-                .confirmedParticipants(0)
-                .declinedParticipants(0)
-                .pendingParticipants(0)
-                .status(MeetingStatistics.StatisticsStatus.FINAL) // DODAJ STATUS
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(statsWithZero));
-
-        // Should handle gracefully without exception
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        });
-    }
-
-    @Test
-    void addAttendanceChart_shouldHandleNullValues() {
-        // Test with all null values
-        MeetingStatistics statsWithNulls = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(null)
-                .attendedParticipants(null)
-                .confirmedParticipants(null)
-                .declinedParticipants(null)
-                .pendingParticipants(null)
-                .status(MeetingStatistics.StatisticsStatus.FINAL) // DODAJ STATUS
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(statsWithNulls));
-
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        });
-    }
-
-    @Test
-    void addAttendanceChart_shouldHandlePartialNullValues() {
-        // Test with mixed null and non-null values
-        MeetingStatistics stats = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(10)
-                .attendedParticipants(8)
-                .confirmedParticipants(null)  // Partial null
-                .declinedParticipants(1)
-                .pendingParticipants(null)    // Partial null
-                .status(MeetingStatistics.StatisticsStatus.FINAL) // DODAJ STATUS
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(stats));
-
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        });
-    }
-
-    @Test
-    void addBasicStatistics_shouldHandleAllNullAndZeroValues() {
-        // Test addBasicStatistics with various null scenarios
-        MeetingStatistics statsWithAllNulls = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(null)
-                .attendedParticipants(null)
-                .confirmedParticipants(null)
-                .declinedParticipants(null)
-                .pendingParticipants(null)
-                .attendanceRate(null)
-                .confirmationRate(null)
-                .averageRating(null)
-                .feedbackCount(null)
-                .avgResponseTimeMinutes(null)
-                .status(MeetingStatistics.StatisticsStatus.FINAL) // DODAJ STATUS
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(statsWithAllNulls));
-
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        }, "Should handle all null values in basic statistics");
-    }
-
-    @Test
-    void addBasicStatistics_shouldHandleZeroRatingAndFeedback() {
-        // Test edge cases for rating and feedback
-        MeetingStatistics statsWithZeros = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(10)
-                .attendedParticipants(8)
-                .averageRating(BigDecimal.ZERO) // Zero rating
-                .feedbackCount(0) // Zero feedback
-                .avgResponseTimeMinutes(BigDecimal.ZERO) // Zero response time
-                .status(MeetingStatistics.StatisticsStatus.FINAL) // DODAJ STATUS
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(statsWithZeros));
-
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        }, "Should handle zero values for rating and feedback");
-    }
-
-    @Test
-    void addBasicStatistics_shouldHandlePositiveRatingAndFeedback() {
-        // Test with positive values
-        MeetingStatistics statsWithValues = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .totalParticipants(10)
-                .attendedParticipants(8)
-                .averageRating(new BigDecimal("4.75")) // Positive rating
-                .feedbackCount(5) // Positive feedback count
-                .avgResponseTimeMinutes(new BigDecimal("30.5")) // Positive response time
-                .status(MeetingStatistics.StatisticsStatus.FINAL) // DODAJ STATUS
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(statsWithValues));
-
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        }, "Should handle positive values for rating and feedback");
-    }
-
-
-    @Test
-    void addSummary_shouldHandleNullStatus() {
-        // Test with null status (edge case)
-        MeetingStatistics nullStatus = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(meeting)
-                .attendanceRate(new BigDecimal("85.00"))
-                .averageRating(new BigDecimal("4.5"))
-                .status(null) // Null status - should be handled
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(nullStatus));
-
-        // Should either handle gracefully or throw expected exception
-        try {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        } catch (RuntimeException e) {
-            // If it throws exception, it should be for null status
-            assertTrue(e.getMessage().contains("status") || e.getMessage().contains("null"));
-        }
-    }
-
-    @Test
-    void addMeetingInfo_shouldHandleNullMeetingDetails() {
-        // Test with meeting having null fields
-        Meeting incompleteMeeting = new Meeting();
-        incompleteMeeting.setId(1L);
-        incompleteMeeting.setTitle(null); // Null title
-        incompleteMeeting.setOrganizer(organizer);
-        incompleteMeeting.setStartDate(null); // Null start date
-        incompleteMeeting.setEndDate(null); // Null end date
-
-        MeetingStatistics stats = MeetingStatistics.builder()
-                .id(1L)
-                .meeting(incompleteMeeting)
-                .totalParticipants(10)
-                .attendedParticipants(8)
-                .status(MeetingStatistics.StatisticsStatus.FINAL)
-                .generatedAt(LocalDateTime.now())
-                .build();
-
-        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(stats));
-
-        assertDoesNotThrow(() -> {
-            byte[] pdf = analyticsService.exportMeetingStatisticsToPdf(100L);
-            assertNotNull(pdf);
-        }, "Should handle null meeting details");
-    }
-
-
     @Test
     void testPdfGenerationForVariousMeetingStatuses() {
         // Test PDF generation for meetings with different statuses
 
-        // Completed meeting (should have end date in past)
+        // Completed meeting
         Meeting completedMeeting = new Meeting();
         completedMeeting.setId(1L);
         completedMeeting.setTitle("Completed Meeting");
@@ -1033,5 +741,327 @@ class MeetingAnalyticsServiceTest {
                     assertNotNull(pdf2);
                 }, "Should handle ongoing meeting")
         );
+    }
+
+    // ========== exportReportToCsv ==========
+
+    @Test
+    void exportReportToCsv_shouldGenerateCsvBytes() {
+        // Given
+        OrganizerReportStats stats = new OrganizerReportStats(
+                2L,
+                new BigDecimal("77.50"),
+                30L,
+                23L
+        );
+
+        when(statisticsRepository.getOrganizerReportStats(1L)).thenReturn(stats);
+
+        // When
+        byte[] csvBytes = analyticsService.exportReportToCsv(1L, null);
+        String csvString = new String(csvBytes);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(csvBytes),
+                () -> assertTrue(csvBytes.length > 0),
+                () -> assertTrue(csvString.contains("Organizer Report")),
+                () -> assertTrue(csvString.contains("Organizer ID: 1")),
+                () -> assertTrue(csvString.contains("Total Meetings: 2"))
+        );
+    }
+
+    // ========== exportReportToPdf ==========
+
+    @Test
+    void exportReportToPdf_shouldGeneratePdfBytes() {
+        // Given
+        OrganizerReportStats stats = new OrganizerReportStats(
+                2L,
+                new BigDecimal("77.50"),
+                30L,
+                23L
+        );
+
+        when(statisticsRepository.getOrganizerReportStats(1L)).thenReturn(stats);
+
+        // When
+        byte[] pdfBytes = analyticsService.exportReportToPdf(1L, null);
+
+        // Then
+        assertAll(
+                () -> assertNotNull(pdfBytes),
+                () -> assertTrue(pdfBytes.length > 0)
+        );
+    }
+
+    // ========== refreshAllStatistics ==========
+
+    @Test
+    void refreshAllStatistics_shouldRefreshAllMeetings() {
+        // Given
+        MeetingStatistics stats1 = createTestStatistics(1L, 10, 8, new BigDecimal("80.00"));
+        MeetingStatistics stats2 = createTestStatistics(2L, 20, 15, new BigDecimal("75.00"));
+
+        List<MeetingStatistics> allStats = Arrays.asList(stats1, stats2);
+
+        when(statisticsRepository.findAll()).thenReturn(allStats);
+
+        // Mock for first meeting
+        Meeting meeting1 = createTestMeeting(1L);
+        Meeting meeting2 = createTestMeeting(2L);
+
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting1));
+        when(meetingRepository.findById(2L)).thenReturn(Optional.of(meeting2));
+
+        ParticipantCountDto counts1 = ParticipantCountDto.builder()
+                .total(10L).confirmed(8L).attended(8L).declined(2L)
+                .cancelled(0L).invited(0L).pending(0L).build();
+
+        ParticipantCountDto counts2 = ParticipantCountDto.builder()
+                .total(20L).confirmed(18L).attended(15L).declined(2L)
+                .cancelled(0L).invited(0L).pending(0L).build();
+
+        when(meetingParticipantRepository.getParticipantCounts(1L)).thenReturn(counts1);
+        when(meetingParticipantRepository.getParticipantCounts(2L)).thenReturn(counts2);
+
+        when(feedbackRepository.findAverageRatingByMeetingId(1L)).thenReturn(4.5);
+        when(feedbackRepository.findAverageRatingByMeetingId(2L)).thenReturn(4.0);
+        when(feedbackRepository.countByMeetingId(1L)).thenReturn(5L);
+        when(feedbackRepository.countByMeetingId(2L)).thenReturn(3L);
+
+        when(statisticsRepository.findByMeetingId(1L)).thenReturn(Optional.of(stats1));
+        when(statisticsRepository.findByMeetingId(2L)).thenReturn(Optional.of(stats2));
+
+        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        analyticsService.refreshAllStatistics();
+
+        // Then
+        verify(statisticsRepository, times(2)).save(any(MeetingStatistics.class));
+        verify(meetingRepository, times(2)).findById(anyLong());
+    }
+
+    @Test
+    void refreshAllStatistics_shouldHandleNullMeeting() {
+        // Given
+        MeetingStatistics statsWithNullMeeting = MeetingStatistics.builder()
+                .totalParticipants(10)
+                .build();
+
+        List<MeetingStatistics> allStats = List.of(statsWithNullMeeting);
+
+        when(statisticsRepository.findAll()).thenReturn(allStats);
+
+        // When
+        analyticsService.refreshAllStatistics();
+
+        // Then
+        verify(statisticsRepository, never()).save(any());
+    }
+
+    @Test
+    void refreshAllStatistics_shouldHandleExceptionsGracefully() {
+        // Given
+        MeetingStatistics stats1 = createTestStatistics(1L, 10, 8, new BigDecimal("80.00"));
+        MeetingStatistics stats2 = createTestStatistics(2L, 20, 15, new BigDecimal("75.00"));
+
+        List<MeetingStatistics> allStats = Arrays.asList(stats1, stats2);
+
+        when(statisticsRepository.findAll()).thenReturn(allStats);
+
+        // First meeting - success
+        Meeting meeting1 = createTestMeeting(1L);
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(meeting1));
+
+        ParticipantCountDto counts1 = ParticipantCountDto.builder()
+                .total(10L).confirmed(8L).attended(8L).declined(2L)
+                .cancelled(0L).invited(0L).pending(0L).build();
+
+        when(meetingParticipantRepository.getParticipantCounts(1L)).thenReturn(counts1);
+        when(feedbackRepository.findAverageRatingByMeetingId(1L)).thenReturn(4.5);
+        when(feedbackRepository.countByMeetingId(1L)).thenReturn(5L);
+        when(statisticsRepository.findByMeetingId(1L)).thenReturn(Optional.of(stats1));
+
+        // Second meeting - error
+        when(meetingRepository.findById(2L)).thenThrow(new RuntimeException("DB Error"));
+
+        when(statisticsRepository.save(any(MeetingStatistics.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        assertDoesNotThrow(() -> analyticsService.refreshAllStatistics());
+
+        // Then - should still process first one
+        verify(statisticsRepository, times(1)).save(any(MeetingStatistics.class));
+    }
+
+    // ========== Private Helper Methods ==========
+
+    private Meeting createTestMeeting(Long id) {
+        User organizer = new User();
+        organizer.setId(1L);
+        organizer.setFirstName("Organizer");
+        organizer.setLastName("Test");
+
+        Meeting meeting = new Meeting();
+        meeting.setId(id);
+        meeting.setTitle("Meeting " + id);
+        meeting.setDescription("Description " + id);
+        meeting.setStartDate(LocalDateTime.now().minusDays(id));
+        meeting.setEndDate(LocalDateTime.now().minusDays(id).plusHours(2));
+        meeting.setOrganizer(organizer);
+        meeting.setStatus(MeetingStatus.COMPLETED);
+        return meeting;
+    }
+
+    private MeetingStatistics createTestStatistics(Long meetingId, int total, int attended, BigDecimal attendanceRate) {
+        Meeting meeting = createTestMeeting(meetingId);
+
+        MeetingStatistics stats = MeetingStatistics.builder()
+                .meeting(meeting)
+                .totalParticipants(total)
+                .attendedParticipants(attended)
+                .confirmedParticipants((int) (total * 0.9))
+                .declinedParticipants((int) (total * 0.1))
+                .attendanceRate(attendanceRate)
+                .confirmationRate(new BigDecimal("90.00"))
+                .averageRating(new BigDecimal("4.0"))
+                .feedbackCount(3)
+                .avgResponseTimeMinutes(new BigDecimal("60.0"))
+                .generatedAt(LocalDateTime.now())
+                .status(MeetingStatistics.StatisticsStatus.FINAL)
+                .finalized(true)
+                .build();
+
+        stats.setId(meetingId);
+        return stats;
+    }
+
+    // ========== Test for getDateRangeText private method ==========
+
+    @Test
+    void getDateRangeText_shouldHandleAllBranches() throws Exception {
+        // Use reflection to test private method
+        Method getDateRangeTextMethod = MeetingAnalyticsServiceImpl.class
+                .getDeclaredMethod("getDateRangeText", ReportFilter.class);
+        getDateRangeTextMethod.setAccessible(true);
+
+        // Test 1: filter = null
+        String result1 = (String) getDateRangeTextMethod.invoke(analyticsService, (Object) null);
+        assertEquals("Cały okres", result1);
+
+        // Test 2: filter with both dates null
+        ReportFilter emptyFilter = new ReportFilter();
+        String result2 = (String) getDateRangeTextMethod.invoke(analyticsService, emptyFilter);
+        assertEquals("Cały okres", result2);
+
+        // Test 3: filter with only dateFrom
+        ReportFilter fromOnlyFilter = new ReportFilter();
+        fromOnlyFilter.setDateFrom(LocalDateTime.of(2024, 3, 15, 10, 30));
+        String result3 = (String) getDateRangeTextMethod.invoke(analyticsService, fromOnlyFilter);
+        assertEquals("15.03.2024 - nieokreślony", result3);
+
+        // Test 4: filter with only dateTo
+        ReportFilter toOnlyFilter = new ReportFilter();
+        toOnlyFilter.setDateTo(LocalDateTime.of(2024, 3, 31, 23, 59));
+        String result4 = (String) getDateRangeTextMethod.invoke(analyticsService, toOnlyFilter);
+        assertEquals("nieokreślony - 31.03.2024", result4);
+
+        // Test 5: filter with both dates
+        ReportFilter fullFilter = new ReportFilter();
+        fullFilter.setDateFrom(LocalDateTime.of(2024, 3, 1, 0, 0));
+        fullFilter.setDateTo(LocalDateTime.of(2024, 3, 31, 23, 59));
+        String result5 = (String) getDateRangeTextMethod.invoke(analyticsService, fullFilter);
+        assertEquals("01.03.2024 - 31.03.2024", result5);
+    }
+
+    // ========== Edge Case Tests ==========
+
+    @Test
+    void testCalculateDerivedMetricsIsCalled() {
+        // Given
+        MeetingStatistics existingStats = mock(MeetingStatistics.class);
+
+        when(meetingRepository.findById(100L)).thenReturn(Optional.of(meeting));
+        when(meetingParticipantRepository.getParticipantCounts(100L)).thenReturn(participantCounts);
+        when(feedbackRepository.findAverageRatingByMeetingId(100L)).thenReturn(4.5);
+        when(feedbackRepository.countByMeetingId(100L)).thenReturn(5L);
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(existingStats));
+        when(statisticsRepository.save(any(MeetingStatistics.class))).thenReturn(existingStats);
+
+        // When
+        analyticsService.generateMeetingStatistics(100L);
+
+        // Then
+        verify(existingStats).calculateDerivedMetrics();
+    }
+
+    @Test
+    void testPdfGenerationWithVariousDataScenarios() {
+        // Test with null values
+        MeetingStatistics nullStats = MeetingStatistics.builder()
+                .id(1L)
+                .meeting(meeting)
+                .totalParticipants(null)
+                .attendedParticipants(null)
+                .attendanceRate(null)
+                .status(MeetingStatistics.StatisticsStatus.FINAL)
+                .generatedAt(LocalDateTime.now())
+                .build();
+
+        // Test with zero values
+        MeetingStatistics zeroStats = MeetingStatistics.builder()
+                .id(2L)
+                .meeting(meeting)
+                .totalParticipants(0)
+                .attendedParticipants(0)
+                .attendanceRate(BigDecimal.ZERO)
+                .status(MeetingStatistics.StatisticsStatus.FINAL)
+                .generatedAt(LocalDateTime.now())
+                .build();
+
+        when(statisticsRepository.findByMeetingId(100L)).thenReturn(Optional.of(nullStats));
+        when(statisticsRepository.findByMeetingId(200L)).thenReturn(Optional.of(zeroStats));
+
+        assertAll(
+                () -> assertDoesNotThrow(() -> {
+                    byte[] pdf1 = analyticsService.exportMeetingStatisticsToPdf(100L);
+                    assertNotNull(pdf1);
+                }, "Should handle null values"),
+                () -> assertDoesNotThrow(() -> {
+                    byte[] pdf2 = analyticsService.exportMeetingStatisticsToPdf(200L);
+                    assertNotNull(pdf2);
+                }, "Should handle zero values")
+        );
+    }
+
+    @Test
+    void testOrganizerReportWithZeroMeetings() {
+        // Given
+        when(statisticsRepository.getOrganizerReportStats(1L)).thenReturn(null);
+
+        // When
+        OrganizerReport report = analyticsService.generateOrganizerReport(1L, null);
+
+        // Then
+        assertAll(
+                () -> assertEquals(0, report.getTotalMeetings()),
+                () -> assertEquals(0, report.getTotalParticipants()),
+                () -> assertEquals(0, report.getTotalAttended()),
+                () -> assertEquals(BigDecimal.ZERO, report.getAverageAttendanceRate())
+        );
+    }
+
+    @Test
+    void testRefreshAllStatisticsWithEmptyList() {
+        // Given
+        when(statisticsRepository.findAll()).thenReturn(Collections.emptyList());
+
+        // When
+        analyticsService.refreshAllStatistics();
+
+        // Then
+        verify(statisticsRepository, never()).save(any());
     }
 }

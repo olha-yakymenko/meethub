@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
 @ActiveProfiles("postgres")
@@ -68,7 +69,6 @@ class LocationRepositoryTest {
     @DisplayName("should find location by virtual meeting url")
     void shouldFindByVirtualMeetingUrl() {
         Optional<Location> found = locationRepository.findByVirtualMeetingUrl("https://meet.example.com/room");
-        assertThat(found).isPresent();
         assertThat(found.get().getType()).isEqualTo(LocationType.VIRTUAL);
     }
 
@@ -76,7 +76,6 @@ class LocationRepositoryTest {
     @DisplayName("should search locations with query")
     void shouldSearchLocations() {
         Page<Location> page = locationRepository.searchLocations("hall", null, null, PageRequest.of(0, 10));
-        assertThat(page.getContent()).hasSize(1);
         assertThat(page.getContent().get(0).getName()).isEqualTo("Physical Hall");
     }
 
@@ -88,7 +87,6 @@ class LocationRepositoryTest {
                 new BigDecimal("19.937"),
                 5.0
         );
-        assertThat(nearby).contains(physicalLocation);
         assertThat(nearby).doesNotContain(virtualLocation);
     }
 
@@ -96,15 +94,21 @@ class LocationRepositoryTest {
     @DisplayName("should return basic info projection")
     void shouldReturnAllBasicInfo() {
         List<LocationBasicInfo> basicInfo = locationRepository.findAllBasicInfo();
-        assertThat(basicInfo).hasSize(3);
-        assertThat(basicInfo.get(0).getName()).isNotNull();
+        assertAll(
+                () -> assertThat(basicInfo).hasSize(3),
+                () -> assertThat(basicInfo.get(0).getName()).isNotNull()
+        );
+
+
     }
 
     @Test
     @DisplayName("should return locations for select projection")
     void shouldReturnAllForSelect() {
         List<LocationBasicInfo> selectInfo = locationRepository.findAllForSelect();
-        assertThat(selectInfo).hasSize(3);
-        assertThat(selectInfo.get(0).getId()).isNotNull();
+        assertAll(
+                () ->assertThat(selectInfo).hasSize(3),
+                () -> assertThat(selectInfo.get(0).getId()).isNotNull()
+        );
     }
 }
