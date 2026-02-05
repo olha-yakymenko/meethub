@@ -876,7 +876,6 @@ public class MeetingAnalyticsServiceImpl implements MeetingAnalyticsService {
     @Override
     @Transactional(readOnly = true)
     public List<MeetingStatistics> getRecentStatistics(int limit) {
-        // Używamy metody z repo zamiast streamów
         return statisticsRepository.findRecentStatistics(PageRequest.of(0, limit));
     }
 
