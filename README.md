@@ -1,6 +1,7 @@
 # MeetHub
 
-**MeetHub** is a comprehensive RESTful API built with the **Spring Boot** framework, designed to simplify the organization and management of meetings, workshops, and social events. The application provides a structured environment for both organizers and participants to interact, collaborate, and share feedback.
+**MeetHub** is a Spring Boot web application designed to simplify the organization and management of meetings, workshops, and social events. It combines a RESTful API with a server-side Thymeleaf frontend, providing a structured environment for organizers and participants to interact, collaborate, and share feedback.
+
 
 ---
 
@@ -26,6 +27,14 @@
 
 
 ### Running the Application
+Before starting the application, make sure the database is running.
+Docker configuration is located in the `docker/` directory.
+
+```bash
+cd docker
+docker-compose up -d
+```
+
 To launch the application locally, use the following command:
 ```bash
 mvn spring-boot:run
